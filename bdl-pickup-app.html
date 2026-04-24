@@ -2642,19 +2642,26 @@ const getInviteEmailBody = (invite) => {
   ]);
 })();
 
-// Link super admins to player IDs on load
+// Link super admins to player IDs on load.
+// Rules (idempotent):
+//   1. 'admin' owner auto-links to Shannon Terry so the generic admin login
+//      still carries player context (avoids needing a separate 'shannon' login).
+//   2. Any other unlinked admin whose username matches exactly one roster
+//      player's first name (case-insensitive) auto-links to that player.
+//   3. Promotion-era rosterPlayerId migrates into playerId.
+// A player may be linked to more than one super admin username — that's fine.
 (function linkSuperAdminIds() {
   const admins = load('superAdmins', []);
   const roster = load('roster', []);
   let changed = false;
+  const shannon = roster.find(r => r.firstName === 'Shannon' && r.lastName === 'Terry');
   admins.forEach(a => {
-    if (a.username === 'shannon' && !a.playerId) {
-      const p = roster.find(r => r.firstName === 'Shannon' && r.lastName === 'Terry');
-      if (p) { a.playerId = p.id; changed = true; }
-    }
-    if (!a.playerId && a.rosterPlayerId) {
-      a.playerId = a.rosterPlayerId; // from promotion
-    }
+    if (!a.playerId && a.rosterPlayerId) { a.playerId = a.rosterPlayerId; changed = true; }
+    if (a.playerId) return;
+    if (a.username === 'admin' && shannon) { a.playerId = shannon.id; changed = true; return; }
+    if (a.username === 'shannon' && shannon) { a.playerId = shannon.id; changed = true; return; }
+    const matches = roster.filter(p => (p.firstName || '').toLowerCase() === a.username.toLowerCase());
+    if (matches.length === 1) { a.playerId = matches[0].id; changed = true; }
   });
   if (changed) save('superAdmins', admins);
 })();
@@ -6949,8 +6956,12 @@ function AdminSettings({ roster, showToast }) {
   };
 
   const getPlayer = (id) => roster.find(p => p.id === id);
-  const assignedIds = superAdmins.map(a => a.playerId).filter(Boolean);
-  const availablePlayers = roster.filter(p => !assignedIds.includes(p.id)).sort((a,b) => a.lastName.localeCompare(b.lastName));
+  const availablePlayers = [...roster].sort((a,b) => a.lastName.localeCompare(b.lastName));
+
+  const changeLinkedPlayer = (username, playerId) => {
+    saveSA(superAdmins.map(a => a.username === username ? { ...a, playerId: playerId || null } : a));
+    showToast(playerId ? 'Link updated.' : 'Link removed.');
+  };
 
   return (
     <div>
@@ -6966,17 +6977,22 @@ function AdminSettings({ roster, showToast }) {
             <tbody>
               {superAdmins.map(a => {
                 const p = a.playerId ? getPlayer(a.playerId) : null;
-                const displayName = p
-                  ? `${p.firstName} ${p.lastName}`
-                  : (a.firstName ? `${a.firstName} ${a.lastName}` : null);
                 return (
                   <tr key={a.username}>
                     <td><strong>{a.username}</strong></td>
                     <td>
-                      {displayName
-                        ? <span>{displayName}{!p && <span style={{color:'var(--text-muted)',fontSize:11,marginLeft:6}}>(off roster)</span>}</span>
-                        : <span style={{color:'var(--text-muted)'}}>Not linked</span>}
-                      {a.email && <div style={{color:'var(--text-muted)',fontSize:11}}>{a.email}</div>}
+                      <select
+                        value={a.playerId || ''}
+                        onChange={e => changeLinkedPlayer(a.username, e.target.value)}
+                        style={{minWidth:180,padding:'6px 8px',fontSize:13}}
+                        aria-label={`Linked player for ${a.username}`}
+                      >
+                        <option value="">No linked player</option>
+                        {availablePlayers.map(rp => (
+                          <option key={rp.id} value={rp.id}>{rp.lastName}, {rp.firstName}</option>
+                        ))}
+                      </select>
+                      {a.email && <div style={{color:'var(--text-muted)',fontSize:11,marginTop:2}}>{a.email}</div>}
                     </td>
                     <td>{a.role === 'owner' ? <span className="badge badge-brand">Owner</span> : <span className="badge badge-blue">Super Admin</span>}</td>
                     <td>{a.role === 'owner' ? <span style={{color:'var(--text-muted)',fontSize:11}}>Protected</span> : <button className="btn btn-danger btn-small" onClick={() => setConfirmRemove(a.username)}>Remove</button>}</td>
