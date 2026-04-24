@@ -3009,12 +3009,20 @@ const MoonIcon = () => (
 );
 
 // ============= THEME TOGGLE ==============
+// One-time migration: reset every existing session's theme to dark for the
+// dark-first rollout. Dark is the default going forward; users can still
+// flip to light via the toggle, and that choice persists afterwards.
+(function migrateThemeToDark() {
+  if (localStorage.getItem('bdl_theme_migrated_v2') === '1') return;
+  localStorage.setItem('bdl_theme', 'dark');
+  localStorage.setItem('bdl_theme_migrated_v2', '1');
+})();
+
 function ThemeToggle() {
   const [dark, setDark] = useState(() => {
     const saved = localStorage.getItem('bdl_theme');
-    if (saved === 'dark') return true;
     if (saved === 'light') return false;
-    return true; // default: dark-first
+    return true; // default / 'dark' / missing → dark
   });
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
