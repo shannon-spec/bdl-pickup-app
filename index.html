@@ -3279,8 +3279,24 @@ function App() {
       {viewGameId ? <GameDetail gameId={viewGameId} games={games} setGames={setGames} roster={roster} leagues={leagues} showToast={showToast} onClose={() => setViewGameId(null)} isAdmin={isAdmin || isCommissioner} /> : (
         <div>
           {tab === 'dashboard' && isAdmin && <Dashboard roster={roster} leagues={leagues} games={games} setTab={setTab} onViewGame={onViewGame} />}
-          {tab === 'dashboard' && (isCommissioner || isPlayerView) && livePlayer && <PlayerDashboard player={livePlayer} roster={roster} leagues={leagues} games={games} setTab={setTab} onViewGame={onViewGame} />}
-          {tab === 'dashboard' && (isCommissioner || isPlayerView) && !livePlayer && <Dashboard roster={roster} leagues={leagues} games={games} setTab={setTab} onViewGame={onViewGame} />}
+          {tab === 'dashboard' && (isCommissioner || isPlayerView) && (() => {
+            // Use the real signed-in player if linked; otherwise pick any roster
+            // player so an unlinked admin can still preview the dashboard.
+            const previewPlayer = livePlayer || roster.find(p => (p.leagueIds || []).length > 0) || roster[0];
+            if (!previewPlayer) {
+              return <div className="pd"><div className="pd-port" style={{textAlign:'center',padding:48}}><div className="pd-port-label-left" style={{marginBottom:12}}>No players yet</div><div style={{color:'var(--text-3)',fontSize:14}}>Add roster players to see the Player Dashboard.</div></div></div>;
+            }
+            return (
+              <React.Fragment>
+                {!livePlayer && (
+                  <div style={{marginBottom:12,padding:'10px 14px',borderRadius:10,background:'var(--surface-2)',border:'1px solid var(--hairline-2)',fontSize:12,color:'var(--text-3)'}}>
+                    Preview — your login isn't linked to a roster player, so this is <strong style={{color:'var(--text-2)'}}>{previewPlayer.firstName} {previewPlayer.lastName}</strong>'s dashboard.
+                  </div>
+                )}
+                <PlayerDashboard player={previewPlayer} roster={roster} leagues={leagues} games={games} setTab={setTab} onViewGame={onViewGame} />
+              </React.Fragment>
+            );
+          })()}
           {tab === 'roster' && isAdmin && <Roster roster={roster} setRoster={setRoster} leagues={leagues} games={games} onViewGame={onViewGame} />}
           {tab === 'roster' && isCommissioner && (() => {
             const commLeagueIds = commissionerLeagues.map(l => l.id);
