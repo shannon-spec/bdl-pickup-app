@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BDL Pickup — Logo Options</title>
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+:root, [data-theme="light"] {
+  --bg: #F5F5F7;
+  --surface: #FFFFFF;
+  --border: rgba(0,0,0,0.08);
+  --text-primary: #1D252C;
+  --text-muted: #A1A9AC;
+  --brand: #FE3B1F;
+}
+[data-theme="dark"] {
+  --bg: #1D252C;
+  --surface: #252F38;
+  --border: rgba(161,169,172,0.12);
+  --text-primary: #FFFFFF;
+  --text-muted: rgba(161,169,172,0.85);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.page { max-width: 1200px; margin: 0 auto; padding: 40px 24px 80px; }
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+}
+.page-header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+.page-header h1 span { color: var(--brand); }
+
+.theme-toggle {
+  width: 36px; height: 36px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text-muted); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s ease;
+}
+.theme-toggle:hover { color: var(--text-primary); border-color: var(--text-muted); }
+.theme-toggle svg { width: 18px; height: 18px; }
+
+.section-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--text-muted);
+  padding-left: 12px; border-left: 2px solid var(--brand);
+  margin-bottom: 20px;
+}
+
+.logo-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+}
+
+.logo-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: box-shadow 0.15s ease;
+}
+.logo-card:hover { box-shadow: 0 0 0 1.5px var(--brand); }
+
+.logo-card-header {
+  padding: 20px 24px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.logo-card-header h2 {
+  font-size: 16px; font-weight: 700; letter-spacing: -0.02em;
+}
+.logo-card-header .option-num {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--brand);
+}
+.logo-card-desc {
+  padding: 8px 24px 0;
+  font-size: 13px; color: var(--text-muted); line-height: 1.5;
+}
+
+.logo-previews {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  margin-top: 20px;
+}
+.preview-pane {
+  padding: 48px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 240px;
+}
+.preview-pane.light { background: #FFFFFF; }
+.preview-pane.dark { background: #1D252C; }
+.preview-label {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; opacity: 0.4;
+}
+.preview-pane.light .preview-label { color: #1D252C; }
+.preview-pane.dark .preview-label { color: #FFFFFF; }
+
+/* Variations row */
+.variations {
+  display: flex;
+  gap: 0;
+  border-top: 1px solid var(--border);
+}
+.variation {
+  flex: 1;
+  padding: 32px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--border);
+}
+.variation:last-child { border-right: none; }
+.variation.on-white { background: #FFFFFF; }
+.variation.on-dark { background: #1D252C; }
+.variation.on-brand { background: #FE3B1F; }
+
+@media (max-width: 768px) {
+  .logo-previews { grid-template-columns: 1fr; }
+  .variations { flex-direction: column; }
+  .variation { border-right: none; border-bottom: 1px solid var(--border); }
+  .variation:last-child { border-bottom: none; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="page-header">
+    <h1><span>BDL</span> Pickup — Logo Options</h1>
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+      <svg id="moonIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg id="sunIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
+  </div>
+
+  <div class="logo-grid">
+
+    <!-- ============ OPTION 1 — GEOMETRIC MARK + WORDMARK ============ -->
+    <div>
+      <div class="section-label">Option 1</div>
+      <div class="logo-card">
+        <div class="logo-card-header">
+          <h2>The Court Mark</h2>
+          <span class="option-num">Primary</span>
+        </div>
+        <p class="logo-card-desc">A geometric basketball silhouette formed from the negative space of the letters BDL. Confident, compact, works at any size. The mark stands alone as a favicon or app icon; the wordmark extends it for headers.</p>
+        <div class="logo-previews">
+          <div class="preview-pane light">
+            <span class="preview-label">Light</span>
+            <svg width="280" height="80" viewBox="0 0 280 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Basketball icon mark -->
+              <circle cx="36" cy="40" r="28" fill="#FE3B1F"/>
+              <path d="M36 12 C36 12 36 68 36 68" stroke="#FFFFFF" stroke-width="2.5" opacity="0.35"/>
+              <path d="M8.5 38 C20 28, 52 28, 63.5 38" stroke="#FFFFFF" stroke-width="2.5" fill="none" opacity="0.35"/>
+              <path d="M8.5 42 C20 52, 52 52, 63.5 42" stroke="#FFFFFF" stroke-width="2.5" fill="none" opacity="0.35"/>
+              <!-- BDL Letters -->
+              <text x="78" y="48" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="42" font-weight="800" letter-spacing="-0.03em" fill="#1D252C">BDL</text>
+              <!-- Tagline -->
+              <text x="79" y="66" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="10" font-weight="600" letter-spacing="0.12em" fill="#A1A9AC" text-transform="uppercase">BALL DON'T LIE PICKUP TRACKER</text>
+            </svg>
+          </div>
+          <div class="preview-pane dark">
+            <span class="preview-label">Dark</span>
+            <svg width="280" height="80" viewBox="0 0 280 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="36" cy="40" r="28" fill="#FE3B1F"/>
+              <path d="M36 12 C36 12 36 68 36 68" stroke="#FFFFFF" stroke-width="2.5" opacity="0.35"/>
+              <path d="M8.5 38 C20 28, 52 28, 63.5 38" stroke="#FFFFFF" stroke-width="2.5" fill="none" opacity="0.35"/>
+              <path d="M8.5 42 C20 52, 52 52, 63.5 42" stroke="#FFFFFF" stroke-width="2.5" fill="none" opacity="0.35"/>
+              <text x="78" y="48" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="42" font-weight="800" letter-spacing="-0.03em" fill="#FFFFFF">BDL</text>
+              <text x="79" y="66" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="10" font-weight="600" letter-spacing="0.12em" fill="rgba(161,169,172,0.85)">BALL DON'T LIE PICKUP TRACKER</text>
+            </svg>
+          </div>
+        </div>
+        <!-- Icon-only variations -->
+        <div class="variations">
+          <div class="variation on-white">
+            <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+              <circle cx="28" cy="28" r="28" fill="#FE3B1F"/>
+              <path d="M28 0 V56" stroke="#FFF" stroke-width="2" opacity="0.35"/>
+              <path d="M0.5 26 C12 18, 44 18, 55.5 26" stroke="#FFF" stroke-width="2" fill="none" opacity="0.35"/>
+              <path d="M0.5 30 C12 38, 44 38, 55.5 30" stroke="#FFF" stroke-width="2" fill="none" opacity="0.35"/>
+              <text x="28" y="34" text-anchor="middle" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="16" font-weight="900" letter-spacing="-0.03em" fill="#FFFFFF">BDL</text>
+            </svg>
+          </div>
+          <div class="variation on-dark">
+            <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+              <circle cx="28" cy="28" r="28" fill="#FE3B1F"/>
+              <path d="M28 0 V56" stroke="#FFF" stroke-width="2" opacity="0.35"/>
+              <path d="M0.5 26 C12 18, 44 18, 55.5 26" stroke="#FFF" stroke-width="2" fill="none" opacity="0.35"/>
+              <path d="M0.5 30 C12 38, 44 38, 55.5 30" stroke="#FFF" stroke-width="2" fill="none" opacity="0.35"/>
+              <text x="28" y="34" text-anchor="middle" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="16" font-weight="900" letter-spacing="-0.03em" fill="#FFFFFF">BDL</text>
+            </svg>
+          </div>
+          <div class="variation on-brand">
+            <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+              <circle cx="28" cy="28" r="27" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+              <path d="M28 1 V55" stroke="#FFF" stroke-width="1.5" opacity="0.35"/>
+              <path d="M1.5 26 C12 18, 44 18, 54.5 26" stroke="#FFF" stroke-width="1.5" fill="none" opacity="0.35"/>
+              <path d="M1.5 30 C12 38, 44 38, 54.5 30" stroke="#FFF" stroke-width="1.5" fill="none" opacity="0.35"/>
+              <text x="28" y="34" text-anchor="middle" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="16" font-weight="900" letter-spacing="-0.03em" fill="#FFFFFF">BDL</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ OPTION 2 — TYPOGRAPHIC LOCKUP ============ -->
+    <div>
+      <div class="section-label">Option 2</div>
+      <div class="logo-card">
+        <div class="logo-card-header">
+          <h2>The Typographic Lockup</h2>
+          <span class="option-num">Clean Type</span>
+        </div>
+        <p class="logo-card-desc">Pure typography. BDL in heavy weight with a red accent bar separating the tagline. No icon needed — the type is the brand. The red left-bar echoes the On3 section-label pattern throughout the app.</p>
+        <div class="logo-previews">
+          <div class="preview-pane light">
+            <span class="preview-label">Light</span>
+            <svg width="260" height="80" viewBox="0 0 260 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <text x="0" y="44" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="50" font-weight="900" letter-spacing="-0.04em" fill="#1D252C">BDL</text>
+              <rect x="132" y="16" width="3" height="36" rx="1.5" fill="#FE3B1F"/>
+              <text x="146" y="30" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="11" font-weight="700" letter-spacing="0.08em" fill="#1D252C">PICKUP</text>
+              <text x="146" y="47" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="11" font-weight="700" letter-spacing="0.08em" fill="#1D252C">TRACKER</text>
+              <text x="0" y="68" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="10" font-weight="600" letter-spacing="0.1em" fill="#A1A9AC">BALL DON'T LIE</text>
+            </svg>
+          </div>
+          <div class="preview-pane dark">
+            <span class="preview-label">Dark</span>
+            <svg width="260" height="80" viewBox="0 0 260 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <text x="0" y="44" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="50" font-weight="900" letter-spacing="-0.04em" fill="#FFFFFF">BDL</text>
+              <rect x="132" y="16" width="3" height="36" rx="1.5" fill="#FE3B1F"/>
+              <text x="146" y="30" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="11" font-weight="700" letter-spacing="0.08em" fill="#FFFFFF">PICKUP</text>
+              <text x="146" y="47" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="11" font-weight="700" letter-spacing="0.08em" fill="#FFFFFF">TRACKER</text>
+              <text x="0" y="68" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="10" font-weight="600" letter-spacing="0.1em" fill="rgba(161,169,172,0.85)">BALL DON'T LIE</text>
+            </svg>
+          </div>
+        </div>
+        <div class="variations">
+          <div class="variation on-white">
+            <svg width="120" height="40" viewBox="0 0 120 40" fill="none">
+              <text x="0" y="28" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="32" font-weight="900" letter-spacing="-0.04em" fill="#1D252C">BDL</text>
+              <rect x="80" y="8" width="2.5" height="24" rx="1.25" fill="#FE3B1F"/>
+              <text x="90" y="23" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="8" font-weight="700" letter-spacing="0.06em" fill="#A1A9AC">PICKUP</text>
+            </svg>
+          </div>
+          <div class="variation on-dark">
+            <svg width="120" height="40" viewBox="0 0 120 40" fill="none">
+              <text x="0" y="28" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="32" font-weight="900" letter-spacing="-0.04em" fill="#FFFFFF">BDL</text>
+              <rect x="80" y="8" width="2.5" height="24" rx="1.25" fill="#FE3B1F"/>
+              <text x="90" y="23" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="8" font-weight="700" letter-spacing="0.06em" fill="rgba(161,169,172,0.85)">PICKUP</text>
+            </svg>
+          </div>
+          <div class="variation on-brand">
+            <svg width="120" height="40" viewBox="0 0 120 40" fill="none">
+              <text x="0" y="28" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="32" font-weight="900" letter-spacing="-0.04em" fill="#FFFFFF">BDL</text>
+              <rect x="80" y="8" width="2.5" height="24" rx="1.25" fill="#FFFFFF"/>
+              <text x="90" y="23" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="8" font-weight="700" letter-spacing="0.06em" fill="rgba(255,255,255,0.7)">PICKUP</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ OPTION 3 — STACKED BADGE ============ -->
+    <div>
+      <div class="section-label">Option 3</div>
+      <div class="logo-card">
+        <div class="logo-card-header">
+          <h2>The Badge</h2>
+          <span class="option-num">Stacked</span>
+        </div>
+        <p class="logo-card-desc">Stacked, contained, and bold. BDL sits as a hero element inside a rounded rectangle with the tagline beneath. Works great for jerseys, merch, app splash screens, and social avatars.</p>
+        <div class="logo-previews">
+          <div class="preview-pane light">
+            <span class="preview-label">Light</span>
+            <svg width="200" height="120" viewBox="0 0 200 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="30" y="4" width="140" height="72" rx="12" fill="#1D252C"/>
+              <text x="100" y="52" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="44" font-weight="900" letter-spacing="-0.03em" fill="#FFFFFF">BDL</text>
+              <rect x="48" y="60" width="104" height="2.5" rx="1.25" fill="#FE3B1F"/>
+              <text x="100" y="96" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="9" font-weight="700" letter-spacing="0.14em" fill="#A1A9AC">BALL DON'T LIE</text>
+              <text x="100" y="112" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="9" font-weight="700" letter-spacing="0.14em" fill="#A1A9AC">PICKUP TRACKER</text>
+            </svg>
+          </div>
+          <div class="preview-pane dark">
+            <span class="preview-label">Dark</span>
+            <svg width="200" height="120" viewBox="0 0 200 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="30" y="4" width="140" height="72" rx="12" fill="#FE3B1F"/>
+              <text x="100" y="52" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="44" font-weight="900" letter-spacing="-0.03em" fill="#FFFFFF">BDL</text>
+              <rect x="48" y="60" width="104" height="2.5" rx="1.25" fill="rgba(255,255,255,0.4)"/>
+              <text x="100" y="96" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="9" font-weight="700" letter-spacing="0.14em" fill="rgba(161,169,172,0.85)">BALL DON'T LIE</text>
+              <text x="100" y="112" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="9" font-weight="700" letter-spacing="0.14em" fill="rgba(161,169,172,0.85)">PICKUP TRACKER</text>
+            </svg>
+          </div>
+        </div>
+        <div class="variations">
+          <div class="variation on-white">
+            <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+              <rect width="64" height="64" rx="14" fill="#1D252C"/>
+              <text x="32" y="38" text-anchor="middle" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="22" font-weight="900" letter-spacing="-0.03em" fill="#FFFFFF">BDL</text>
+              <rect x="12" y="44" width="40" height="2" rx="1" fill="#FE3B1F"/>
+              <text x="32" y="56" text-anchor="middle" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="5.5" font-weight="700" letter-spacing="0.1em" fill="rgba(255,255,255,0.5)">PICKUP</text>
+            </svg>
+          </div>
+          <div class="variation on-dark">
+            <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+              <rect width="64" height="64" rx="14" fill="#FE3B1F"/>
+              <text x="32" y="38" text-anchor="middle" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="22" font-weight="900" letter-spacing="-0.03em" fill="#FFFFFF">BDL</text>
+              <rect x="12" y="44" width="40" height="2" rx="1" fill="rgba(255,255,255,0.4)"/>
+              <text x="32" y="56" text-anchor="middle" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="5.5" font-weight="700" letter-spacing="0.1em" fill="rgba(255,255,255,0.7)">PICKUP</text>
+            </svg>
+          </div>
+          <div class="variation on-brand">
+            <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+              <rect x="1" y="1" width="62" height="62" rx="13" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+              <text x="32" y="38" text-anchor="middle" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="22" font-weight="900" letter-spacing="-0.03em" fill="#FFFFFF">BDL</text>
+              <rect x="12" y="44" width="40" height="2" rx="1" fill="rgba(255,255,255,0.4)"/>
+              <text x="32" y="56" text-anchor="middle" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="5.5" font-weight="700" letter-spacing="0.1em" fill="rgba(255,255,255,0.7)">PICKUP</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const toggle = document.getElementById('themeToggle');
+  const sun = document.getElementById('sunIcon');
+  const moon = document.getElementById('moonIcon');
+  let theme = 'light';
+  toggle.addEventListener('click', () => {
+    theme = theme === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+    sun.style.display = theme === 'dark' ? 'block' : 'none';
+    moon.style.display = theme === 'light' ? 'block' : 'none';
+  });
+</script>
+</body>
+</html>
