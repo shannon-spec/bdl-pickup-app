@@ -3901,8 +3901,10 @@ function PlayerDashboard({ player, roster, leagues, games, setTab, onViewGame })
   const probA = Math.round((recA.rate / probDenom) * 100);
   const probB = 100 - probA;
 
-  // Leaderboard (players in current league)
+  // Leaderboard (players in current league). Require at least 10% of league
+  // games played (minimum 1) to avoid 1-0 players gaming the board.
   const leaguePlayers = currentLeague ? roster.filter(p => (p.leagueIds || []).includes(currentLeague.id)) : [];
+  const minGames = Math.max(1, Math.ceil(leagueCompletedCount * 0.10));
   const leaderboard = leaguePlayers.map(p => {
     let w = 0, l = 0;
     completedLeagueGames.forEach(g => {
@@ -3914,7 +3916,7 @@ function PlayerDashboard({ player, roster, leagues, games, setTab, onViewGame })
     });
     const total = w + l;
     return { p, w, l, pct: total > 0 ? (w / total * 100) : -1 };
-  }).filter(r => r.w + r.l > 0).sort((a,b) => b.pct - a.pct).slice(0, 5);
+  }).filter(r => (r.w + r.l) >= minGames).sort((a,b) => b.pct - a.pct).slice(0, 5);
 
   // Activity — most recent game completions, framed as events
   const activity = [...completedLeagueGames].sort((a,b) => (b.gameDate||'').localeCompare(a.gameDate||'')).slice(0, 3).map(g => {
@@ -7294,12 +7296,16 @@ function Leaderboard({ games, leagues, roster }) {
   const allPlayers = Object.values(playerStats);
   const withGames = allPlayers.filter(p => p.gp > 0);
 
+  // Minimum games played to qualify for rate-based boards:
+  // 10% of the league's completed games, floor of 1.
+  const minGames = Math.max(1, Math.ceil(completed.length * 0.10));
+
   // Leaderboards
   const topWins = withGames.slice().sort((a,b) => b.w - a.w || a.gp - b.gp).slice(0,10);
-  const topWinPct = withGames.filter(p => p.gp >= 3).slice().sort((a,b) => (b.w/b.gp) - (a.w/a.gp) || b.w - a.w).slice(0,10);
+  const topWinPct = withGames.filter(p => p.gp >= minGames).slice().sort((a,b) => (b.w/b.gp) - (a.w/a.gp) || b.w - a.w).slice(0,10);
   const topGW = allPlayers.filter(p => p.gw > 0).slice().sort((a,b) => b.gw - a.gw || a.gp - b.gp).slice(0,10);
   const topLosses = withGames.slice().sort((a,b) => b.l - a.l || b.gp - a.gp).slice(0,10);
-  const lowWinPct = withGames.filter(p => p.gp >= 3).slice().sort((a,b) => (a.w/a.gp) - (b.w/b.gp) || b.l - a.l).slice(0,10);
+  const lowWinPct = withGames.filter(p => p.gp >= minGames).slice().sort((a,b) => (a.w/a.gp) - (b.w/b.gp) || b.l - a.l).slice(0,10);
 
   const renderBoard = (title, players, columns, emptyMsg) => (
     <div className="card" style={{flex:1,minWidth:300}}>
@@ -7366,7 +7372,7 @@ function Leaderboard({ games, leagues, roster }) {
           {key:'pct',label:'Win%',align:'right',render:(p)=>(p.gp>0?(p.w/p.gp*100).toFixed(1):'0.0')+'%',style:(p)=>({fontWeight:800,fontSize:16,color:'var(--green)'})},
           {key:'w',label:'W',align:'right',render:(p)=>p.w},
           {key:'l',label:'L',align:'right',render:(p)=>p.l},
-        ], 'Min 3 games required.')}
+        ], `Min ${minGames} game${minGames===1?'':'s'} required (10% of league games).`)}
       </div>
 
       {/* Game Winner Leaderboard */}
@@ -7392,7 +7398,7 @@ function Leaderboard({ games, leagues, roster }) {
           {key:'pct',label:'Win%',align:'right',render:(p)=>(p.gp>0?(p.w/p.gp*100).toFixed(1):'0.0')+'%',style:(p)=>({fontWeight:800,fontSize:16,color:'var(--red)'})},
           {key:'w',label:'W',align:'right',render:(p)=>p.w},
           {key:'l',label:'L',align:'right',render:(p)=>p.l},
-        ], 'Min 3 games required.')}
+        ], `Min ${minGames} game${minGames===1?'':'s'} required (10% of league games).`)}
       </div>
     </div>
   );
