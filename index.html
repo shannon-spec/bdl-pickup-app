@@ -3139,7 +3139,30 @@ function App() {
   const handleLogout = () => {
     setLoggedIn(false); setUserRole(null); setCurrentPlayer(null); setTab('dashboard');
     save('loggedIn', false); save('userRole', null); save('currentPlayer', null);
+    save('adminUsername', null);
   };
+
+  // Rehydrate the admin session's linked player from the current super admin
+  // record. Handles the case where a session started before a link migration
+  // ran, so `currentPlayer` is stale (null) even though the username now has
+  // a linked playerId.
+  useEffect(() => {
+    if (!loggedIn || userRole !== 'admin') return;
+    let adminUsername = load('adminUsername', null);
+    const admins = load('superAdmins', []);
+    // Back-compat: sessions that predate adminUsername storage fall back to
+    // the 'admin' owner (or the first owner).
+    if (!adminUsername) {
+      const owner = admins.find(a => a.username === 'admin') || admins.find(a => a.role === 'owner') || admins[0];
+      adminUsername = owner?.username || null;
+      if (adminUsername) save('adminUsername', adminUsername);
+    }
+    const admin = admins.find(a => a.username === adminUsername);
+    if (!admin || !admin.playerId) return;
+    if (currentPlayer && currentPlayer.id === admin.playerId) return;
+    const fresh = roster.find(p => p.id === admin.playerId);
+    if (fresh) { setCurrentPlayer(fresh); save('currentPlayer', fresh); }
+  }, [loggedIn, userRole, roster]);
 
   // Handle invite link
   if (inviteParam && !inviteHandled) {
@@ -3365,6 +3388,7 @@ function LoginScreen({ onLogin, roster, setRoster, leagues, setLeagues }) {
     const adminMatch = superAdmins.find(a => a.username.toLowerCase() === user.toLowerCase());
     if (adminMatch && pass === ADMIN_PASS) {
       const linkedPlayer = adminMatch.playerId ? roster.find(p => p.id === adminMatch.playerId) : null;
+      save('adminUsername', adminMatch.username);
       onLogin('admin', linkedPlayer || null);
     }
     else { setErr('Invalid credentials.'); }
