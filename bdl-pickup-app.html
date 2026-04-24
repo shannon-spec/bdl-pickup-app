@@ -2,8 +2,11 @@
 <html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>BDL Pickup App V2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
@@ -11,61 +14,121 @@
 /* ========== RESET ========== */
 *{margin:0;padding:0;box-sizing:border-box}
 
-/* ========== ON3 DESIGN TOKENS ========== */
+/* ========== BDL V2 DESIGN TOKENS ========== */
 :root, [data-theme="light"] {
-  --brand: #FE3B1F;
-  --brand-hover: #e5331a;
-  --bg: #F5F5F7;
-  --bg-subtle: #EEEFF1;
+  /* brand */
+  --brand: #F04E23;
+  --brand-hover: #D8431C;
+  --brand-ink: #9B2A10;
+  --brand-soft: #FDE7DF;
+  --brand-bg: #FDE7DF;
+
+  /* surfaces */
+  --bg: #F6F6F4;
+  --bg-subtle: #FAFAF8;
   --surface: #FFFFFF;
-  --surface-hover: #FAFAFA;
-  --border: rgba(0,0,0,0.08);
-  --border-strong: rgba(0,0,0,0.12);
-  --text-primary: #1D252C;
-  --text-muted: #A1A9AC;
+  --surface-2: #FAFAF8;
+  --surface-hover: #FAFAF8;
+
+  /* borders */
+  --border: #ECEAE4;
+  --border-strong: #DFDCD4;
+
+  /* text */
+  --text-primary: #0E0E0C;
+  --text-2: #4A4A46;
+  --text-3: #8A8A82;
+  --text-4: #B5B3AB;
+  --text-muted: #8A8A82;
   --text-inverse: #FFFFFF;
-  --green: #34C759;
-  --green-bg: rgba(52,199,89,0.1);
-  --red: #FF3B30;
-  --red-bg: rgba(255,59,48,0.08);
-  --blue: #007AFF;
-  --blue-bg: rgba(0,122,255,0.08);
-  --yellow: #FF9500;
-  --yellow-bg: rgba(255,149,0,0.1);
-  --brand-bg: rgba(254,59,31,0.08);
+
+  /* status */
+  --win: #0F9D58;
+  --win-soft: #E3F4EA;
+  --locked: #0F9D58;
+  --locked-soft: #E3F4EA;
+  --green: #0F9D58;
+  --green-bg: #E3F4EA;
+  --red: #D1331F;
+  --red-bg: rgba(209,51,31,0.08);
+  --blue: #2F6FEB;
+  --blue-bg: rgba(47,111,235,0.10);
+  --yellow: #C77A00;
+  --yellow-bg: rgba(199,122,0,0.10);
+
+  /* winner chips */
+  --winner-white-bg: #F1EFE8;
+  --winner-white-text: #0E0E0C;
+  --winner-dark-bg: #0E0E0C;
+  --winner-dark-text: #F5F4EF;
+
+  /* shadows */
+  --shadow-sm: 0 1px 2px rgba(15,15,10,.04);
+  --shadow-md: 0 2px 6px rgba(15,15,10,.05), 0 1px 2px rgba(15,15,10,.04);
+
+  /* misc */
   --modal-overlay: rgba(0,0,0,0.4);
-  --toast-bg: #1D252C;
+  --toast-bg: #0E0E0C;
   --toast-text: #FFFFFF;
-  --input-bg: #F5F5F7;
+  --input-bg: #FFFFFF;
 }
 
 [data-theme="dark"] {
-  --bg: #1D252C;
-  --bg-subtle: #252F38;
-  --surface: #252F38;
-  --surface-hover: #2C3640;
-  --border: rgba(161,169,172,0.12);
-  --border-strong: rgba(161,169,172,0.2);
-  --text-primary: #FFFFFF;
-  --text-muted: rgba(161,169,172,0.85);
-  --text-inverse: #1D252C;
-  --green-bg: rgba(52,199,89,0.15);
-  --red-bg: rgba(255,59,48,0.12);
-  --blue-bg: rgba(0,122,255,0.12);
-  --yellow-bg: rgba(255,149,0,0.12);
-  --brand-bg: rgba(254,59,31,0.12);
+  --brand: #FF6B3D;
+  --brand-hover: #FF7F55;
+  --brand-ink: #FFB8A0;
+  --brand-soft: #3A1A10;
+  --brand-bg: #3A1A10;
+
+  --bg: #0B0B0A;
+  --bg-subtle: #1B1B19;
+  --surface: #141413;
+  --surface-2: #1B1B19;
+  --surface-hover: #1B1B19;
+
+  --border: #262522;
+  --border-strong: #33322D;
+
+  --text-primary: #F5F4EF;
+  --text-2: #C9C7BF;
+  --text-3: #8B8A82;
+  --text-4: #5A5954;
+  --text-muted: #8B8A82;
+  --text-inverse: #0E0E0C;
+
+  --win: #34D399;
+  --win-soft: #0E2A1F;
+  --locked: #34D399;
+  --locked-soft: #0E2A1F;
+  --green: #34D399;
+  --green-bg: #0E2A1F;
+  --red: #FF4D3D;
+  --red-bg: rgba(255,77,61,0.14);
+  --blue: #8BB3FF;
+  --blue-bg: rgba(139,179,255,0.14);
+  --yellow: #E0A84A;
+  --yellow-bg: rgba(224,168,74,0.14);
+
+  --winner-white-bg: #2A2A26;
+  --winner-white-text: #F5F4EF;
+  --winner-dark-bg: #0B0B0A;
+  --winner-dark-text: #F5F4EF;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.35);
+  --shadow-md: 0 2px 6px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.25);
+
   --modal-overlay: rgba(0,0,0,0.6);
-  --toast-bg: #FFFFFF;
-  --toast-text: #1D252C;
-  --input-bg: #1D252C;
+  --toast-bg: #F5F4EF;
+  --toast-text: #0E0E0C;
+  --input-bg: #1B1B19;
 }
 
 /* ========== BASE ========== */
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
   background: var(--bg);
   color: var(--text-primary);
-  min-height: 100vh;
+  min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background 0.2s ease, color 0.2s ease;
@@ -74,7 +137,16 @@ body {
 .app {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 20px 64px;
+  padding: clamp(16px,3vw,28px) clamp(16px,4vw,40px) clamp(32px,6vw,64px);
+  padding-left: max(clamp(16px,4vw,40px), env(safe-area-inset-left));
+  padding-right: max(clamp(16px,4vw,40px), env(safe-area-inset-right));
+  min-height: 100dvh;
+}
+
+button { -webkit-tap-highlight-color: transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
 }
 
 /* ========== HEADER ========== */
@@ -82,29 +154,174 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 0;
-  margin-bottom: 32px;
-  flex-wrap: wrap;
+  padding: clamp(12px,2vw,20px) 0 clamp(16px,3vw,24px);
+  margin-bottom: clamp(16px,3vw,24px);
   gap: 12px;
 }
-.header h1 {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
+.brand-link {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+}
+.brand-ball {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 30%, #ff8a5c, #F04E23 55%, #9B2A10);
+  position: relative;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(15,15,10,0.18);
+}
+.brand-ball::before, .brand-ball::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.brand-ball::before {
+  border-left: 1.5px solid rgba(255,255,255,0.35);
+  border-right: 1.5px solid rgba(255,255,255,0.35);
+  margin: 0 50% 0 calc(50% - 1px);
+  width: 2px;
+  height: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: transparent;
+}
+.brand-ball::after {
+  background:
+    radial-gradient(circle at 50% 50%, transparent 62%, rgba(0,0,0,0.18) 62.5%, transparent 64%),
+    radial-gradient(circle at 50% 50%, transparent 45%, rgba(255,255,255,0.28) 45.5%, transparent 47%),
+    radial-gradient(circle at 50% 50%, transparent 30%, rgba(255,255,255,0.28) 30.5%, transparent 32%);
+}
+.brand-text { display: flex; flex-direction: column; line-height: 1; min-width: 0; }
+.brand-word {
+  font-family: 'Inter', inherit;
+  font-size: clamp(18px,3vw,20px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
   color: var(--text-primary);
 }
-.header h1 .brand-mark {
-  color: var(--brand);
+.brand-sub {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-top: 6px;
+  white-space: nowrap;
 }
+@media (max-width: 960px) { .brand-sub { display: none; } }
+@media (max-width: 380px) {
+  .brand-ball { width: 34px; height: 34px; }
+  .brand-word { font-size: 17px; }
+}
+
 .header-right {
   display: flex;
   align-items: center;
   gap: 10px;
 }
+
+/* Segmented role switcher (pill group) */
+.role-seg {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px;
+  gap: 2px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.role-seg button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--text-3);
+  padding: 8px 18px;
+  border-radius: 999px;
+  font: 600 12px/1 'Inter', inherit;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  min-height: 36px;
+  transition: color .15s ease, background .15s ease;
+}
+.role-seg button:hover { color: var(--text-primary); }
+.role-seg button[aria-selected="true"] {
+  background: var(--brand);
+  color: #fff;
+}
+.role-seg button[aria-selected="true"]:hover { background: var(--brand-hover); }
+
+/* Circular icon buttons (settings, theme toggle) */
+.icon-btn {
+  width: 40px; height: 40px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+  box-shadow: var(--shadow-sm);
+}
+.icon-btn:hover { color: var(--text-primary); border-color: var(--border-strong); }
+.icon-btn svg { width: 18px; height: 18px; }
+.theme-toggle { /* legacy class retained, mapped to icon-btn look */
+  width: 40px; height: 40px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+  box-shadow: var(--shadow-sm);
+}
+.theme-toggle:hover { color: var(--text-primary); border-color: var(--border-strong); }
+.theme-toggle svg { width: 18px; height: 18px; }
+
+/* Logout pill */
+.logout-btn {
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
+  font: 600 12px/1 'Inter', inherit;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: border-color .15s ease, background .15s ease;
+}
+.logout-btn:hover { border-color: var(--border-strong); background: var(--surface-2); }
+
+/* Hamburger (mobile-only) */
+.hamburger {
+  display: none;
+  width: 40px; height: 40px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
+  align-items: center; justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+.hamburger svg { width: 20px; height: 20px; }
+
+/* legacy admin-badge retained for non-header usages */
 .admin-badge {
   background: var(--brand);
   color: #fff;
@@ -116,69 +333,314 @@ body {
   text-transform: uppercase;
 }
 
-/* Theme Toggle */
-.theme-toggle {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
+/* Mobile bottom sheet */
+.sheet-overlay {
+  position: fixed; inset: 0;
+  background: var(--modal-overlay);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  animation: sheetFade .2s ease;
+}
+@keyframes sheetFade { from { opacity: 0; } to { opacity: 1; } }
+.sheet {
+  width: 100%;
   background: var(--surface);
-  color: var(--text-muted);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s ease;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  padding: 8px 20px calc(20px + env(safe-area-inset-bottom));
+  box-shadow: 0 -8px 24px rgba(0,0,0,0.18);
+  animation: sheetSlide .22s ease;
+  display: flex; flex-direction: column; gap: 4px;
 }
-.theme-toggle:hover {
-  color: var(--text-primary);
-  border-color: var(--border-strong);
+@keyframes sheetSlide { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.sheet-handle {
+  width: 40px; height: 4px;
+  border-radius: 999px;
+  background: var(--border-strong);
+  margin: 6px auto 14px;
 }
-.theme-toggle svg {
-  width: 18px;
-  height: 18px;
-}
-
-/* ========== TABS ========== */
-.tabs {
-  display: flex;
-  gap: 2px;
-  margin-bottom: 28px;
-  overflow-x: auto;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 0;
-}
-.tab {
-  padding: 10px 18px;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  transition: all 0.15s ease;
-}
-.tab:hover {
-  color: var(--text-primary);
-}
-.tab.active {
-  color: var(--brand);
-  border-bottom-color: var(--brand);
-}
-
-/* ========== SECTION LABELS ========== */
-.section-label {
+.sheet-section { padding: 6px 0 14px; }
+.sheet-label {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-3);
+  margin-bottom: 10px;
+}
+.role-seg-full { display: flex; width: 100%; }
+.role-seg-full button { flex: 1; padding: 10px 8px; }
+.sheet-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 52px;
+  padding: 0 4px;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--border);
+  color: var(--text-primary);
+  font: 600 15px/1 'Inter', inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.sheet-row:first-of-type { border-top: 0; }
+.sheet-row svg { width: 20px; height: 20px; color: var(--text-2); }
+.sheet-row-theme .theme-toggle {
+  width: 36px; height: 36px;
+  box-shadow: none;
+}
+.sheet-row-danger { color: var(--brand); font-weight: 700; }
+
+/* Responsive header visibility */
+@media (max-width: 640px) {
+  .header-desktop { display: none; }
+  .hamburger { display: inline-flex; }
+}
+@media (min-width: 641px) {
+  .hamburger { display: none; }
+}
+@media (max-width: 780px) and (min-width: 641px) {
+  .role-seg button { padding: 8px 12px; }
+}
+
+/* ========== TABS ========== */
+.tabs-wrap {
+  position: relative;
+  margin-bottom: clamp(18px,3vw,28px);
+  border-bottom: 1px solid var(--border);
+}
+.tabs {
+  display: flex;
+  gap: clamp(8px,2vw,20px);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scroll-snap-type: x proximity;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  scroll-snap-align: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 10px;
+  min-height: 44px;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  font: 500 14px/1 'Inter', inherit;
+  letter-spacing: 0;
+  white-space: nowrap;
+  transition: color .15s ease, border-color .15s ease, font-weight .15s ease;
+  margin-bottom: -1px;
+}
+.tab:hover { color: var(--text-primary); }
+.tab.active {
+  color: var(--text-primary);
+  font-weight: 600;
+  border-bottom-color: var(--brand);
+  box-shadow: inset 10px 0 0 0 transparent, inset -10px 0 0 0 transparent;
+}
+.tab-count {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-4);
+  font-variant-numeric: tabular-nums;
+}
+.tab.active .tab-count { color: var(--text-3); }
+@media (max-width: 640px) {
+  .tabs-wrap::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0; bottom: 1px;
+    width: 32px;
+    background: linear-gradient(to right, transparent, var(--bg));
+    pointer-events: none;
+  }
+}
+
+/* ========== SECTION LABELS ========== */
+.section-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-2);
   padding-left: 12px;
-  border-left: 2px solid var(--brand);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
   margin-bottom: 16px;
+}
+.section-head .section-label { margin-bottom: 0; }
+.section-label::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 14px;
+  background: var(--brand);
+  border-radius: 2px;
+}
+
+/* Dashboard/section header row with right-side link */
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.section-link {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font: 500 12px/1 'Inter', inherit;
+  color: var(--text-3);
+  padding: 6px 4px;
+  transition: color .15s ease;
+}
+.section-link:hover { color: var(--text-primary); }
+
+/* V2 data card wrapper for tables */
+.data-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  margin-bottom: clamp(20px,3vw,28px);
+}
+.data-card .empty { padding: 32px 20px; text-align: center; color: var(--text-3); }
+.data-table-wrap { overflow-x: auto; }
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: clamp(13px,2.6vw,14px);
+}
+.data-table thead th {
+  text-align: left;
+  background: var(--surface-2);
+  padding: 10px 18px;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.data-table tbody td {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+.data-table tbody tr:last-child td { border-bottom: 0; }
+.data-table tbody tr.row-clickable { cursor: pointer; transition: background .12s ease; }
+.data-table tbody tr.row-clickable:hover td { background: var(--surface-2); }
+.data-table .col-score { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Date stack (upcoming) */
+.date-stack { display: flex; flex-direction: column; gap: 6px; line-height: 1; font-variant-numeric: tabular-nums; }
+.date-stack .date-top { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; color: var(--text-3); text-transform: uppercase; }
+.date-stack .date-bot { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.date-stack.is-compact .date-top { font-size: 10.5px; }
+
+/* Date cell (recent results) */
+.date-cell { font-variant-numeric: tabular-nums; color: var(--text-2); }
+.date-cell strong { color: var(--text-primary); font-weight: 600; }
+
+/* Matchup */
+.matchup { display: inline-flex; align-items: baseline; gap: 0; font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.matchup .vs { color: var(--text-4); font-weight: 500; margin: 0 8px; font-size: 13px; }
+
+/* Score — mono */
+.score { font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 15px; display: inline-flex; align-items: baseline; gap: 8px; }
+.score .n-win { color: var(--text-primary); }
+.score .n-lose { color: var(--text-3); }
+.score .n-sep { color: var(--text-4); font-weight: 500; }
+
+/* Unified badge system */
+.bdg {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font: 600 11px/1 'Inter', inherit;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.bdg-format { background: var(--brand-soft); color: var(--brand-ink); }
+.bdg-locked { background: var(--locked-soft); color: var(--locked); }
+.bdg-open   { background: var(--yellow-bg); color: var(--yellow); }
+.bdg-dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; display: inline-block; }
+.bdg-white { background: var(--winner-white-bg); color: var(--winner-white-text); border: 1px solid var(--border); }
+.bdg-dark { background: var(--winner-dark-bg); color: var(--winner-dark-text); }
+
+/* League pill with gradient dot */
+.league-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 14px 4px 4px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.league-pill .league-dot {
+  width: 18px; height: 18px; border-radius: 999px;
+  background: linear-gradient(135deg, var(--brand), #8B2FA0);
+  flex-shrink: 0;
+}
+
+.text-muted { color: var(--text-3); }
+
+/* Mobile card list for Dashboard tables */
+.card-list { display: flex; flex-direction: column; }
+.mini-card {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 14px 16px;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--border);
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  color: inherit;
+}
+.mini-card:first-child { border-top: 0; }
+.mini-card:hover { background: var(--surface-2); }
+.mini-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mini-mid { font-size: 15px; font-weight: 700; }
+.mini-bot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mini-meta { font-size: 12px; color: var(--text-3); }
+
+/* Responsive list visibility */
+.only-desktop { display: block; }
+.only-mobile { display: none; }
+@media (max-width: 640px) {
+  .only-desktop { display: none; }
+  .only-mobile { display: block; }
+  .data-card { border-radius: 14px; }
 }
 
 /* ========== CARDS ========== */
@@ -382,6 +844,66 @@ tr:hover td {
   margin-top: 6px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+/* V2 dashboard stat cards */
+.stat-grid-v2 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: clamp(20px,3vw,28px);
+}
+@media (max-width: 960px) and (min-width: 641px) { .stat-grid-v2 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .stat-grid-v2 { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
+.stat-v2 {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: relative;
+}
+.stat-v2 .stat-icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.stat-v2 .stat-icon svg { width: 18px; height: 18px; }
+.stat-v2.is-win .stat-icon { background: var(--win-soft); color: var(--win); }
+.stat-v2 .stat-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.stat-v2 .stat-value {
+  font: 700 clamp(24px,5.5vw,30px)/1 'Inter', inherit;
+  letter-spacing: -0.025em;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.stat-v2 .stat-label {
+  font-size: clamp(10px,2.2vw,11px);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.stat-v2 .stat-delta {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--win-soft);
+  color: var(--win);
+  font: 600 11px/1 'Inter', inherit;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ========== BADGES ========== */
@@ -1925,29 +2447,15 @@ const getInviteEmailBody = (invite) => {
 
 // ============= LOGO — THE COURT MARK ==============
 const BDLLogo = ({ size = 'default' }) => {
-  if (size === 'large') {
-    return (
-      <svg width="220" height="64" viewBox="0 0 220 64" fill="none" style={{display:'block'}}>
-        <circle cx="28" cy="32" r="24" fill="var(--brand)"/>
-        <path d="M28 8 V56" stroke="#FFF" strokeWidth="2" opacity="0.35"/>
-        <path d="M4.5 30 C14 22, 42 22, 51.5 30" stroke="#FFF" strokeWidth="2" fill="none" opacity="0.35"/>
-        <path d="M4.5 34 C14 42, 42 42, 51.5 34" stroke="#FFF" strokeWidth="2" fill="none" opacity="0.35"/>
-        <text x="28" y="37.5" textAnchor="middle" fontFamily="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" fontSize="14" fontWeight="900" letterSpacing="-0.03em" fill="#FFF">BDL</text>
-        <text x="64" y="38" fontFamily="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" fontSize="34" fontWeight="800" letterSpacing="-0.03em" fill="var(--text-primary)">BDL</text>
-        <text x="65" y="54" fontFamily="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" fontSize="8.5" fontWeight="600" letterSpacing="0.12em" fill="var(--text-muted)">BALL DON'T LIE PICKUP TRACKER</text>
-      </svg>
-    );
-  }
+  const dim = size === 'large' ? 56 : 42;
   return (
-    <svg width="220" height="42" viewBox="0 0 220 42" fill="none" style={{display:'block'}}>
-      <circle cx="16" cy="16" r="14" fill="var(--brand)"/>
-      <path d="M16 2 V30" stroke="#FFF" strokeWidth="1.5" opacity="0.35"/>
-      <path d="M2.5 15 C8 10, 24 10, 29.5 15" stroke="#FFF" strokeWidth="1.5" fill="none" opacity="0.35"/>
-      <path d="M2.5 17 C8 22, 24 22, 29.5 17" stroke="#FFF" strokeWidth="1.5" fill="none" opacity="0.35"/>
-      <text x="16" y="19" textAnchor="middle" fontFamily="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" fontSize="8" fontWeight="900" letterSpacing="-0.02em" fill="#FFF">BDL</text>
-      <text x="37" y="20" fontFamily="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" fontSize="20" fontWeight="800" letterSpacing="-0.03em" fill="var(--text-primary)">BDL</text>
-      <text x="37" y="34" fontFamily="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif" fontSize="7" fontWeight="600" letterSpacing="0.1em" fill="var(--text-muted)">BALL DON'T LIE PICKUP TRACKER</text>
-    </svg>
+    <div className="brand-link" aria-label="BDL — Ball Don't Lie Pickup Tracker">
+      <div className="brand-ball" style={{width:dim,height:dim}} aria-hidden="true" />
+      <div className="brand-text">
+        <div className="brand-word">BDL</div>
+        <div className="brand-sub">Ball Don't Lie · Pickup Tracker</div>
+      </div>
+    </div>
   );
 };
 
@@ -2135,6 +2643,14 @@ function App() {
   if (!loggedIn) return <LoginScreen onLogin={handleLogin} roster={roster} setRoster={(r) => { setRoster(r); save('roster', r); }} leagues={leagues} setLeagues={(l) => { setLeagues(l); save('leagues', l); }} />;
 
   const [viewAs, setViewAs] = useState('admin'); // 'admin' | 'commissioner' | 'player'
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [mobileMenuOpen]);
 
   const trueAdmin = userRole === 'admin';
   const isAdmin = trueAdmin && viewAs === 'admin';
@@ -2186,37 +2702,73 @@ function App() {
     <div className="app">
       <header className="header">
         <BDLLogo />
-        <div className="header-right">
-          {/* User identity */}
-          <div style={{display:'flex',alignItems:'center',gap:6}}>
-            {isAdmin ? (
-              <span className="admin-badge">{livePlayer ? `${livePlayer.firstName} ${livePlayer.lastName}` : 'Admin'}</span>
-            ) : isCommissioner ? (
-              <span className="commish-badge" style={{fontSize:10,padding:'4px 10px',borderRadius:100}}>{livePlayer ? `${livePlayer.firstName} ${livePlayer.lastName}` : 'Commissioner'}</span>
-            ) : (
-              <span className="player-badge">{livePlayer ? `${livePlayer.firstName} ${livePlayer.lastName}` : 'Player'}</span>
-            )}
-          </div>
-          {/* Role switcher + controls */}
+        <div className="header-right header-desktop">
           {trueAdmin && (
-            <div className="role-switcher">
-              <button className={viewAs==='admin'?'active-admin':''} onClick={()=>setViewAs('admin')}>Admin</button>
-              <button className={viewAs==='commissioner'?'active-commish':''} onClick={()=>setViewAs('commissioner')}>Commish</button>
-              <button className={viewAs==='player'?'active-player':''} onClick={()=>setViewAs('player')}>Player</button>
+            <div className="role-seg" role="tablist" aria-label="Switch role">
+              <button role="tab" aria-selected={viewAs==='admin'} onClick={()=>setViewAs('admin')}>Admin</button>
+              <button role="tab" aria-selected={viewAs==='commissioner'} onClick={()=>setViewAs('commissioner')}>Commish</button>
+              <button role="tab" aria-selected={viewAs==='player'} onClick={()=>setViewAs('player')}>Player</button>
             </div>
           )}
           {isAdmin && (
-            <button className="theme-toggle" onClick={() => setTab('admin')} aria-label="Settings" title="Settings"><GearIcon /></button>
+            <button className="icon-btn" onClick={() => setTab('admin')} aria-label="Settings" title="Settings"><GearIcon /></button>
           )}
           <ThemeToggle />
-          <button className="btn btn-secondary btn-small" onClick={handleLogout}>Logout</button>
+          <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </div>
+        <button className="hamburger" aria-label="Open menu" onClick={() => setMobileMenuOpen(true)}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+        </button>
       </header>
-      <nav className="tabs">
-        {tabs.map(t => (
-          <button key={t.id} className={`tab ${tab === t.id ? 'active' : ''}`} onClick={() => setTab(t.id)}>{t.label}</button>
-        ))}
-      </nav>
+      {mobileMenuOpen && (
+        <div className="sheet-overlay" role="dialog" aria-label="Menu" onClick={() => setMobileMenuOpen(false)}>
+          <div className="sheet" onClick={e => e.stopPropagation()}>
+            <div className="sheet-handle" />
+            {trueAdmin && (
+              <div className="sheet-section">
+                <div className="sheet-label">View as</div>
+                <div className="role-seg role-seg-full" role="tablist" aria-label="Switch role">
+                  <button role="tab" aria-selected={viewAs==='admin'} onClick={()=>{setViewAs('admin'); setMobileMenuOpen(false);}}>Admin</button>
+                  <button role="tab" aria-selected={viewAs==='commissioner'} onClick={()=>{setViewAs('commissioner'); setMobileMenuOpen(false);}}>Commish</button>
+                  <button role="tab" aria-selected={viewAs==='player'} onClick={()=>{setViewAs('player'); setMobileMenuOpen(false);}}>Player</button>
+                </div>
+              </div>
+            )}
+            {isAdmin && (
+              <button className="sheet-row" onClick={() => { setTab('admin'); setMobileMenuOpen(false); }}>
+                <GearIcon /> <span>Settings</span>
+              </button>
+            )}
+            <div className="sheet-row sheet-row-theme"><ThemeToggle /><span>Theme</span></div>
+            <button className="sheet-row sheet-row-danger" onClick={() => { handleLogout(); setMobileMenuOpen(false); }}>
+              <span>Logout</span>
+            </button>
+          </div>
+        </div>
+      )}
+      <div className="tabs-wrap">
+        <nav className="tabs" role="tablist">
+          {tabs.map(t => {
+            const count = t.id === 'roster' ? roster.length
+              : t.id === 'leagues' ? leagues.length
+              : t.id === 'games' ? games.length
+              : null;
+            const isActive = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                role="tab"
+                aria-selected={isActive}
+                className={`tab ${isActive ? 'active' : ''}`}
+                onClick={() => setTab(t.id)}
+              >
+                {t.label}
+                {count !== null && <span className="tab-count">{count}</span>}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
       {viewGameId ? <GameDetail gameId={viewGameId} games={games} setGames={setGames} roster={roster} leagues={leagues} showToast={showToast} onClose={() => setViewGameId(null)} isAdmin={isAdmin || isCommissioner} /> : (
         <div>
           {tab === 'dashboard' && <Dashboard roster={roster} leagues={leagues} games={games} setTab={setTab} onViewGame={onViewGame} />}
@@ -2502,70 +3054,200 @@ function LoginScreen({ onLogin, roster, setRoster, leagues, setLeagues }) {
 function Dashboard({ roster, leagues, games, setTab, onViewGame }) {
   const totalGames = games.length;
   const completed = games.filter(g => isGameComplete(g)).length;
-  const upcoming = games.filter(g => g.scoreA === null || g.scoreB === null).length;
+  const upcomingList = games.filter(g => !isGameComplete(g));
+  const upcoming = upcomingList.length;
+  const completedPct = totalGames > 0 ? Math.round(completed / totalGames * 100) : 0;
+
+  const PlayersIcon = () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>);
+  const TrophyIcon = () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4a2 2 0 0 1-2-2V5h4"/><path d="M18 9h2a2 2 0 0 0 2-2V5h-4"/><path d="M6 5v4a6 6 0 0 0 12 0V5z"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>);
+  const GlobeIcon = () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>);
+  const CheckIcon = () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>);
+  const ChevronRight = () => (<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>);
 
   return (
     <div>
-      <div className="stat-grid">
-        <div className="stat-card"><div className="num">{roster.length}</div><div className="label">Players</div></div>
-        <div className="stat-card"><div className="num">{leagues.length}</div><div className="label">Leagues</div></div>
-        <div className="stat-card"><div className="num">{totalGames}</div><div className="label">Total Games</div></div>
-        <div className="stat-card"><div className="num">{completed}</div><div className="label">Completed</div></div>
+      <div className="stat-grid-v2">
+        <div className="stat-v2">
+          <span className="stat-icon"><PlayersIcon /></span>
+          <span className="stat-body">
+            <span className="stat-value">{roster.length}</span>
+            <span className="stat-label">Players</span>
+          </span>
+        </div>
+        <div className="stat-v2">
+          <span className="stat-icon"><TrophyIcon /></span>
+          <span className="stat-body">
+            <span className="stat-value">{leagues.length}</span>
+            <span className="stat-label">Leagues</span>
+          </span>
+        </div>
+        <div className="stat-v2">
+          <span className="stat-icon"><GlobeIcon /></span>
+          <span className="stat-body">
+            <span className="stat-value">{totalGames}</span>
+            <span className="stat-label">Total Games</span>
+          </span>
+        </div>
+        <div className="stat-v2 is-win">
+          <span className="stat-icon"><CheckIcon /></span>
+          <span className="stat-body">
+            <span className="stat-value">{completed}</span>
+            <span className="stat-label">Completed</span>
+          </span>
+          {totalGames > 0 && <span className="stat-delta">{completedPct}%</span>}
+        </div>
       </div>
 
-      <div className="section-label">Upcoming Games</div>
-      <div className="card">
+      <div className="section-head">
+        <div className="section-label">Upcoming Games</div>
+        <button className="section-link" onClick={() => setTab('games')}>View schedule <ChevronRight /></button>
+      </div>
+      <div className="data-card">
         {upcoming === 0 ? (
           <div className="empty">
             <p>No upcoming games scheduled</p>
             <button className="btn btn-primary btn-small" style={{marginTop:14}} onClick={() => setTab('games')}>Schedule a Game</button>
           </div>
         ) : (
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>Date</th><th>League</th><th>Matchup</th><th>Format</th><th>Status</th></tr></thead>
-              <tbody>
-                {games.filter(g => g.scoreA === null || g.scoreB === null).slice(0,5).map(g => (
-                  <tr key={g.id}>
-                    <td>{fmtGameDate(g.gameDate)}</td>
-                    <td>{g.leagueName || '—'}</td>
-                    <td><strong style={{cursor:'pointer',color:'var(--brand)'}} onClick={() => onViewGame && onViewGame(g.id)}>{g.teamAName} vs {g.teamBName}</strong></td>
-                    <td><span className="badge badge-brand">{g.format?.replace('-series','') || '5v5'}</span></td>
-                    <td><span className={`badge ${g.locked ? 'badge-green' : 'badge-yellow'}`}>{g.locked ? 'Locked' : 'Open'}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <React.Fragment>
+            <div className="data-table-wrap only-desktop">
+              <table className="data-table">
+                <thead><tr><th>Date</th><th>League</th><th>Matchup</th><th>Format</th><th>Status</th></tr></thead>
+                <tbody>
+                  {upcomingList.slice(0,5).map(g => (
+                    <tr key={g.id} onClick={() => onViewGame && onViewGame(g.id)} className="row-clickable">
+                      <td><DateStack dateStr={g.gameDate} timeStr={g.gameTime} /></td>
+                      <td><LeaguePill name={g.leagueName} /></td>
+                      <td><Matchup a={g.teamAName} b={g.teamBName} /></td>
+                      <td><span className="bdg bdg-format">{(g.format?.replace('-series','') || '5v5').replace('v',' V ').toUpperCase()}</span></td>
+                      <td><span className={`bdg ${g.locked ? 'bdg-locked' : 'bdg-open'}`}><span className="bdg-dot"/>{g.locked ? 'Locked' : 'Open'}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="card-list only-mobile">
+              {upcomingList.slice(0,5).map(g => (
+                <button key={g.id} className="mini-card" onClick={() => onViewGame && onViewGame(g.id)}>
+                  <div className="mini-top">
+                    <DateStack dateStr={g.gameDate} timeStr={g.gameTime} compact />
+                    <span className={`bdg ${g.locked ? 'bdg-locked' : 'bdg-open'}`}><span className="bdg-dot"/>{g.locked ? 'Locked' : 'Open'}</span>
+                  </div>
+                  <div className="mini-mid"><Matchup a={g.teamAName} b={g.teamBName} /></div>
+                  <div className="mini-bot">
+                    <LeaguePill name={g.leagueName} />
+                    <span className="bdg bdg-format">{(g.format?.replace('-series','') || '5v5').replace('v',' V ').toUpperCase()}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </React.Fragment>
         )}
       </div>
 
-      <div className="section-label" style={{marginTop:28}}>Recent Results</div>
-      <div className="card">
+      <div className="section-head" style={{marginTop: 'clamp(20px,3vw,28px)'}}>
+        <div className="section-label">Recent Results</div>
+        <button className="section-link" onClick={() => setTab('games')}>All games <ChevronRight /></button>
+      </div>
+      <div className="data-card">
         {completed === 0 ? (
           <div className="empty"><p>No completed games yet</p></div>
         ) : (
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>Date</th><th>Matchup</th><th>Score</th><th>Winner</th></tr></thead>
-              <tbody>
-                {games.filter(g => isGameComplete(g)).slice(-5).reverse().map(g => {
-                  const wt = getGameWinTeam(g); const w = wt === 'A' ? g.teamAName : wt === 'B' ? g.teamBName : 'Tie';
-                  return (
-                    <tr key={g.id}>
-                      <td>{fmtGameDate(g.gameDate)}</td>
-                      <td><strong style={{cursor:'pointer',color:'var(--brand)'}} onClick={() => onViewGame && onViewGame(g.id)}>{g.teamAName} vs {g.teamBName}</strong></td>
-                      <td>{g.scoreA !== null && g.scoreB !== null ? <strong>{g.scoreA} — {g.scoreB}</strong> : <span className="badge badge-green">{w} W</span>}</td>
-                      <td><span className="badge badge-green">{w}</span></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <React.Fragment>
+            <div className="data-table-wrap only-desktop">
+              <table className="data-table">
+                <thead><tr><th>Date</th><th>Matchup</th><th className="col-score">Score</th><th>Winner</th></tr></thead>
+                <tbody>
+                  {games.filter(g => isGameComplete(g)).slice(-5).reverse().map(g => {
+                    const wt = getGameWinTeam(g);
+                    const winA = wt === 'A'; const winB = wt === 'B';
+                    return (
+                      <tr key={g.id} onClick={() => onViewGame && onViewGame(g.id)} className="row-clickable">
+                        <td><DateCell dateStr={g.gameDate} /></td>
+                        <td><Matchup a={g.teamAName} b={g.teamBName} /></td>
+                        <td className="col-score"><Score a={g.scoreA} b={g.scoreB} winA={winA} winB={winB} /></td>
+                        <td><WinnerChip team={wt === 'A' ? g.teamAName : wt === 'B' ? g.teamBName : null} /></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="card-list only-mobile">
+              {games.filter(g => isGameComplete(g)).slice(-5).reverse().map(g => {
+                const wt = getGameWinTeam(g); const winA = wt === 'A'; const winB = wt === 'B';
+                return (
+                  <button key={g.id} className="mini-card" onClick={() => onViewGame && onViewGame(g.id)}>
+                    <div className="mini-top">
+                      <DateStack dateStr={g.gameDate} compact />
+                      <WinnerChip team={wt === 'A' ? g.teamAName : wt === 'B' ? g.teamBName : null} />
+                    </div>
+                    <div className="mini-mid"><Matchup a={g.teamAName} b={g.teamBName} /></div>
+                    <div className="mini-bot">
+                      <Score a={g.scoreA} b={g.scoreB} winA={winA} winB={winB} />
+                      <span className="mini-meta">{g.leagueName || ''}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </React.Fragment>
         )}
       </div>
     </div>
+  );
+}
+
+// ===== Dashboard helpers =====
+function DateStack({ dateStr, timeStr, compact }) {
+  if (!dateStr) return <span className="text-muted">—</span>;
+  const d = new Date(dateStr + 'T00:00:00');
+  const days = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const top = `${days[d.getDay()]} · ${months[d.getMonth()]} ${d.getDate()}`;
+  const year = d.getFullYear();
+  const time = timeStr ? fmtTime(timeStr) : null;
+  return (
+    <div className={`date-stack ${compact ? 'is-compact' : ''}`}>
+      <div className="date-top">{top}</div>
+      <div className="date-bot">{year}{time ? ` · ${time}` : ''}</div>
+    </div>
+  );
+}
+function DateCell({ dateStr }) {
+  if (!dateStr) return <span className="text-muted">—</span>;
+  const d = new Date(dateStr + 'T00:00:00');
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return (
+    <span className="date-cell"><strong>{`${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}`}</strong><span>, {d.getFullYear()}</span></span>
+  );
+}
+function Matchup({ a, b }) {
+  return <span className="matchup"><strong>{a || 'White'}</strong><span className="vs">vs</span><strong>{b || 'Dark'}</strong></span>;
+}
+function Score({ a, b, winA, winB }) {
+  if (a === null || a === undefined || b === null || b === undefined) return <span className="text-muted">—</span>;
+  return (
+    <span className="score">
+      <span className={winA ? 'n-win' : 'n-lose'}>{a}</span>
+      <span className="n-sep">—</span>
+      <span className={winB ? 'n-win' : 'n-lose'}>{b}</span>
+    </span>
+  );
+}
+function WinnerChip({ team }) {
+  if (!team) return <span className="text-muted">—</span>;
+  const isWhiteTeam = /white/i.test(team);
+  return <span className={`bdg ${isWhiteTeam ? 'bdg-white' : 'bdg-dark'}`}>{team}</span>;
+}
+function LeaguePill({ name }) {
+  if (!name) return <span className="text-muted">—</span>;
+  return (
+    <span className="league-pill">
+      <span className="league-dot" />
+      <span>{name}</span>
+    </span>
   );
 }
 
