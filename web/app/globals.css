@@ -1,0 +1,224 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is([data-theme="dark"] *));
+
+/* ====================================================================
+   BDL DESIGN TOKENS
+   Shared on :root, then theme-specific on [data-theme="dark"|"light"].
+   shadcn's expected variable names are mapped to BDL tokens so its
+   primitives inherit the same palette automatically.
+   ==================================================================== */
+:root {
+  --font: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* radii */
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 14px;
+  --r-2xl: 16px;
+  --r-pill: 999px;
+
+  /* durations */
+  --t-fast: 120ms;
+  --t-base: 200ms;
+  --t-slow: 320ms;
+  --ease: cubic-bezier(.2,.7,.2,1);
+
+  --z-sticky: 40;
+  --z-popover: 60;
+  --z-modal: 80;
+  --z-toast: 100;
+}
+
+[data-theme="dark"] {
+  --bg: #000000;
+  --surface: #0F0F0F;
+  --surface-2: #151515;
+
+  --hairline: #1E1E1E;
+  --hairline-2: #262626;
+
+  --text: #FFFFFF;
+  --text-2: #B8B8B6;
+  --text-3: #7A7A77;
+  --text-4: #4A4A47;
+
+  --up: #00E676;
+  --up-soft: rgba(0,230,118,.10);
+  --down: #FF3B5C;
+  --down-soft: rgba(255,59,92,.10);
+  --warn: #FFB020;
+  --warn-soft: rgba(255,176,32,.10);
+  --info: #4A9EFF;
+  --info-soft: rgba(74,158,255,.10);
+
+  --brand: #F04E23;
+  --brand-soft: rgba(240,78,35,.12);
+  --brand-ink: #FF6B3D;
+
+  --topbar-bg: rgba(0,0,0,.72);
+  --overlay: rgba(0,0,0,.72);
+  --mark-inset: rgba(255,255,255,.06);
+  --cta-shadow: 0 4px 14px rgba(240,78,35,.30);
+  --badge-dot-border: var(--bg);
+
+  --tb-white-bg: #F5F4EF; --tb-white-fg: #0E0E0C;
+  --tb-dark-bg: #0E0E0C;  --tb-dark-fg: #F5F4EF;
+}
+
+[data-theme="light"] {
+  --bg: #F7F7F4;
+  --surface: #FFFFFF;
+  --surface-2: #F2F1EC;
+
+  --hairline: #E8E6E0;
+  --hairline-2: #D9D7CF;
+
+  --text: #0E0E0C;
+  --text-2: #4A4A46;
+  --text-3: #8A8A82;
+  --text-4: #B5B3AB;
+
+  --up: #00A852;
+  --up-soft: rgba(0,168,82,.10);
+  --down: #DC2545;
+  --down-soft: rgba(220,37,69,.08);
+  --warn: #B87400;
+  --warn-soft: rgba(184,116,0,.10);
+  --info: #2563EB;
+  --info-soft: rgba(37,99,235,.08);
+
+  --brand: #F04E23;
+  --brand-soft: rgba(240,78,35,.10);
+  --brand-ink: #9B2A10;
+
+  --topbar-bg: rgba(255,255,255,.78);
+  --overlay: rgba(17,17,17,.45);
+  --mark-inset: rgba(0,0,0,.08);
+  --cta-shadow: 0 4px 14px rgba(240,78,35,.25), 0 1px 2px rgba(0,0,0,.06);
+  --badge-dot-border: var(--surface);
+
+  --tb-white-bg: #FFFFFF; --tb-white-fg: #0E0E0C;
+  --tb-dark-bg: #0E0E0C;  --tb-dark-fg: #F5F4EF;
+}
+
+/* Default theme (SSR-safe) — dark-first. ThemeProvider overrides client-side. */
+:root:not([data-theme]) {
+  color-scheme: dark;
+  --bg: #000000; --surface: #0F0F0F; --surface-2: #151515;
+  --hairline: #1E1E1E; --hairline-2: #262626;
+  --text: #FFFFFF; --text-2: #B8B8B6; --text-3: #7A7A77; --text-4: #4A4A47;
+  --up: #00E676; --up-soft: rgba(0,230,118,.10);
+  --down: #FF3B5C; --down-soft: rgba(255,59,92,.10);
+  --warn: #FFB020; --warn-soft: rgba(255,176,32,.10);
+  --info: #4A9EFF; --info-soft: rgba(74,158,255,.10);
+  --brand: #F04E23; --brand-soft: rgba(240,78,35,.12); --brand-ink: #FF6B3D;
+  --topbar-bg: rgba(0,0,0,.72); --overlay: rgba(0,0,0,.72);
+  --mark-inset: rgba(255,255,255,.06);
+  --cta-shadow: 0 4px 14px rgba(240,78,35,.30);
+  --badge-dot-border: #000000;
+  --tb-white-bg: #F5F4EF; --tb-white-fg: #0E0E0C;
+  --tb-dark-bg: #0E0E0C;  --tb-dark-fg: #F5F4EF;
+}
+
+/* ====================================================================
+   Tailwind theme — expose BDL tokens as Tailwind classes.
+   shadcn's expected color names are aliased to BDL equivalents.
+   ==================================================================== */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-hairline: var(--hairline);
+  --color-hairline-2: var(--hairline-2);
+  --color-text: var(--text);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-text-4: var(--text-4);
+  --color-up: var(--up);
+  --color-up-soft: var(--up-soft);
+  --color-down: var(--down);
+  --color-down-soft: var(--down-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-ink: var(--brand-ink);
+
+  /* shadcn aliases → BDL tokens */
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--text);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--text);
+  --color-primary: var(--brand);
+  --color-primary-foreground: #FFFFFF;
+  --color-secondary: var(--surface-2);
+  --color-secondary-foreground: var(--text);
+  --color-muted: var(--surface-2);
+  --color-muted-foreground: var(--text-3);
+  --color-accent: var(--surface-2);
+  --color-accent-foreground: var(--text);
+  --color-destructive: var(--down);
+  --color-border: var(--hairline);
+  --color-input: var(--surface-2);
+  --color-ring: var(--brand);
+
+  --font-sans: var(--font);
+  --font-mono: var(--mono);
+  --font-heading: var(--font);
+
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --radius-xl: var(--r-xl);
+  --radius-2xl: var(--r-2xl);
+}
+
+@layer base {
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "cv11","ss01","ss03","tnum";
+    letter-spacing: -0.01em;
+    transition:
+      background-color var(--t-base) var(--ease),
+      color var(--t-base) var(--ease),
+      border-color var(--t-base) var(--ease);
+  }
+  button { font-family: inherit; -webkit-tap-highlight-color: transparent; }
+  a { color: inherit; text-decoration: none; }
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  /* Numeric values should always be tabular. */
+  .num, [data-num] {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation: none !important;
+      transition: none !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
