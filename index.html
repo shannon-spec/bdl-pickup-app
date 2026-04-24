@@ -5241,19 +5241,80 @@ function AdminSettings({ roster, showToast }) {
   const [superAdmins, setSuperAdmins] = useState(load('superAdmins', []));
   const [addId, setAddId] = useState('');
   const [addUsername, setAddUsername] = useState('');
+  const [addFirstName, setAddFirstName] = useState('');
+  const [addLastName, setAddLastName] = useState('');
+  const [addEmail, setAddEmail] = useState('');
+  const [sentCredentials, setSentCredentials] = useState(null);
+  const [credsCopied, setCredsCopied] = useState(false);
+  const [sendState, setSendState] = useState('idle'); // idle | sending | sent | error
+  const [sendError, setSendError] = useState('');
   const [confirmRemove, setConfirmRemove] = useState(null);
 
   const saveSA = (list) => { setSuperAdmins(list); save('superAdmins', list); };
 
+  const resetForm = () => {
+    setAddId(''); setAddUsername('');
+    setAddFirstName(''); setAddLastName(''); setAddEmail('');
+  };
+
   const addSuperAdmin = () => {
-    if (!addId || !addUsername.trim()) { showToast('Select a player and enter a username.'); return; }
+    if (!addFirstName.trim() || !addLastName.trim()) { showToast('Enter first and last name.'); return; }
+    if (!addEmail.trim()) { showToast('Enter an email address.'); return; }
+    if (!addUsername.trim()) { showToast('Enter a username.'); return; }
     const un = addUsername.trim().toLowerCase();
     if (superAdmins.find(a => a.username === un)) { showToast('Username already exists.'); return; }
-    const player = roster.find(p => p.id === addId);
-    if (!player) return;
-    saveSA([...superAdmins, { username: un, playerId: player.id, role: 'super_admin' }]);
-    setAddId(''); setAddUsername('');
-    showToast(`${player.firstName} ${player.lastName} added as Super Admin.`);
+    const player = addId ? roster.find(p => p.id === addId) : null;
+    const newAdmin = {
+      username: un,
+      playerId: player ? player.id : null,
+      role: 'super_admin',
+      firstName: addFirstName.trim(),
+      lastName: addLastName.trim(),
+      email: addEmail.trim(),
+    };
+    saveSA([...superAdmins, newAdmin]);
+    resetForm();
+    setSentCredentials(newAdmin);
+    setCredsCopied(false);
+    setSendState('idle');
+    setSendError('');
+  };
+
+  const sendCredentialsEmail = async (admin) => {
+    setSendState('sending');
+    setSendError('');
+    try {
+      const response = await fetch('/api/send-admin-credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: admin.firstName,
+          lastName: admin.lastName,
+          email: admin.email,
+          username: admin.username,
+          password: ADMIN_PASS,
+          loginUrl: window.location.origin + window.location.pathname,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.error || `Request failed (${response.status})`);
+      setSendState('sent');
+      showToast(`Credentials sent to ${admin.email}.`);
+    } catch (err) {
+      setSendState('error');
+      setSendError(err.message || 'Failed to send.');
+    }
+  };
+
+  const credentialsEmailBody = (admin) =>
+    `Hi ${admin.firstName},\n\nYou've been added as a Super Admin on BDL Pickup. You now have full access to Roster, Leagues, Games, and Settings.\n\nLogin URL: ${window.location.origin}${window.location.pathname}\nUsername: ${admin.username}\nPassword: ${ADMIN_PASS}\n\nKeep these credentials secure.\n\n— BDL Pickup`;
+
+  const copyCredentials = async (admin) => {
+    try {
+      await navigator.clipboard.writeText(credentialsEmailBody(admin));
+      setCredsCopied(true);
+      setTimeout(() => setCredsCopied(false), 2000);
+    } catch { showToast('Copy failed.'); }
   };
 
   const removeSuperAdmin = (username) => {
@@ -5282,10 +5343,18 @@ function AdminSettings({ roster, showToast }) {
             <tbody>
               {superAdmins.map(a => {
                 const p = a.playerId ? getPlayer(a.playerId) : null;
+                const displayName = p
+                  ? `${p.firstName} ${p.lastName}`
+                  : (a.firstName ? `${a.firstName} ${a.lastName}` : null);
                 return (
                   <tr key={a.username}>
                     <td><strong>{a.username}</strong></td>
-                    <td>{p ? `${p.firstName} ${p.lastName}` : <span style={{color:'var(--text-muted)'}}>Not linked</span>}</td>
+                    <td>
+                      {displayName
+                        ? <span>{displayName}{!p && <span style={{color:'var(--text-muted)',fontSize:11,marginLeft:6}}>(off roster)</span>}</span>
+                        : <span style={{color:'var(--text-muted)'}}>Not linked</span>}
+                      {a.email && <div style={{color:'var(--text-muted)',fontSize:11}}>{a.email}</div>}
+                    </td>
                     <td>{a.role === 'owner' ? <span className="badge badge-brand">Owner</span> : <span className="badge badge-blue">Super Admin</span>}</td>
                     <td>{a.role === 'owner' ? <span style={{color:'var(--text-muted)',fontSize:11}}>Protected</span> : <button className="btn btn-danger btn-small" onClick={() => setConfirmRemove(a.username)}>Remove</button>}</td>
                   </tr>
@@ -5296,26 +5365,46 @@ function AdminSettings({ roster, showToast }) {
         </div>
 
         <div className="section-label" style={{marginBottom:12}}>Add Super Admin</div>
-        <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'flex-end'}}>
-          <div className="form-group" style={{flex:1,minWidth:180}}>
-            <label>Player</label>
-            <select value={addId} onChange={e => {
-              setAddId(e.target.value);
-              if (e.target.value) {
-                const p = roster.find(r => r.id === e.target.value);
-                if (p) setAddUsername(p.firstName.toLowerCase());
+        <div className="form-group" style={{marginBottom:10}}>
+          <label>Link to Roster Player <span style={{color:'var(--text-muted)',fontWeight:400}}>(optional)</span></label>
+          <select value={addId} onChange={e => {
+            const id = e.target.value;
+            setAddId(id);
+            if (id) {
+              const p = roster.find(r => r.id === id);
+              if (p) {
+                setAddFirstName(p.firstName || '');
+                setAddLastName(p.lastName || '');
+                setAddEmail(p.email || '');
+                setAddUsername((p.firstName || '').toLowerCase());
               }
-            }}>
-              <option value="">Select player...</option>
-              {availablePlayers.map(p => <option key={p.id} value={p.id}>{p.lastName}, {p.firstName}</option>)}
-            </select>
+            }
+          }}>
+            <option value="">No linked player</option>
+            {availablePlayers.map(p => <option key={p.id} value={p.id}>{p.lastName}, {p.firstName}</option>)}
+          </select>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
+          <div className="form-group">
+            <label>First Name</label>
+            <input value={addFirstName} onChange={e => setAddFirstName(e.target.value)} placeholder="e.g. Jake" />
           </div>
-          <div className="form-group" style={{flex:1,minWidth:150}}>
+          <div className="form-group">
+            <label>Last Name</label>
+            <input value={addLastName} onChange={e => setAddLastName(e.target.value)} placeholder="e.g. Johnson" />
+          </div>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
+          <div className="form-group">
+            <label>Email</label>
+            <input type="email" value={addEmail} onChange={e => setAddEmail(e.target.value)} placeholder="jake@example.com" />
+          </div>
+          <div className="form-group">
             <label>Login Username</label>
             <input value={addUsername} onChange={e => setAddUsername(e.target.value)} placeholder="e.g. jake" />
           </div>
-          <button className="btn btn-primary" onClick={addSuperAdmin}>Add Super Admin</button>
         </div>
+        <button className="btn btn-primary" onClick={addSuperAdmin}>Add Super Admin &amp; Send Credentials</button>
         <p style={{color:'var(--text-muted)',fontSize:11,marginTop:10}}>All Super Admins use the shared password: bdl2026</p>
       </div>
 
@@ -5327,6 +5416,47 @@ function AdminSettings({ roster, showToast }) {
           onConfirm={() => removeSuperAdmin(confirmRemove)}
           onCancel={() => setConfirmRemove(null)}
         />
+      )}
+
+      {sentCredentials && (
+        <div className="modal-overlay" onClick={() => setSentCredentials(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{maxWidth:480,textAlign:'center'}}>
+            <div style={{fontSize:40,marginBottom:12}}>&#9989;</div>
+            <h2 style={{marginBottom:8}}>Super Admin Added</h2>
+            <p style={{color:'var(--text-muted)',fontSize:13,marginBottom:16}}>
+              Send {sentCredentials.firstName} their login credentials below.
+            </p>
+            <div style={{background:'var(--bg-subtle)',border:'1px solid var(--border)',borderRadius:8,padding:14,marginBottom:16,textAlign:'left',fontSize:13}}>
+              <div style={{marginBottom:6}}><strong>Username:</strong> {sentCredentials.username}</div>
+              <div style={{marginBottom:6}}><strong>Password:</strong> {ADMIN_PASS}</div>
+              <div><strong>Email:</strong> {sentCredentials.email}</div>
+            </div>
+            <div style={{display:'flex',gap:8,justifyContent:'center',marginBottom:12,flexWrap:'wrap'}}>
+              <button
+                className="btn btn-primary btn-small"
+                disabled={sendState === 'sending' || sendState === 'sent'}
+                onClick={() => sendCredentialsEmail(sentCredentials)}
+              >
+                {sendState === 'sending' ? 'Sending…' : sendState === 'sent' ? 'Sent ✓' : 'Send Email'}
+              </button>
+              <button className="btn btn-secondary btn-small" onClick={() => copyCredentials(sentCredentials)}>
+                {credsCopied ? 'Copied!' : 'Copy Credentials'}
+              </button>
+              <a
+                href={`mailto:${sentCredentials.email}?subject=${encodeURIComponent('Your BDL Pickup Super Admin Login')}&body=${encodeURIComponent(credentialsEmailBody(sentCredentials))}`}
+                className="btn btn-secondary btn-small"
+                style={{textDecoration:'none'}}
+              >Open Mail App</a>
+              <button className="btn btn-secondary btn-small" onClick={() => setSentCredentials(null)}>Done</button>
+            </div>
+            {sendState === 'error' && (
+              <div style={{color:'var(--danger,#c1272d)',fontSize:12,marginBottom:12}}>
+                Couldn't send: {sendError}
+              </div>
+            )}
+            <div style={{background:'var(--bg-subtle)',borderRadius:8,padding:14,textAlign:'left',fontSize:12,color:'var(--text-muted)',whiteSpace:'pre-wrap'}}>{credentialsEmailBody(sentCredentials)}</div>
+          </div>
+        </div>
       )}
     </div>
   );
