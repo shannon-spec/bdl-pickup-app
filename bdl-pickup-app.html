@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
 <title>BDL Pickup App V2</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,103 +16,68 @@
 *{margin:0;padding:0;box-sizing:border-box}
 
 /* ========== BDL V2 DESIGN TOKENS ========== */
-:root, [data-theme="light"] {
-  /* brand */
-  --brand: #F04E23;
-  --brand-hover: #D8431C;
-  --brand-ink: #9B2A10;
-  --brand-soft: #FDE7DF;
-  --brand-bg: #FDE7DF;
-
-  /* surfaces */
-  --bg: #F6F6F4;
-  --bg-subtle: #FAFAF8;
-  --surface: #FFFFFF;
-  --surface-2: #FAFAF8;
-  --surface-hover: #FAFAF8;
-
-  /* borders */
-  --border: #ECEAE4;
-  --border-strong: #DFDCD4;
-
-  /* text */
-  --text-primary: #0E0E0C;
-  --text-2: #4A4A46;
-  --text-3: #8A8A82;
-  --text-4: #B5B3AB;
-  --text-muted: #8A8A82;
-  --text-inverse: #FFFFFF;
-
-  /* status */
-  --win: #0F9D58;
-  --win-soft: #E3F4EA;
-  --locked: #0F9D58;
-  --locked-soft: #E3F4EA;
-  --green: #0F9D58;
-  --green-bg: #E3F4EA;
-  --red: #D1331F;
-  --red-bg: rgba(209,51,31,0.08);
-  --blue: #2F6FEB;
-  --blue-bg: rgba(47,111,235,0.10);
-  --yellow: #C77A00;
-  --yellow-bg: rgba(199,122,0,0.10);
-
-  /* winner chips */
-  --winner-white-bg: #F1EFE8;
-  --winner-white-text: #0E0E0C;
-  --winner-dark-bg: #0E0E0C;
-  --winner-dark-text: #F5F4EF;
-
-  /* shadows */
-  --shadow-sm: 0 1px 2px rgba(15,15,10,.04);
-  --shadow-md: 0 2px 6px rgba(15,15,10,.05), 0 1px 2px rgba(15,15,10,.04);
-
-  /* misc */
-  --modal-overlay: rgba(0,0,0,0.4);
-  --toast-bg: #0E0E0C;
-  --toast-text: #FFFFFF;
-  --input-bg: #FFFFFF;
+:root {
+  --font: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 [data-theme="dark"] {
-  --brand: #FF6B3D;
-  --brand-hover: #FF7F55;
-  --brand-ink: #FFB8A0;
-  --brand-soft: #3A1A10;
-  --brand-bg: #3A1A10;
+  /* Kalshi/Robinhood dark */
+  --bg: #000000;
+  --bg-subtle: #0F0F0F;
+  --surface: #0F0F0F;
+  --surface-2: #151515;
+  --surface-hover: #151515;
 
-  --bg: #0B0B0A;
-  --bg-subtle: #1B1B19;
-  --surface: #141413;
-  --surface-2: #1B1B19;
-  --surface-hover: #1B1B19;
+  --hairline: #1E1E1E;
+  --hairline-2: #262626;
+  --border: #1E1E1E;
+  --border-strong: #262626;
 
-  --border: #262522;
-  --border-strong: #33322D;
+  --text: #FFFFFF;
+  --text-primary: #FFFFFF;
+  --text-2: #B8B8B6;
+  --text-3: #7A7A77;
+  --text-4: #4A4A47;
+  --text-muted: #7A7A77;
+  --text-inverse: #000000;
 
-  --text-primary: #F5F4EF;
-  --text-2: #C9C7BF;
-  --text-3: #8B8A82;
-  --text-4: #5A5954;
-  --text-muted: #8B8A82;
-  --text-inverse: #0E0E0C;
+  --up: #00E676;
+  --up-soft: rgba(0,230,118,.10);
+  --down: #FF3B5C;
+  --down-soft: rgba(255,59,92,.10);
 
-  --win: #34D399;
-  --win-soft: #0E2A1F;
-  --locked: #34D399;
-  --locked-soft: #0E2A1F;
-  --green: #34D399;
-  --green-bg: #0E2A1F;
-  --red: #FF4D3D;
-  --red-bg: rgba(255,77,61,0.14);
+  --win: #00E676;
+  --win-soft: rgba(0,230,118,.10);
+  --locked: #00E676;
+  --locked-soft: rgba(0,230,118,.10);
+  --green: #00E676;
+  --green-bg: rgba(0,230,118,.10);
+  --red: #FF3B5C;
+  --red-bg: rgba(255,59,92,.10);
   --blue: #8BB3FF;
   --blue-bg: rgba(139,179,255,0.14);
   --yellow: #E0A84A;
   --yellow-bg: rgba(224,168,74,0.14);
 
-  --winner-white-bg: #2A2A26;
-  --winner-white-text: #F5F4EF;
-  --winner-dark-bg: #0B0B0A;
+  --brand: #F04E23;
+  --brand-hover: #FF7F55;
+  --brand-ink: #FF6B3D;
+  --brand-soft: rgba(240,78,35,.12);
+  --brand-bg: rgba(240,78,35,.12);
+
+  --topbar-bg: rgba(0,0,0,.72);
+  --mark-inset: rgba(255,255,255,.06);
+  --badge-dot-border: var(--bg);
+  --cta-shadow: 0 4px 14px rgba(240,78,35,.3);
+
+  --tb-white-bg: #F5F4EF; --tb-white-fg: #0E0E0C;
+  --tb-dark-bg: #0E0E0C;  --tb-dark-fg: #F5F4EF;
+  --winner-white-bg: #F5F4EF;
+  --winner-white-text: #0E0E0C;
+  --winner-dark-bg: #0E0E0C;
   --winner-dark-text: #F5F4EF;
 
   --shadow-sm: 0 1px 2px rgba(0,0,0,.35);
@@ -120,19 +86,86 @@
   --modal-overlay: rgba(0,0,0,0.6);
   --toast-bg: #F5F4EF;
   --toast-text: #0E0E0C;
-  --input-bg: #1B1B19;
+  --input-bg: #151515;
+}
+
+:root, [data-theme="light"] {
+  --bg: #F7F7F4;
+  --bg-subtle: #F2F1EC;
+  --surface: #FFFFFF;
+  --surface-2: #F2F1EC;
+  --surface-hover: #F2F1EC;
+
+  --hairline: #E8E6E0;
+  --hairline-2: #D9D7CF;
+  --border: #E8E6E0;
+  --border-strong: #D9D7CF;
+
+  --text: #0E0E0C;
+  --text-primary: #0E0E0C;
+  --text-2: #4A4A46;
+  --text-3: #8A8A82;
+  --text-4: #B5B3AB;
+  --text-muted: #8A8A82;
+  --text-inverse: #FFFFFF;
+
+  --up: #00A852;
+  --up-soft: rgba(0,168,82,.10);
+  --down: #DC2545;
+  --down-soft: rgba(220,37,69,.08);
+
+  --win: #00A852;
+  --win-soft: rgba(0,168,82,.10);
+  --locked: #00A852;
+  --locked-soft: rgba(0,168,82,.10);
+  --green: #00A852;
+  --green-bg: rgba(0,168,82,.10);
+  --red: #DC2545;
+  --red-bg: rgba(220,37,69,.08);
+  --blue: #2F6FEB;
+  --blue-bg: rgba(47,111,235,0.10);
+  --yellow: #C77A00;
+  --yellow-bg: rgba(199,122,0,0.10);
+
+  --brand: #F04E23;
+  --brand-hover: #D8431C;
+  --brand-ink: #9B2A10;
+  --brand-soft: rgba(240,78,35,.10);
+  --brand-bg: rgba(240,78,35,.10);
+
+  --topbar-bg: rgba(255,255,255,.78);
+  --mark-inset: rgba(0,0,0,.08);
+  --badge-dot-border: var(--surface);
+  --cta-shadow: 0 4px 14px rgba(240,78,35,.25), 0 1px 2px rgba(0,0,0,.06);
+
+  --tb-white-bg: #FFFFFF; --tb-white-fg: #0E0E0C;
+  --tb-dark-bg: #0E0E0C;  --tb-dark-fg: #F5F4EF;
+  --winner-white-bg: #FFFFFF;
+  --winner-white-text: #0E0E0C;
+  --winner-dark-bg: #0E0E0C;
+  --winner-dark-text: #F5F4EF;
+
+  --shadow-sm: 0 1px 2px rgba(15,15,10,.04);
+  --shadow-md: 0 2px 6px rgba(15,15,10,.05), 0 1px 2px rgba(15,15,10,.04);
+
+  --modal-overlay: rgba(0,0,0,0.4);
+  --toast-bg: #0E0E0C;
+  --toast-text: #FFFFFF;
+  --input-bg: #FFFFFF;
 }
 
 /* ========== BASE ========== */
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  font-family: var(--font);
   background: var(--bg);
   color: var(--text-primary);
   min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background 0.2s ease, color 0.2s ease;
+  font-feature-settings: "cv11","ss01","ss03","tnum";
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
+.num { font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
 
 .app {
   max-width: 1200px;
@@ -1840,6 +1873,476 @@ tr:hover td {
   .header h1 { font-size: 20px; }
   .app { padding: 0 16px 48px; }
 }
+
+/* ============================================================
+   PLAYER DASHBOARD ("Kalshi meets Robinhood" — dark-first)
+   ============================================================ */
+.pd {
+  display: flex; flex-direction: column;
+  gap: clamp(14px, 2.2vw, 20px);
+  color: var(--text);
+}
+
+/* Context strip */
+.pd-context {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+}
+.pd-league-switch {
+  display: inline-flex; align-items: center;
+  gap: 10px;
+  height: 42px;
+  padding: 0 16px 0 4px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--hairline-2);
+  color: var(--text);
+  font: 500 14px/1 var(--font);
+  cursor: pointer;
+  transition: border-color .15s ease, background-color .15s ease;
+}
+.pd-league-switch:hover { border-color: var(--text-4); background: var(--surface-2); }
+.pd-league-dot {
+  width: 34px; height: 34px; border-radius: 999px;
+  background: linear-gradient(135deg, var(--brand), #8B2FA0);
+  box-shadow: inset 0 0 0 2px var(--mark-inset);
+  flex-shrink: 0;
+}
+.pd-league-name { font-weight: 700; color: var(--text); }
+.pd-league-season { font-family: var(--mono); font-size: 12px; color: var(--text-3); }
+.pd-league-chev { color: var(--text-3); display: inline-flex; align-items: center; }
+.pd-schedule { font-size: 13px; color: var(--text-3); }
+.pd-schedule strong { color: var(--text-2); font-weight: 500; }
+
+/* Hero portfolio card */
+.pd-port {
+  background: var(--surface);
+  border: 1px solid var(--hairline-2);
+  border-radius: 18px;
+  padding: 26px 28px 24px;
+  box-shadow: var(--shadow-sm);
+  transition: background-color .2s ease, border-color .2s ease;
+}
+.pd-port-label {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+.pd-port-label-left {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.pd-port-label-left strong { color: var(--text-2); font-weight: 600; }
+.pd-port-week { font-family: var(--mono); font-size: 12px; color: var(--text-3); letter-spacing: 0; text-transform: none; }
+.pd-port-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap: clamp(16px, 2.5vw, 28px);
+}
+.pd-port-stat { position: relative; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.pd-port-stat + .pd-port-stat::before {
+  content: '';
+  position: absolute;
+  left: calc(clamp(16px, 2.5vw, 28px) * -0.5);
+  top: 0; bottom: 0;
+  width: 1px;
+  background: var(--hairline);
+}
+.pd-port-stat-lbl {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.pd-port-stat-val {
+  font: 800 clamp(30px, 4.4vw, 44px)/1 var(--font);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  display: flex; align-items: baseline; gap: 6px;
+}
+.pd-port-stat-val .unit { font-size: 0.55em; font-weight: 700; color: var(--text-3); letter-spacing: -0.01em; }
+.pd-port-stat-val.streak-w { color: var(--up); }
+.pd-port-stat-val.streak-l { color: var(--down); }
+.pd-port-stat-sub {
+  font-size: 11.5px; color: var(--text-2);
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.pd-port-stat-sub.up { color: var(--up); }
+.pd-port-stat-sub.down { color: var(--down); }
+.pd-port-stat-sub svg { width: 10px; height: 10px; }
+
+@media (max-width: 860px) {
+  .pd-port-stats { grid-template-columns: repeat(2, 1fr); row-gap: 22px; }
+  .pd-port-stat::before { display: none; }
+  .pd-port-stat:nth-child(2n)::before { display: block; top: 0; bottom: 0; left: calc(clamp(16px, 2.5vw, 28px) * -0.5); }
+}
+@media (max-width: 640px) {
+  .pd-port { padding: 22px; }
+  .pd-port-label { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .pd-port-stat-val { font-size: clamp(28px, 10vw, 36px); }
+}
+
+/* Next Game card */
+.pd-next {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 22px;
+  align-items: center;
+  padding: 22px 24px;
+  border-radius: 16px;
+  border: 1px solid var(--hairline-2);
+  background:
+    radial-gradient(ellipse at top left, var(--brand-soft), transparent 60%),
+    var(--surface);
+  overflow: hidden;
+}
+.pd-next-left { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.pd-ng-meta {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  font-size: 12px;
+}
+.pd-ng-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.pd-ng-venue { color: var(--text-3); }
+.pd-ng-teams { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.pd-ng-team { display: inline-flex; align-items: center; gap: 10px; }
+.pd-ng-badge {
+  width: 36px; height: 36px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 10px;
+  font: 800 15px/1 var(--font);
+  letter-spacing: -0.02em;
+}
+.pd-ng-badge.w { background: var(--tb-white-bg); color: var(--tb-white-fg); box-shadow: inset 0 0 0 1px var(--hairline-2); }
+.pd-ng-badge.d { background: var(--tb-dark-bg); color: var(--tb-dark-fg); }
+.pd-ng-tn { display: flex; flex-direction: column; gap: 3px; }
+.pd-ng-tname { font-weight: 700; font-size: 17px; color: var(--text); display: inline-flex; align-items: center; gap: 6px; }
+.pd-ng-trec { font-family: var(--mono); font-size: 11.5px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.pd-me {
+  font: 600 10px/1 var(--font);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+}
+.pd-ng-x { color: var(--text-4); font-size: 12px; font-weight: 500; }
+.pd-prob-block { display: flex; flex-direction: column; gap: 6px; padding-top: 4px; }
+.pd-prob-top {
+  display: flex; align-items: center; justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+.pd-prob-lead { color: var(--up); font-weight: 700; }
+.pd-prob-bar {
+  display: flex;
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--hairline);
+}
+.pd-prob-seg-a { background: var(--up); }
+.pd-prob-seg-b { background: var(--text-3); }
+.pd-cta {
+  height: 46px;
+  padding: 0 20px;
+  border-radius: 12px;
+  border: 0;
+  background: var(--brand);
+  color: #FFFFFF;
+  font: 700 14px/1 var(--font);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px;
+  box-shadow: var(--cta-shadow);
+  transition: background-color .15s ease, transform .1s ease;
+}
+.pd-cta:hover { background: var(--brand-hover); }
+.pd-cta:active { transform: translateY(1px); }
+.pd-cta svg { width: 18px; height: 18px; }
+@media (max-width: 860px) {
+  .pd-next { grid-template-columns: 1fr; }
+  .pd-cta { width: 100%; justify-content: center; }
+}
+
+/* Last 5 */
+.pd-section-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px;
+}
+.pd-section-title {
+  display: inline-flex; align-items: center; gap: 10px;
+  font: 600 12px/1 var(--font);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+.pd-section-title::before {
+  content: '';
+  width: 3px; height: 12px;
+  background: var(--brand);
+  border-radius: 2px;
+}
+.pd-section-link {
+  background: transparent; border: 0; cursor: pointer;
+  font: 500 12.5px/1 var(--font);
+  color: var(--text-3);
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 6px 4px;
+}
+.pd-section-link:hover { color: var(--text); }
+
+.pd-form {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(170px, 1fr);
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 2px;
+}
+.pd-form::-webkit-scrollbar { display: none; }
+.pd-form-card {
+  scroll-snap-align: start;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--hairline-2);
+  min-width: 170px;
+}
+.pd-form-top {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px;
+}
+.pd-form-date {
+  font: 600 10.5px/1 var(--font);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.pd-form-pill {
+  display: inline-flex; align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font: 700 10px/1 var(--font);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.pd-form-pill.won { background: var(--up-soft); color: var(--up); }
+.pd-form-pill.lost { background: var(--down-soft); color: var(--down); }
+.pd-form-score {
+  font-family: var(--mono);
+  font-weight: 800;
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  display: inline-flex; align-items: baseline; gap: 8px;
+}
+.pd-form-score .lose { color: var(--text-3); }
+.pd-form-score .sep { color: var(--text-4); font-weight: 500; }
+.pd-form-opp { font-size: 11.5px; color: var(--text-3); }
+
+/* Upcoming / Markets */
+.pd-markets-card {
+  background: var(--surface);
+  border: 1px solid var(--hairline-2);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.pd-market-row {
+  display: grid;
+  grid-template-columns: 140px 1fr 200px 110px;
+  gap: 20px;
+  align-items: center;
+  padding: 16px 20px;
+  border-top: 1px solid var(--hairline);
+  background: transparent;
+  cursor: pointer;
+  transition: background-color .12s ease;
+}
+.pd-market-row:first-child { border-top: 0; }
+.pd-market-row:hover { background: var(--surface-2); }
+.pd-m-date { display: flex; flex-direction: column; gap: 4px; line-height: 1; }
+.pd-m-date-day { font-weight: 700; font-size: 12.5px; color: var(--text); letter-spacing: 0.02em; }
+.pd-m-date-time { font-family: var(--mono); font-size: 10.5px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.pd-m-teams { font-size: 14px; display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pd-m-teams .t { font-weight: 700; color: var(--text); }
+.pd-m-teams .x { color: var(--text-4); font-weight: 500; }
+.pd-m-prob-lite {
+  display: grid;
+  grid-template-columns: 34px 1fr 34px;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-3);
+}
+.pd-m-prob-lite .pd-prob-bar { height: 4px; }
+.pd-m-status {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font: 600 11px/1 var(--font);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  justify-self: end;
+}
+.pd-m-status.rsvp { background: var(--up-soft); color: var(--up); }
+.pd-m-status.open { background: var(--surface-2); color: var(--text-2); border: 1px solid var(--hairline-2); }
+@media (max-width: 1100px) {
+  .pd-market-row { grid-template-columns: 120px 1fr 110px; }
+  .pd-m-prob-lite { display: none; }
+}
+@media (max-width: 640px) {
+  .pd-market-row { grid-template-columns: 1fr auto; grid-auto-rows: auto; row-gap: 8px; }
+  .pd-m-teams { grid-column: 1 / -1; order: 3; }
+}
+
+/* Split: leaderboard + activity */
+.pd-split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 1100px) { .pd-split { grid-template-columns: 1fr; } }
+.pd-lb-card, .pd-activity-card {
+  background: var(--surface);
+  border: 1px solid var(--hairline-2);
+  border-radius: 16px;
+  padding: 18px 20px 12px;
+}
+.pd-lb-card { display: flex; flex-direction: column; gap: 10px; }
+.pd-lb-card .pd-section-head { padding-bottom: 4px; }
+.pd-lb-row {
+  display: grid;
+  grid-template-columns: 28px 1fr 80px 80px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 6px;
+  border-top: 1px solid var(--hairline);
+  font-size: 13.5px;
+  border-radius: 8px;
+}
+.pd-lb-row:first-of-type { border-top: 0; }
+.pd-lb-rank { font-family: var(--mono); font-size: 13px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.pd-lb-row.top .pd-lb-rank { color: var(--brand-ink); }
+.pd-lb-who { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+.pd-lb-avatar {
+  width: 28px; height: 28px; border-radius: 999px;
+  background: linear-gradient(135deg, var(--brand), #8B2FA0);
+  color: #fff; font: 700 11px/1 var(--font);
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.pd-lb-name { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pd-lb-record { font-family: var(--mono); font-size: 12px; color: var(--text-3); text-align: right; font-variant-numeric: tabular-nums; }
+.pd-lb-pct { font-weight: 800; font-size: 13.5px; text-align: right; font-variant-numeric: tabular-nums; }
+.pd-lb-pct.up { color: var(--up); }
+.pd-lb-pct.down { color: var(--down); }
+.pd-lb-pct.mid { color: var(--text-2); }
+.pd-lb-row.me {
+  background: var(--surface-2);
+  border-left: 2px solid var(--brand);
+  padding-left: 10px;
+}
+.pd-lb-row.me .pd-lb-name::before {
+  content: '•';
+  color: var(--brand);
+  margin-right: 6px;
+  font-weight: 900;
+}
+@media (max-width: 640px) {
+  .pd-lb-row { grid-template-columns: 28px 1fr 80px; }
+  .pd-lb-record { display: none; }
+}
+
+.pd-activity-card { display: flex; flex-direction: column; gap: 10px; }
+.pd-activity-row {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 14px;
+  padding: 10px 6px;
+  border-top: 1px solid var(--hairline);
+  font-size: 13px;
+}
+.pd-activity-row:first-of-type { border-top: 0; }
+.pd-activity-row .who { color: var(--text); }
+.pd-activity-row .who strong { font-weight: 700; }
+.pd-activity-row .when { font-family: var(--mono); font-size: 11.5px; color: var(--text-3); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+
+/* Discover */
+.pd-discover-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media (max-width: 1100px) { .pd-discover-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px)  { .pd-discover-grid { grid-template-columns: 1fr; } }
+.pd-discover-card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--hairline-2);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.pd-discover-card.you {
+  border-color: var(--brand);
+  background:
+    radial-gradient(ellipse at top right, var(--brand-soft), transparent 60%),
+    var(--surface);
+}
+.pd-disc-dot {
+  width: 32px; height: 32px; border-radius: 999px;
+  background: linear-gradient(135deg, var(--brand), #8B2FA0);
+  box-shadow: inset 0 0 0 2px var(--mark-inset);
+}
+.pd-disc-title { font: 700 15px/1.2 var(--font); color: var(--text); }
+.pd-disc-sub { font-size: 12px; color: var(--text-3); }
+.pd-disc-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px;
+  margin-top: 2px;
+}
+.pd-disc-chips { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.pd-disc-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font: 500 11px/1 var(--font);
+  border: 1px solid var(--hairline);
+}
+.pd-disc-chip.youin { color: var(--up); background: var(--up-soft); border: 0; }
+.pd-disc-chip.youin::before { content: '•'; font-weight: 900; }
+.pd-disc-action {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 0;
+  font: 700 11.5px/1 var(--font);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.pd-disc-action.join { background: var(--brand); color: #fff; }
+.pd-disc-action.wait, .pd-disc-action.manage { background: var(--surface-2); color: var(--text); border: 1px solid var(--hairline-2); }
+
+@media (prefers-reduced-motion:reduce) {
+  * { animation: none !important; transition: none !important; }
+}
 </style>
 </head>
 <body>
@@ -2502,11 +3005,15 @@ const MoonIcon = () => (
 function ThemeToggle() {
   const [dark, setDark] = useState(() => {
     const saved = localStorage.getItem('bdl_theme');
-    return saved === 'dark';
+    if (saved === 'dark') return true;
+    if (saved === 'light') return false;
+    return true; // default: dark-first
   });
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
     localStorage.setItem('bdl_theme', dark ? 'dark' : 'light');
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', dark ? '#000000' : '#F7F7F4');
   }, [dark]);
   return (
     <button className="theme-toggle" onClick={() => setDark(!dark)} aria-label="Toggle theme">
@@ -2771,7 +3278,9 @@ function App() {
       </div>
       {viewGameId ? <GameDetail gameId={viewGameId} games={games} setGames={setGames} roster={roster} leagues={leagues} showToast={showToast} onClose={() => setViewGameId(null)} isAdmin={isAdmin || isCommissioner} /> : (
         <div>
-          {tab === 'dashboard' && <Dashboard roster={roster} leagues={leagues} games={games} setTab={setTab} onViewGame={onViewGame} />}
+          {tab === 'dashboard' && isAdmin && <Dashboard roster={roster} leagues={leagues} games={games} setTab={setTab} onViewGame={onViewGame} />}
+          {tab === 'dashboard' && (isCommissioner || isPlayerView) && livePlayer && <PlayerDashboard player={livePlayer} roster={roster} leagues={leagues} games={games} setTab={setTab} onViewGame={onViewGame} />}
+          {tab === 'dashboard' && (isCommissioner || isPlayerView) && !livePlayer && <Dashboard roster={roster} leagues={leagues} games={games} setTab={setTab} onViewGame={onViewGame} />}
           {tab === 'roster' && isAdmin && <Roster roster={roster} setRoster={setRoster} leagues={leagues} games={games} onViewGame={onViewGame} />}
           {tab === 'roster' && isCommissioner && (() => {
             const commLeagueIds = commissionerLeagues.map(l => l.id);
@@ -3248,6 +3757,422 @@ function LeaguePill({ name }) {
       <span className="league-dot" />
       <span>{name}</span>
     </span>
+  );
+}
+
+// ============= PLAYER DASHBOARD ==============
+function PlayerDashboard({ player, roster, leagues, games, setTab, onViewGame }) {
+  // --- League context: default to first league the player is in
+  const playerLeagues = leagues.filter(l => (player.leagueIds || []).includes(l.id));
+  const [currentLeagueId, setCurrentLeagueId] = useState(playerLeagues[0]?.id || null);
+  const [leagueMenuOpen, setLeagueMenuOpen] = useState(false);
+  const currentLeague = playerLeagues.find(l => l.id === currentLeagueId) || playerLeagues[0] || null;
+
+  const ChevDown = () => (<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>);
+  const ChevUp = () => (<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>);
+  const ChevRight = () => (<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>);
+  const CheckMark = () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>);
+
+  // --- Helpers
+  const playerTeamId = (g) => (g.teamA || []).includes(player.id) ? 'A' : (g.teamB || []).includes(player.id) ? 'B' : null;
+  const getTeamNameForGame = (g, side) => side === 'A' ? (g.teamAName || 'White') : (g.teamBName || 'Dark');
+  const initials = (p) => `${(p.firstName||'?')[0] || ''}${(p.lastName||'')[0] || ''}`.toUpperCase();
+
+  // Games scoped to current league
+  const leagueGames = currentLeague ? games.filter(g => g.leagueId === currentLeague.id) : [];
+  const completedLeagueGames = leagueGames.filter(isGameComplete);
+  const upcomingLeagueGames = leagueGames.filter(g => !isGameComplete(g))
+    .sort((a,b) => (a.gameDate||'').localeCompare(b.gameDate||''));
+
+  // Player's games in this league
+  const myGames = leagueGames.filter(g => playerTeamId(g));
+  const myCompleted = myGames.filter(isGameComplete).sort((a,b) => (a.gameDate||'').localeCompare(b.gameDate||''));
+
+  // Stats
+  let wins = 0, losses = 0;
+  myCompleted.forEach(g => {
+    const side = playerTeamId(g);
+    const win = getGameWinTeam(g);
+    if (side && win) { if (side === win) wins++; else losses++; }
+  });
+  const played = wins + losses;
+  const winPct = played > 0 ? (wins / played * 100) : null;
+
+  // "Last 5" delta: win% of last 5 minus win% before that
+  const last5 = myCompleted.slice(-5);
+  const prior = myCompleted.slice(0, Math.max(0, myCompleted.length - 5));
+  const last5Wins = last5.filter(g => playerTeamId(g) === getGameWinTeam(g)).length;
+  const priorWins = prior.filter(g => playerTeamId(g) === getGameWinTeam(g)).length;
+  const last5Pct = last5.length > 0 ? (last5Wins / last5.length * 100) : 0;
+  const priorPct = prior.length > 0 ? (priorWins / prior.length * 100) : 0;
+  const last5Delta = (last5.length > 0 && prior.length > 0) ? +(last5Pct - priorPct).toFixed(1) : null;
+
+  // Games-played rate in league
+  const leagueCompletedCount = completedLeagueGames.length;
+  const myCompletedCount = myCompleted.length;
+  const gamesPlayedPct = leagueCompletedCount > 0 ? Math.round(myCompletedCount / leagueCompletedCount * 100) : null;
+
+  // Streak (from most recent completed game, going back)
+  const recent = [...myCompleted].reverse();
+  let streakType = null, streakCount = 0;
+  for (const g of recent) {
+    const side = playerTeamId(g); const win = getGameWinTeam(g);
+    if (!side || !win) break;
+    const isWin = side === win;
+    if (streakType === null) { streakType = isWin ? 'W' : 'L'; streakCount = 1; }
+    else if (streakType === (isWin ? 'W' : 'L')) streakCount++;
+    else break;
+  }
+
+  // Season meta
+  const allDates = leagueGames.map(g => g.gameDate).filter(Boolean).sort();
+  const completedDates = completedLeagueGames.map(g => g.gameDate).filter(Boolean).sort();
+  const seasonYear = allDates[0] ? allDates[0].slice(0,4) : String(new Date().getFullYear());
+  const weekOf = allDates.length ? Math.min(allDates.length, Math.ceil((completedDates.length + 1))) : 0;
+  const totalWeeks = allDates.length || 0;
+
+  // Next game (player's)
+  const myUpcoming = myGames.filter(g => !isGameComplete(g))
+    .sort((a,b) => (a.gameDate||'').localeCompare(b.gameDate||''));
+  const nextGame = myUpcoming[0] || upcomingLeagueGames[0] || null;
+
+  // Team records (for win-prob on upcoming)
+  const teamRecordFromLastN = (side, n = 5) => {
+    const rel = completedLeagueGames.slice(-n);
+    let w = 0, tot = 0;
+    rel.forEach(g => {
+      const winSide = getGameWinTeam(g);
+      if (!winSide) return;
+      tot++;
+      if (winSide === side) w++;
+    });
+    return { w, tot, rate: tot > 0 ? w / tot : 0.5 };
+  };
+  const recA = teamRecordFromLastN('A');
+  const recB = teamRecordFromLastN('B');
+  const probDenom = (recA.rate + recB.rate) || 1;
+  const probA = Math.round((recA.rate / probDenom) * 100);
+  const probB = 100 - probA;
+
+  // Leaderboard (players in current league)
+  const leaguePlayers = currentLeague ? roster.filter(p => (p.leagueIds || []).includes(currentLeague.id)) : [];
+  const leaderboard = leaguePlayers.map(p => {
+    let w = 0, l = 0;
+    completedLeagueGames.forEach(g => {
+      const side = (g.teamA || []).includes(p.id) ? 'A' : (g.teamB || []).includes(p.id) ? 'B' : null;
+      if (!side) return;
+      const win = getGameWinTeam(g);
+      if (!win) return;
+      if (side === win) w++; else l++;
+    });
+    const total = w + l;
+    return { p, w, l, pct: total > 0 ? (w / total * 100) : -1 };
+  }).filter(r => r.w + r.l > 0).sort((a,b) => b.pct - a.pct).slice(0, 5);
+
+  // Activity — most recent game completions, framed as events
+  const activity = [...completedLeagueGames].sort((a,b) => (b.gameDate||'').localeCompare(a.gameDate||'')).slice(0, 3).map(g => {
+    const win = getGameWinTeam(g);
+    const winner = win === 'A' ? (g.teamAName || 'White') : win === 'B' ? (g.teamBName || 'Dark') : null;
+    const loser = win === 'A' ? (g.teamBName || 'Dark') : win === 'B' ? (g.teamAName || 'White') : null;
+    const winScore = win === 'A' ? g.scoreA : win === 'B' ? g.scoreB : null;
+    const loseScore = win === 'A' ? g.scoreB : win === 'B' ? g.scoreA : null;
+    return { id: g.id, winner, loser, winScore, loseScore, date: g.gameDate };
+  });
+
+  // Discover
+  const otherLeagues = leagues.filter(l => !(player.leagueIds || []).includes(l.id));
+
+  // --- Render
+  if (!currentLeague) {
+    return (
+      <div className="pd">
+        <div className="pd-port" style={{textAlign:'center',padding:'48px 24px'}}>
+          <div className="pd-port-label" style={{justifyContent:'center'}}>
+            <span className="pd-port-label-left">No league yet</span>
+          </div>
+          <div style={{color:'var(--text-3)',fontSize:14,marginBottom:18}}>You're not in any leagues yet. Explore open leagues below.</div>
+          <button className="pd-cta" onClick={() => setTab('leagues')}>Browse leagues <ChevRight /></button>
+        </div>
+      </div>
+    );
+  }
+
+  const fmtWD = (dateStr) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    return `${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]} · ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]} ${d.getDate()}`;
+  };
+  const fmtWDUpper = (dateStr) => fmtWD(dateStr).toUpperCase();
+
+  const TeamBadge = ({ side }) => (
+    <span className={`pd-ng-badge ${side === 'A' ? 'w' : 'd'}`}>{side === 'A' ? 'W' : 'D'}</span>
+  );
+  const teamRec = (side) => side === 'A' ? `${recA.w}-${recA.tot - recA.w}` : `${recB.w}-${recB.tot - recB.w}`;
+
+  const mySide = nextGame ? playerTeamId(nextGame) : null;
+
+  return (
+    <div className="pd">
+      {/* Context strip */}
+      <div className="pd-context">
+        <div style={{position:'relative'}}>
+          <button className="pd-league-switch" onClick={() => playerLeagues.length > 1 && setLeagueMenuOpen(o => !o)} aria-label="Switch league">
+            <span className="pd-league-dot" />
+            <span className="pd-league-name">{currentLeague.name}</span>
+            <span className="pd-league-season num">{seasonYear}</span>
+            {playerLeagues.length > 1 && <span className="pd-league-chev"><ChevDown /></span>}
+          </button>
+          {leagueMenuOpen && (
+            <div style={{position:'absolute',top:48,left:0,zIndex:20,background:'var(--surface)',border:'1px solid var(--hairline-2)',borderRadius:12,padding:6,minWidth:220,boxShadow:'var(--shadow-md)'}}>
+              {playerLeagues.map(l => (
+                <button key={l.id} onClick={() => { setCurrentLeagueId(l.id); setLeagueMenuOpen(false); }}
+                  style={{display:'flex',alignItems:'center',gap:10,padding:'10px 12px',width:'100%',background:l.id===currentLeague.id?'var(--surface-2)':'transparent',border:0,borderRadius:8,cursor:'pointer',textAlign:'left',color:'var(--text)',fontSize:13,fontWeight:500}}>
+                  <span className="pd-league-dot" style={{width:20,height:20}} />{l.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="pd-schedule">
+          {currentLeague.schedule || <span><strong>Tuesdays & Thursdays</strong> · 7:00 PM</span>}
+        </div>
+      </div>
+
+      {/* Hero portfolio */}
+      <div className="pd-port">
+        <div className="pd-port-label">
+          <div className="pd-port-label-left">Your Season · <strong>{currentLeague.name}</strong></div>
+          {totalWeeks > 0 && <div className="pd-port-week">Week {weekOf} of {totalWeeks}</div>}
+        </div>
+        <div className="pd-port-stats">
+          <div className="pd-port-stat">
+            <div className="pd-port-stat-lbl">Win %</div>
+            <div className="pd-port-stat-val num">{winPct !== null ? winPct.toFixed(1) : '—'}{winPct !== null && <span className="unit">%</span>}</div>
+            <div className={`pd-port-stat-sub ${last5Delta !== null ? (last5Delta >= 0 ? 'up' : 'down') : ''}`}>
+              {last5Delta !== null ? (<React.Fragment>{last5Delta >= 0 ? <ChevUp /> : <ChevUp style={{transform:'rotate(180deg)'}} />}{last5Delta >= 0 ? '+' : ''}{last5Delta} last 5G</React.Fragment>) : <span style={{color:'var(--text-3)'}}>Not enough games yet</span>}
+            </div>
+          </div>
+          <div className="pd-port-stat">
+            <div className="pd-port-stat-lbl">Record</div>
+            <div className="pd-port-stat-val num">{wins}<span style={{color:'var(--text-4)',fontWeight:700,margin:'0 -2px'}}>–</span>{losses}</div>
+            <div className="pd-port-stat-sub">{played} game{played===1?'':'s'} played</div>
+          </div>
+          <div className="pd-port-stat">
+            <div className="pd-port-stat-lbl">Games Played</div>
+            <div className="pd-port-stat-val num">{gamesPlayedPct !== null ? gamesPlayedPct : '—'}{gamesPlayedPct !== null && <span className="unit">%</span>}</div>
+            <div className="pd-port-stat-sub">{myCompletedCount} of {leagueCompletedCount} league nights</div>
+          </div>
+          <div className="pd-port-stat">
+            <div className="pd-port-stat-lbl">Streak</div>
+            <div className={`pd-port-stat-val num ${streakType === 'W' ? 'streak-w' : streakType === 'L' ? 'streak-l' : ''}`}>
+              {streakType ? `${streakType}${streakCount}` : '—'}
+            </div>
+            <div className={`pd-port-stat-sub ${streakType === 'W' ? 'up' : streakType === 'L' ? 'down' : ''}`}>
+              {streakType ? `${streakCount} straight ${streakType === 'W' ? 'win' : 'loss'}${streakCount===1?'':'es'}` : 'No games yet'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Next game */}
+      {nextGame && (
+        <div className="pd-next">
+          <div className="pd-next-left">
+            <div className="pd-ng-meta">
+              <span className="pd-ng-tag">Next · {fmtWD(nextGame.gameDate)} · {fmtTime(nextGame.gameTime)}</span>
+              {nextGame.venue && <span className="pd-ng-venue">{nextGame.venue}</span>}
+            </div>
+            <div className="pd-ng-teams">
+              <div className="pd-ng-team">
+                <TeamBadge side="A" />
+                <div className="pd-ng-tn">
+                  <div className="pd-ng-tname">{getTeamNameForGame(nextGame, 'A')}{mySide === 'A' && <span className="pd-me">You</span>}</div>
+                  <div className="pd-ng-trec num">{teamRec('A')} last 5</div>
+                </div>
+              </div>
+              <span className="pd-ng-x">vs</span>
+              <div className="pd-ng-team">
+                <TeamBadge side="B" />
+                <div className="pd-ng-tn">
+                  <div className="pd-ng-tname">{getTeamNameForGame(nextGame, 'B')}{mySide === 'B' && <span className="pd-me">You</span>}</div>
+                  <div className="pd-ng-trec num">{teamRec('B')} last 5</div>
+                </div>
+              </div>
+            </div>
+            <div className="pd-prob-block">
+              <div className="pd-prob-top">
+                <span className={probA >= probB ? 'pd-prob-lead' : ''}>{getTeamNameForGame(nextGame,'A')} {probA}%</span>
+                <span className={probB > probA ? 'pd-prob-lead' : ''}>{getTeamNameForGame(nextGame,'B')} {probB}%</span>
+              </div>
+              <div className="pd-prob-bar">
+                <div className={probA >= probB ? 'pd-prob-seg-a' : 'pd-prob-seg-b'} style={{width: probA + '%'}} />
+                <div className={probB > probA ? 'pd-prob-seg-a' : 'pd-prob-seg-b'} style={{width: probB + '%'}} />
+              </div>
+            </div>
+          </div>
+          <button className="pd-cta" onClick={() => onViewGame && onViewGame(nextGame.id)}>
+            <CheckMark /> I'm In
+          </button>
+        </div>
+      )}
+
+      {/* Last 5 form cards */}
+      {last5.length > 0 && (
+        <div>
+          <div className="pd-section-head" style={{marginBottom:10}}>
+            <div className="pd-section-title">Your Last 5</div>
+            <button className="pd-section-link" onClick={() => setTab('games')}>All games <ChevRight /></button>
+          </div>
+          <div className="pd-form">
+            {[...last5].reverse().map(g => {
+              const side = playerTeamId(g);
+              const win = getGameWinTeam(g);
+              const isWin = side && win && side === win;
+              const myScore = side === 'A' ? g.scoreA : g.scoreB;
+              const opScore = side === 'A' ? g.scoreB : g.scoreA;
+              const opName = side === 'A' ? getTeamNameForGame(g,'B') : getTeamNameForGame(g,'A');
+              return (
+                <button key={g.id} className="pd-form-card" onClick={() => onViewGame && onViewGame(g.id)}>
+                  <div className="pd-form-top">
+                    <span className="pd-form-date">{fmtWDUpper(g.gameDate)}</span>
+                    <span className={`pd-form-pill ${isWin ? 'won' : 'lost'}`}>{isWin ? 'Won' : 'Lost'}</span>
+                  </div>
+                  <div className="pd-form-score">
+                    {myScore !== null && myScore !== undefined ? (
+                      <React.Fragment>
+                        <span className={isWin ? '' : 'lose'}>{myScore}</span>
+                        <span className="sep">—</span>
+                        <span className={!isWin ? '' : 'lose'}>{opScore}</span>
+                      </React.Fragment>
+                    ) : <span className="lose">—</span>}
+                  </div>
+                  <div className="pd-form-opp">vs {opName}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Upcoming / Markets */}
+      {upcomingLeagueGames.length > 0 && (
+        <div>
+          <div className="pd-section-head" style={{marginBottom:10}}>
+            <div className="pd-section-title">Upcoming · {currentLeague.name}</div>
+            <button className="pd-section-link" onClick={() => setTab('games')}>All games <ChevRight /></button>
+          </div>
+          <div className="pd-markets-card">
+            {upcomingLeagueGames.slice(0,5).map(g => {
+              const side = playerTeamId(g);
+              const rsvp = !!side; // player is rostered
+              return (
+                <div key={g.id} className="pd-market-row" onClick={() => onViewGame && onViewGame(g.id)}>
+                  <div className="pd-m-date">
+                    <span className="pd-m-date-day">{fmtWD(g.gameDate)}</span>
+                    <span className="pd-m-date-time">{fmtTime(g.gameTime)}</span>
+                  </div>
+                  <div className="pd-m-teams">
+                    <span className="t">{getTeamNameForGame(g,'A')}</span>{side==='A' && <span className="pd-me">You</span>}
+                    <span className="x">vs</span>
+                    <span className="t">{getTeamNameForGame(g,'B')}</span>{side==='B' && <span className="pd-me">You</span>}
+                  </div>
+                  <div className="pd-m-prob-lite">
+                    <span>{probA}%</span>
+                    <span className="pd-prob-bar"><span className="pd-prob-seg-a" style={{width: probA + '%'}} /><span className="pd-prob-seg-b" style={{width: probB + '%'}} /></span>
+                    <span style={{textAlign:'right'}}>{probB}%</span>
+                  </div>
+                  <span className={`pd-m-status ${rsvp ? 'rsvp' : 'open'}`}>{rsvp ? "RSVP'd" : 'Open'}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Split: leaderboard + activity */}
+      <div className="pd-split">
+        <div className="pd-lb-card">
+          <div className="pd-section-head"><div className="pd-section-title">League Leaders</div><button className="pd-section-link" onClick={() => setTab('leaderboard')}>Full leaderboard <ChevRight /></button></div>
+          {leaderboard.length === 0 ? (
+            <div style={{color:'var(--text-3)',fontSize:13,padding:'10px 6px'}}>No games played yet.</div>
+          ) : leaderboard.map((row, i) => {
+            const isMe = row.p.id === player.id;
+            const pctClass = row.pct >= 60 ? 'up' : row.pct < 40 ? 'down' : 'mid';
+            return (
+              <div key={row.p.id} className={`pd-lb-row ${i === 0 ? 'top' : ''} ${isMe ? 'me' : ''}`}>
+                <span className="pd-lb-rank num">{i + 1}</span>
+                <span className="pd-lb-who">
+                  <span className="pd-lb-avatar">{initials(row.p)}</span>
+                  <span className="pd-lb-name">{row.p.firstName} {row.p.lastName}</span>
+                </span>
+                <span className="pd-lb-record num">{row.w}-{row.l}</span>
+                <span className={`pd-lb-pct num ${pctClass}`}>{row.pct.toFixed(1)}%</span>
+              </div>
+            );
+          })}
+        </div>
+        <div className="pd-activity-card">
+          <div className="pd-section-head"><div className="pd-section-title">Recent Activity</div><button className="pd-section-link" onClick={() => setTab('games')}>All games <ChevRight /></button></div>
+          {activity.length === 0 ? (
+            <div style={{color:'var(--text-3)',fontSize:13,padding:'10px 6px'}}>No activity yet.</div>
+          ) : activity.map((a, i) => (
+            <div key={a.id} className="pd-activity-row">
+              <span className="who">
+                <strong>{a.winner}</strong> beat <strong>{a.loser}</strong> {a.winScore !== null && a.loseScore !== null ? `${a.winScore}–${a.loseScore}` : ''}
+              </span>
+              <span className="when">{fmtWD(a.date)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Discover */}
+      {(otherLeagues.length > 0 || playerLeagues.length > 0) && (
+        <div>
+          <div className="pd-section-head" style={{marginBottom:10}}>
+            <div className="pd-section-title">Discover</div>
+            <button className="pd-section-link" onClick={() => setTab('leagues')}>All leagues <ChevRight /></button>
+          </div>
+          <div className="pd-discover-grid">
+            <div className="pd-discover-card you">
+              <div className="pd-disc-dot" />
+              <div>
+                <div className="pd-disc-title">{currentLeague.name}</div>
+                <div className="pd-disc-sub">{currentLeague.schedule || 'Your home league'}</div>
+              </div>
+              <div className="pd-disc-foot">
+                <div className="pd-disc-chips">
+                  <span className="pd-disc-chip youin">You're in</span>
+                  <span className="pd-disc-chip">{leaguePlayers.length} players</span>
+                </div>
+                <button className="pd-disc-action manage" onClick={() => setTab('leagues')}>Manage</button>
+              </div>
+            </div>
+            {otherLeagues.slice(0, 5).map(l => {
+              const lp = roster.filter(p => (p.leagueIds || []).includes(l.id));
+              const cap = l.maxPlayers || null;
+              const spots = cap ? Math.max(0, cap - lp.length) : null;
+              return (
+                <div key={l.id} className="pd-discover-card">
+                  <div className="pd-disc-dot" />
+                  <div>
+                    <div className="pd-disc-title">{l.name}</div>
+                    <div className="pd-disc-sub">{l.schedule || l.description || 'Open league'}</div>
+                  </div>
+                  <div className="pd-disc-foot">
+                    <div className="pd-disc-chips">
+                      <span className="pd-disc-chip">{lp.length} players</span>
+                      {spots !== null && <span className="pd-disc-chip">{spots} spot{spots===1?'':'s'}</span>}
+                    </div>
+                    <button className="pd-disc-action join" onClick={() => setTab('leagues')}>Join</button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
