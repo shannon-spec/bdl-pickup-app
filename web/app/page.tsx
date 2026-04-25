@@ -587,8 +587,9 @@ function LbRow({
       : "text-[color:var(--text-2)]";
   const initials = `${row.player.firstName[0] ?? ""}${row.player.lastName[0] ?? ""}`.toUpperCase();
   return (
-    <div
-      className={`grid items-center gap-3 py-2.5 px-1.5 grid-cols-[28px_1fr_80px_80px] max-sm:grid-cols-[28px_1fr_80px] border-t border-[color:var(--hairline)] first:border-t-0 ${
+    <Link
+      href={`/players/${row.player.id}`}
+      className={`grid items-center gap-3 py-2.5 px-1.5 grid-cols-[28px_1fr_80px_80px] max-sm:grid-cols-[28px_1fr_80px] border-t border-[color:var(--hairline)] first:border-t-0 hover:bg-[color:var(--surface-2)] transition-colors ${
         row.isMe ? "bg-[color:var(--surface-2)] border-l-2 border-l-[color:var(--brand)] pl-2.5" : ""
       }`}
     >
@@ -606,7 +607,7 @@ function LbRow({
         >
           {initials}
         </span>
-        <span className="font-semibold text-[color:var(--text)] truncate">
+        <span className="font-semibold text-[color:var(--text)] truncate hover:text-[color:var(--brand)]">
           {row.isMe && (
             <span className="text-[color:var(--brand)] font-extrabold mr-1.5">•</span>
           )}
@@ -619,7 +620,7 @@ function LbRow({
       <span className={`font-extrabold text-[13.5px] text-right num ${pctTone}`}>
         {row.pct.toFixed(1)}%
       </span>
-    </div>
+    </Link>
   );
 }
 

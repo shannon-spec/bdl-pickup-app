@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import type { GameDetail } from "@/lib/queries/games";
@@ -100,7 +101,12 @@ export function RosterRow({
   const [pending, start] = useTransition();
   return (
     <div className="flex items-center justify-between gap-3 px-5 py-2.5 border-t border-[color:var(--hairline)] first:border-t-0 hover:bg-[color:var(--surface-2)] text-[14px]">
-      <span className="font-bold">{name}</span>
+      <Link
+        href={`/players/${playerId}`}
+        className="font-bold hover:text-[color:var(--brand)]"
+      >
+        {name}
+      </Link>
       <div className="flex items-center gap-1.5">
         {(["A", "B", "invited"] as const).map((s) =>
           s === currentSide ? null : (

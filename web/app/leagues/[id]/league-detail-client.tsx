@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Copy, Mail, Pencil, Plus, Trash2, X } from "lucide-react";
 import type { LeagueDetail } from "@/lib/queries/leagues";
@@ -144,9 +145,12 @@ export function MemberRow({
   return (
     <Row>
       <div className="min-w-0">
-        <div className="font-bold text-[color:var(--text)] truncate">
+        <Link
+          href={`/players/${player.id}`}
+          className="font-bold text-[color:var(--text)] truncate hover:text-[color:var(--brand)]"
+        >
           {player.lastName}, {player.firstName}
-        </div>
+        </Link>
         <div className="text-[11.5px] text-[color:var(--text-3)] mt-0.5 flex items-center gap-2">
           <Pill tone={player.status === "Active" ? "win" : player.status === "IR" ? "loss" : "neutral"}>
             {player.status}
@@ -183,9 +187,12 @@ export function CommissionerRow({
   const [pending, start] = useTransition();
   return (
     <Row>
-      <div className="font-bold text-[color:var(--text)]">
+      <Link
+        href={`/players/${player.id}`}
+        className="font-bold text-[color:var(--text)] hover:text-[color:var(--brand)]"
+      >
         {player.firstName} {player.lastName}
-      </div>
+      </Link>
       <button
         type="button"
         disabled={pending}
