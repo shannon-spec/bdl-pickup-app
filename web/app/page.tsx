@@ -143,7 +143,7 @@ export default async function Home() {
               className="rounded-[16px] border border-[color:var(--hairline-2)] px-6 py-5 relative overflow-hidden flex flex-col gap-3.5"
               style={{
                 background:
-                  "radial-gradient(ellipse at top left, var(--brand-soft), transparent 60%), var(--surface)",
+                  "radial-gradient(ellipse at top left, var(--next-game-tint), transparent 60%), var(--surface)",
               }}
             >
               <div className="flex items-center gap-2.5 flex-wrap text-[12px]">
