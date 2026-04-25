@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ChevronRight, ChevronUp, Check } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
 import { TopBar } from "@/components/bdl/top-bar";
-import { ContextStrip } from "@/components/bdl/context-strip";
+import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { StatBlock, StatRow } from "@/components/bdl/stat-block";
 import { TeamBadge } from "@/components/bdl/team-badge";
@@ -22,6 +22,7 @@ import {
   getLeaguePlayerCount,
   getFirstRosterPlayer,
 } from "@/lib/queries/player-dashboard";
+import { getActiveLeagueId } from "@/lib/cookies/active-league";
 
 /** Always render fresh — this dashboard reads session + DB on each request. */
 export const dynamic = "force-dynamic";
@@ -74,7 +75,9 @@ export default async function Home() {
   }
 
   const myLeagues = await getPlayerLeagues(me.id);
-  const currentLeague = myLeagues[0] ?? null;
+  const activeId = await getActiveLeagueId();
+  const currentLeague =
+    (activeId && myLeagues.find((l) => l.id === activeId)) || myLeagues[0] || null;
 
   if (!currentLeague) {
     return (
@@ -127,16 +130,7 @@ export default async function Home() {
           </div>
         )}
 
-        <ContextStrip
-          leagueName={currentLeague.name}
-          season={currentLeague.season ?? undefined}
-          schedule={
-            currentLeague.schedule ? (
-              <span>{currentLeague.schedule}</span>
-            ) : undefined
-          }
-          hasMoreLeagues={myLeagues.length > 1}
-        />
+        <ContextHeader />
 
         {/* Hero */}
         <section className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-7 pt-6 pb-5 max-sm:px-5 max-sm:pt-5 max-sm:pb-4">

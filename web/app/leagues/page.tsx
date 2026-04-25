@@ -4,6 +4,7 @@ import { ChevronRight } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
 import { isAdminLike, getMyCommissionerLeagueIds } from "@/lib/auth/perms";
 import { TopBar } from "@/components/bdl/top-bar";
+import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
@@ -28,6 +29,7 @@ export default async function LeaguesPage() {
     <>
       <TopBar active="/leagues" userInitials={session.username.slice(0, 2).toUpperCase()} />
       <PageFrame>
+        <ContextHeader />
         <LeaguesPageClient canCreate={isAdmin}>
           <SectionHead
             title="Leagues"
