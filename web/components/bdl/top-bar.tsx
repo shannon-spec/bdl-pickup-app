@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, LogOut, Search, Settings } from "lucide-react";
+import { Bell, LogOut, Settings } from "lucide-react";
 import { Brand } from "./brand";
 import { ThemeToggle } from "./theme-toggle";
 import { signOut } from "@/lib/auth/actions";
@@ -64,7 +64,6 @@ export function TopBar({ active = "/", userInitials = "ST" }: { active?: string;
         </nav>
 
         <div className="flex items-center gap-2">
-          <SearchPill />
           <ThemeToggle />
           <Link
             href="/settings"
@@ -90,35 +89,6 @@ export function TopBar({ active = "/", userInitials = "ST" }: { active?: string;
         </div>
       </div>
     </header>
-  );
-}
-
-function SearchPill() {
-  return (
-    <button
-      type="button"
-      className={cn(
-        "max-sm:hidden",
-        "inline-flex items-center gap-2 rounded-full h-[34px] px-3",
-        "bg-[color:var(--surface)] border border-[color:var(--hairline-2)]",
-        "text-[13px] text-[color:var(--text-3)]",
-        "hover:text-[color:var(--text)] hover:border-[color:var(--text-4)]",
-        "transition-colors",
-        "max-md:w-[160px]",
-      )}
-      aria-label="Search"
-    >
-      <Search size={14} />
-      <span>Search</span>
-      <kbd
-        className={cn(
-          "ml-2 text-[10px] font-[family-name:var(--mono)] text-[color:var(--text-4)]",
-          "border border-[color:var(--hairline-2)] rounded px-1 py-[1px] leading-none",
-        )}
-      >
-        ⌘K
-      </kbd>
-    </button>
   );
 }
 
