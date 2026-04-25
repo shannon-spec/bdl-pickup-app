@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useMemo } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import type { SessionLeague } from "@/lib/queries/session-context";
 
 type View = "player" | "commissioner" | "admin";
@@ -23,7 +23,6 @@ export function RoleToggle({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
 
   const activeLeague = leagues.find((l) => l.id === activeLeagueId);
   const isCommish =
@@ -36,49 +35,32 @@ export function RoleToggle({
     return out;
   }, [isCommish, isSuperAdmin]);
 
-  const urlView = (searchParams.get("view") as View | null) ?? null;
-
-  // On league change: rehydrate from per-league localStorage. If the
-  // stored view isn't valid for this league, snap to player.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const key = `bdl_view_${activeLeagueId}`;
-    const stored = window.localStorage.getItem(key) as View | null;
-    let next: View;
-    if (stored && options.includes(stored)) {
-      next = stored;
-    } else if (urlView && options.includes(urlView)) {
-      next = urlView;
-    } else {
-      next = "player";
-    }
-    if (next !== urlView) {
-      const sp = new URLSearchParams(searchParams.toString());
-      if (next === "player") sp.delete("view");
-      else sp.set("view", next);
-      const qs = sp.toString();
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-    }
-    // We intentionally don't include searchParams or urlView in deps;
-    // we re-run only when the active league changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeLeagueId]);
-
   if (options.length <= 1) return null;
+
+  // Highlight derived from current pathname — wherever you actually are
+  // wins, regardless of what was last clicked.
+  const current: View = pathname.startsWith("/admin")
+    ? "admin"
+    : pathname.startsWith(`/leagues/${activeLeagueId}`)
+      ? "commissioner"
+      : "player";
 
   const onSelect = (v: View) => {
     if (typeof window !== "undefined") {
       window.localStorage.setItem(`bdl_view_${activeLeagueId}`, v);
     }
-    const sp = new URLSearchParams(searchParams.toString());
-    if (v === "player") sp.delete("view");
-    else sp.set("view", v);
-    const qs = sp.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    // Each lens has a home — clicking a tab navigates there so admin
+    // and commissioner functions are actually reachable.
+    if (v === "admin") {
+      router.push("/admin");
+      return;
+    }
+    if (v === "commissioner") {
+      router.push(`/leagues/${activeLeagueId}`);
+      return;
+    }
+    router.push("/");
   };
-
-  const current: View =
-    urlView && options.includes(urlView) ? urlView : "player";
 
   return (
     <div
