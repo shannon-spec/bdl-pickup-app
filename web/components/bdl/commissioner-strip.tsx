@@ -3,6 +3,10 @@ import { Mail, Phone } from "lucide-react";
 import { asc } from "drizzle-orm";
 import { readSession } from "@/lib/auth/session";
 import { getViewCaps } from "@/lib/auth/view";
+import {
+  getLeagueContactAccess,
+  type ContactAccess,
+} from "@/lib/auth/contact-access";
 import { getActiveLeagueId } from "@/lib/cookies/active-league";
 import {
   getLeagueCommissionerContacts,
@@ -12,11 +16,17 @@ import { db, players } from "@/lib/db";
 import { CommissionerAdminControls } from "./commissioner-admin-controls";
 
 /**
- * League commissioner contact strip. Renders only when the viewer is
- * a league member, a commissioner, or an admin. Admin-only inline
- * controls (add/remove commissioner) appear when the active view is
- * "admin" — purely a UI lensing decision; the perm checks still gate
- * the actions on the server.
+ * League commissioner contact strip.
+ *
+ * Strip visibility — viewer must be a member, commissioner, or admin
+ * of the league (handled in getLeagueCommissionerContacts).
+ *
+ * Cell / email visibility is *view-lensed* via getLeagueContactAccess:
+ *   - Admin view (real admin): always shown
+ *   - Player or Commissioner view, viewer in league: shown unless private
+ *   - Outside the league or wrong view: hidden entirely
+ *
+ * Inline add/remove admin controls render only in admin view.
  */
 export async function CommissionerStrip({ leagueId }: { leagueId?: string }) {
   const session = await readSession();
@@ -26,6 +36,7 @@ export async function CommissionerStrip({ leagueId }: { leagueId?: string }) {
 
   const caps = await getViewCaps(session);
   const showAdminControls = caps.view === "admin";
+  const contactAccess = await getLeagueContactAccess(session, id, caps.view);
 
   const commissioners = await getLeagueCommissionerContacts(id, session);
   if (!commissioners) return null;
@@ -58,7 +69,7 @@ export async function CommissionerStrip({ leagueId }: { leagueId?: string }) {
       ) : (
         <div className="flex flex-wrap gap-2.5">
           {commissioners.map((c) => (
-            <Card key={c.id} c={c} canSeePrivate={caps.view === "admin"} />
+            <Card key={c.id} c={c} access={contactAccess} />
           ))}
         </div>
       )}
@@ -83,11 +94,13 @@ function initials(c: CommissionerContact) {
 
 function Card({
   c,
-  canSeePrivate,
+  access,
 }: {
   c: CommissionerContact;
-  canSeePrivate: boolean;
+  access: ContactAccess;
 }) {
+  const showCell = access !== "none" && c.cell !== null;
+  const showEmail = access !== "none" && c.email !== null;
   return (
     <div className="flex items-center gap-3 rounded-full border border-[color:var(--hairline-2)] bg-[color:var(--surface-2)] pl-1 pr-3.5 py-1">
       <Link
@@ -104,22 +117,28 @@ function Card({
         >
           {c.firstName} {c.lastName}
         </Link>
-        <div className="flex items-center gap-3 text-[11.5px] text-[color:var(--text-3)] flex-wrap">
-          <Contact
-            icon={<Phone size={11} />}
-            value={c.cell}
-            isPrivate={c.cellPrivate}
-            canSeePrivate={canSeePrivate}
-            href={c.cell ? `tel:${c.cell}` : undefined}
-          />
-          <Contact
-            icon={<Mail size={11} />}
-            value={c.email}
-            isPrivate={c.emailPrivate}
-            canSeePrivate={canSeePrivate}
-            href={c.email ? `mailto:${c.email}` : undefined}
-          />
-        </div>
+        {(showCell || showEmail) && (
+          <div className="flex items-center gap-3 text-[11.5px] text-[color:var(--text-3)] flex-wrap">
+            {showCell && (
+              <Contact
+                icon={<Phone size={11} />}
+                value={c.cell}
+                isPrivate={c.cellPrivate}
+                access={access}
+                href={c.cell ? `tel:${c.cell}` : undefined}
+              />
+            )}
+            {showEmail && (
+              <Contact
+                icon={<Mail size={11} />}
+                value={c.email}
+                isPrivate={c.emailPrivate}
+                access={access}
+                href={c.email ? `mailto:${c.email}` : undefined}
+              />
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -129,17 +148,18 @@ function Contact({
   icon,
   value,
   isPrivate,
-  canSeePrivate,
+  access,
   href,
 }: {
   icon: React.ReactNode;
   value: string | null;
   isPrivate: boolean;
-  canSeePrivate: boolean;
+  access: ContactAccess;
   href?: string;
 }) {
   if (!value) return null;
-  const showValue = !isPrivate || canSeePrivate;
+  // "all" → show value regardless of privacy. "non-private" → show only if not flagged.
+  const showValue = access === "all" || (access === "non-private" && !isPrivate);
   const valueEl = showValue ? (
     <a
       href={href}

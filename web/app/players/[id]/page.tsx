@@ -3,6 +3,10 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, ChevronUp } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
 import { getViewCaps } from "@/lib/auth/view";
+import {
+  getPlayerContactAccess,
+  type ContactAccess,
+} from "@/lib/auth/contact-access";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
@@ -40,6 +44,10 @@ export default async function PlayerProfilePage({
   const isMe = session.playerId === player.id;
   const caps = await getViewCaps(session);
   const canEdit = caps.view === "admin";
+  // Looking at your own profile: always see your own contact info.
+  const contactAccess: ContactAccess = isMe
+    ? "all"
+    : await getPlayerContactAccess(session, player.id, caps.view);
 
   return (
     <>
@@ -241,11 +249,13 @@ export default async function PlayerProfilePage({
           </div>
         )}
 
-        {/* Contact (admins/commissioners only get to see PII; we show what's not flagged private) */}
-        {/* Player info + contact (side-by-side cards) */}
+        {/* Contact card honors per-league membership: outside viewers see no contact info,
+            league members see non-private fields, admins in admin view see everything. */}
         <div className="grid grid-cols-2 gap-4 max-[1100px]:grid-cols-1">
           <PlayerInfoCard player={player} />
-          <ContactCard player={player} />
+          {contactAccess !== "none" && (
+            <ContactCard player={player} access={contactAccess} />
+          )}
         </div>
       </PageFrame>
       <MobileBottomBar active="profile" />
@@ -330,12 +340,14 @@ function PlayerInfoCard({ player }: { player: PlayerType }) {
   );
 }
 
-function ContactCard({ player }: { player: PlayerType }) {
-  const showEmail = player.email && !player.emailPrivate;
-  const showCell = player.cell && !player.cellPrivate;
-  if (!showEmail && !showCell && !player.emailPrivate && !player.cellPrivate) {
-    return null;
-  }
+function ContactCard({
+  player,
+  access,
+}: {
+  player: PlayerType;
+  access: ContactAccess;
+}) {
+  if (!player.cell && !player.email) return null;
 
   return (
     <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6">
@@ -344,18 +356,24 @@ function ContactCard({ player }: { player: PlayerType }) {
         Contact
       </div>
       <div className="grid grid-cols-2 gap-x-6 gap-y-5 max-sm:grid-cols-1">
-        <ContactField
-          label="Cell"
-          value={player.cell}
-          isPrivate={player.cellPrivate}
-          href={player.cell ? `tel:${player.cell}` : undefined}
-        />
-        <ContactField
-          label="Email"
-          value={player.email}
-          isPrivate={player.emailPrivate}
-          href={player.email ? `mailto:${player.email}` : undefined}
-        />
+        {player.cell && (
+          <ContactField
+            label="Cell"
+            value={player.cell}
+            isPrivate={player.cellPrivate}
+            access={access}
+            href={`tel:${player.cell}`}
+          />
+        )}
+        {player.email && (
+          <ContactField
+            label="Email"
+            value={player.email}
+            isPrivate={player.emailPrivate}
+            access={access}
+            href={`mailto:${player.email}`}
+          />
+        )}
       </div>
     </div>
   );
@@ -388,13 +406,17 @@ function ContactField({
   label,
   value,
   isPrivate,
+  access,
   href,
 }: {
   label: string;
   value: string | null;
   isPrivate: boolean;
+  access: ContactAccess;
   href?: string;
 }) {
+  const showValue =
+    !!value && (access === "all" || (access === "non-private" && !isPrivate));
   return (
     <div className="flex flex-col gap-1.5">
       <span className="text-[10.5px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)] flex items-center gap-2">
@@ -405,7 +427,7 @@ function ContactField({
           </span>
         )}
       </span>
-      {value && !isPrivate ? (
+      {showValue ? (
         <a
           href={href}
           className="font-bold text-[15.5px] text-[color:var(--text)] hover:text-[color:var(--brand)]"
