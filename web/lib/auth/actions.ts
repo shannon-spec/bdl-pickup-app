@@ -2,7 +2,8 @@
 
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
-import { db, superAdmins } from "@/lib/db";
+import bcrypt from "bcryptjs";
+import { db, superAdmins, players } from "@/lib/db";
 import {
   createSession,
   writeSessionCookie,
@@ -33,30 +34,57 @@ export async function signInAdmin(formData: FormData): Promise<SignInResult> {
     return { ok: false, error: "Username and password are required." };
   }
 
-  const expected = process.env.ADMIN_SHARED_PASSWORD;
-  if (!expected) {
-    return {
-      ok: false,
-      error: "Server not configured (ADMIN_SHARED_PASSWORD missing).",
-    };
-  }
-  if (!safeEq(password, expected)) {
-    return { ok: false, error: "Invalid credentials." };
-  }
-
+  // Try super_admins first — shared-password gate stays in place for them.
   const [admin] = await db
     .select()
     .from(superAdmins)
     .where(eq(superAdmins.username, username))
     .limit(1);
 
-  if (!admin) return { ok: false, error: "Invalid credentials." };
+  if (admin) {
+    const expected = process.env.ADMIN_SHARED_PASSWORD;
+    if (!expected) {
+      return {
+        ok: false,
+        error: "Server not configured (ADMIN_SHARED_PASSWORD missing).",
+      };
+    }
+    if (!safeEq(password, expected)) {
+      return { ok: false, error: "Invalid credentials." };
+    }
+    const token = await createSession({
+      adminId: admin.id,
+      username: admin.username,
+      role: admin.role,
+      playerId: admin.playerId,
+    });
+    await writeSessionCookie(token);
+    return { ok: true };
+  }
+
+  // Fall back to player credentials. Players store a per-account bcrypt
+  // hash; no shared password.
+  const [player] = await db
+    .select({
+      id: players.id,
+      username: players.username,
+      passwordHash: players.passwordHash,
+    })
+    .from(players)
+    .where(eq(players.username, username))
+    .limit(1);
+
+  if (!player || !player.passwordHash) {
+    return { ok: false, error: "Invalid credentials." };
+  }
+  const ok = await bcrypt.compare(password, player.passwordHash);
+  if (!ok) return { ok: false, error: "Invalid credentials." };
 
   const token = await createSession({
-    adminId: admin.id,
-    username: admin.username,
-    role: admin.role,
-    playerId: admin.playerId,
+    adminId: "",
+    username: player.username ?? username,
+    role: "player",
+    playerId: player.id,
   });
   await writeSessionCookie(token);
   return { ok: true };

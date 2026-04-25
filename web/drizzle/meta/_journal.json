@@ -15,6 +15,13 @@
       "when": 1777117669772,
       "tag": "0001_cultured_thunderbolt",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777157211227,
+      "tag": "0002_cuddly_makkari",
+      "breakpoints": true
     }
   ]
 }

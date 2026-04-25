@@ -24,6 +24,7 @@ import {
   time,
   primaryKey,
   index,
+  uniqueIndex,
   pgEnum,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
@@ -94,6 +95,11 @@ export const players = pgTable(
     cellPrivate: boolean("cell_private").notNull().default(false),
     emailPrivate: boolean("email_private").notNull().default(false),
     addressPrivate: boolean("address_private").notNull().default(false),
+    // Optional player-side credentials. Players without these can only
+    // be reached via invite link or admin impersonation. Username stored
+    // lowercased for case-insensitive lookup.
+    username: text("username"),
+    passwordHash: text("password_hash"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
@@ -103,6 +109,7 @@ export const players = pgTable(
   (t) => [
     index("players_last_first_idx").on(t.lastName, t.firstName),
     index("players_email_idx").on(t.email),
+    uniqueIndex("players_username_idx").on(t.username),
   ],
 );
 

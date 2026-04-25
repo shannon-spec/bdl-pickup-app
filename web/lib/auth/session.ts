@@ -12,9 +12,14 @@ const COOKIE = "bdl_session";
 const ALG = "HS256";
 
 export type Session = {
+  /**
+   * super_admins.id for admin sessions; empty string for player sessions.
+   * Existing helpers/queries treat the empty string as "no admin row".
+   */
   adminId: string;
   username: string;
-  role: "owner" | "super_admin";
+  /** "player" was added to support per-player credential logins. */
+  role: "owner" | "super_admin" | "player";
   playerId: string | null;
   iat: number;
   exp: number;
@@ -107,6 +112,13 @@ export async function requireAdmin(): Promise<Session> {
   if (session.role !== "owner" && session.role !== "super_admin") {
     throw new Error("Forbidden — admin role required.");
   }
+  return session;
+}
+
+/** Any signed-in user (admin or player). */
+export async function requireUser(): Promise<Session> {
+  const session = await readSession();
+  if (!session) throw new Error("Not authenticated.");
   return session;
 }
 

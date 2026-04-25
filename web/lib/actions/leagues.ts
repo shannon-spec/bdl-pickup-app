@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import bcrypt from "bcryptjs";
 import { db, leagues, leaguePlayers, leagueCommissioners, players } from "@/lib/db";
 import { requireAdminOnly, requireLeagueManager } from "@/lib/auth/perms";
 import { requireAdminView, requireManageView } from "@/lib/auth/view";
@@ -133,6 +134,85 @@ const newPlayerSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required.").max(60),
   lastName: z.string().trim().min(1, "Last name is required.").max(60),
 });
+
+const credentialsSchema = z.object({
+  leagueId: z.string().uuid("Pick a league."),
+  firstName: z.string().trim().min(1, "First name required.").max(60),
+  lastName: z.string().trim().min(1, "Last name required.").max(60),
+  email: z
+    .string()
+    .trim()
+    .max(120)
+    .optional()
+    .or(z.literal(""))
+    .refine(
+      (v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
+      "Invalid email.",
+    ),
+  username: z
+    .string()
+    .trim()
+    .min(3, "Username must be 3-32 chars.")
+    .max(32, "Username must be 3-32 chars.")
+    .regex(
+      /^[a-zA-Z0-9._-]+$/,
+      "Letters, numbers, dot, dash, and underscore only.",
+    ),
+  password: z.string().min(8, "Password must be at least 8 characters.").max(72),
+});
+
+export async function createPlayerWithCredentials(
+  formData: FormData,
+): Promise<ActionResult<{ id: string; username: string }>> {
+  const parsed = credentialsSchema.safeParse(readForm(formData));
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "Validation failed.",
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+  const v = parsed.data;
+  await requireLeagueManager(v.leagueId);
+  await requireManageView();
+
+  const username = v.username.toLowerCase();
+  const [taken] = await db
+    .select({ id: players.id })
+    .from(players)
+    .where(eq(players.username, username))
+    .limit(1);
+  if (taken) {
+    return {
+      ok: false,
+      error: "Username is already in use.",
+      fieldErrors: { username: ["Username is already in use."] },
+    };
+  }
+
+  const passwordHash = await bcrypt.hash(v.password, 10);
+  const [row] = await db
+    .insert(players)
+    .values({
+      firstName: v.firstName,
+      lastName: v.lastName,
+      email: nullable(v.email),
+      username,
+      passwordHash,
+    })
+    .returning({ id: players.id });
+
+  await db
+    .insert(leaguePlayers)
+    .values({ leagueId: v.leagueId, playerId: row.id })
+    .onConflictDoNothing();
+
+  revalidatePath(`/leagues/${v.leagueId}`);
+  revalidatePath("/players");
+  revalidatePath("/roster");
+  revalidatePath("/");
+  return { ok: true, data: { id: row.id, username } };
+}
 
 export async function createAndAddLeagueMember(
   leagueId: string,
