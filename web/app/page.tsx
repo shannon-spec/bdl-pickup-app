@@ -19,7 +19,6 @@ import {
   getSeasonStats,
   getLastFive,
   getNextGame,
-  getUpcomingMarkets,
   getLeaderboard,
   getRecentActivity,
   getDiscoverLeagues,
@@ -104,7 +103,6 @@ export default async function Home() {
     stats,
     lastFive,
     nextGame,
-    upcoming,
     leaderboard,
     activity,
     discover,
@@ -115,7 +113,6 @@ export default async function Home() {
     getSeasonStats(me.id, currentLeague.id),
     getLastFive(me.id, currentLeague.id),
     getNextGame(me.id, currentLeague.id),
-    getUpcomingMarkets(me.id, currentLeague.id, 5),
     getLeaderboard(currentLeague.id, me.id, 5),
     getRecentActivity(currentLeague.id, 3),
     getDiscoverLeagues(me.id, 5),
@@ -186,6 +183,12 @@ export default async function Home() {
                   {nextGame.venue && (
                     <span className="text-[color:var(--text-3)]">{nextGame.venue}</span>
                   )}
+                  <Link
+                    href="/games"
+                    className="ml-auto pointer-events-auto inline-flex items-center gap-1 text-[11.5px] text-[color:var(--text-3)] hover:text-[color:var(--text)]"
+                  >
+                    All games <ChevronRight size={12} />
+                  </Link>
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
                   <TeamPick
@@ -338,38 +341,6 @@ export default async function Home() {
                     vs {g.opName}
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Upcoming markets */}
-        {upcoming.length > 0 && (
-          <div>
-            <SectionHead
-              title={`Upcoming · ${currentLeague.name}`}
-              right={
-                <Link
-                  href="/games"
-                  className="inline-flex items-center gap-1 text-[12px] text-[color:var(--text-3)] hover:text-[color:var(--text)]"
-                >
-                  All games <ChevronRight size={13} />
-                </Link>
-              }
-            />
-            <div className="mt-3 rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden">
-              {upcoming.map((g) => (
-                <MarketRow
-                  key={g.id}
-                  date={fmtWD(g.date)}
-                  time={fmtTime(g.time)}
-                  a={g.teamAName}
-                  b={g.teamBName}
-                  you={g.mySide}
-                  probA={g.probA}
-                  probB={g.probB}
-                  status={g.mySide ? "rsvp" : "open"}
-                />
               ))}
             </div>
           </div>
@@ -544,63 +515,6 @@ function TeamPick({
   );
 }
 
-function MarketRow({
-  date,
-  time,
-  a,
-  b,
-  you,
-  probA,
-  probB,
-  status,
-}: {
-  date: string;
-  time: string;
-  a: string;
-  b: string;
-  you: "A" | "B" | null;
-  probA: number;
-  probB: number;
-  status: "rsvp" | "open";
-}) {
-  return (
-    <div className="grid gap-5 items-center px-5 py-4 grid-cols-[140px_1fr_200px_110px] max-[1100px]:grid-cols-[120px_1fr_110px] max-sm:grid-cols-[1fr_auto] max-sm:gap-y-2 border-t border-[color:var(--hairline)] first:border-t-0 hover:bg-[color:var(--surface-2)] transition-colors cursor-pointer">
-      <div className="flex flex-col gap-1">
-        <span className="font-bold text-[12.5px] tracking-[0.02em] text-[color:var(--text)]">
-          {date}
-        </span>
-        <span className="font-[family-name:var(--mono)] text-[10.5px] text-[color:var(--text-3)] num">
-          {time}
-        </span>
-      </div>
-      <div className="flex items-center gap-2 max-sm:col-span-2 max-sm:order-3">
-        <span className="font-bold">{a}</span>
-        {you === "A" && (
-          <span className="text-[10px] font-semibold uppercase tracking-[0.08em] px-1.5 py-0.5 rounded-full bg-[color:var(--brand-soft)] text-[color:var(--brand-ink)]">
-            You
-          </span>
-        )}
-        <span className="text-[color:var(--text-4)] font-medium">vs</span>
-        <span className="font-bold">{b}</span>
-        {you === "B" && (
-          <span className="text-[10px] font-semibold uppercase tracking-[0.08em] px-1.5 py-0.5 rounded-full bg-[color:var(--brand-soft)] text-[color:var(--brand-ink)]">
-            You
-          </span>
-        )}
-      </div>
-      <div className="max-[1100px]:hidden">
-        <ProbabilityBar aLabel="" bLabel="" a={probA} b={probB} compact showTop={false} />
-      </div>
-      <div className="justify-self-end">
-        {status === "rsvp" ? (
-          <Pill tone="win">RSVP&apos;d</Pill>
-        ) : (
-          <Pill tone="neutral">Open</Pill>
-        )}
-      </div>
-    </div>
-  );
-}
 
 function LbRow({
   rank,
