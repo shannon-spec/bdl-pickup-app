@@ -15,6 +15,7 @@ import { MembersStrip } from "@/components/bdl/members-strip";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
+import { TeamBadge } from "@/components/bdl/team-badge";
 import { getGamesList } from "@/lib/queries/games";
 import { getLeaguesWithStats } from "@/lib/queries/leagues";
 import { GamesPageClient } from "./games-client";
@@ -28,6 +29,12 @@ const fmtDate = (d: string | null) => {
   return `${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][dt.getDay()]} · ${
     ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][dt.getMonth()]
   } ${dt.getDate()}, ${dt.getFullYear()}`;
+};
+const fmtTime = (t: string | null) => {
+  if (!t) return "";
+  const [h, m] = t.split(":");
+  const hr = Number(h);
+  return `${hr % 12 || 12}:${m} ${hr >= 12 ? "PM" : "AM"}`;
 };
 
 export default async function GamesPage({
@@ -68,6 +75,24 @@ export default async function GamesPage({
     : rowsAll.filter((g) => g.leagueId && scopedLeagueIds!.includes(g.leagueId));
   const allLeagues = allLeaguesAll;
 
+  // Pull the soonest still-upcoming game out of the listing and render
+  // it as a hero card above the rows. Skipped on the "Completed" filter.
+  const today = new Date().toISOString().slice(0, 10);
+  const heroGame =
+    filter.status === "completed"
+      ? null
+      : rows
+          .filter(
+            (g) =>
+              !((g.scoreA !== null && g.scoreB !== null) || g.winTeam !== null) &&
+              (g.gameDate ?? "") >= today,
+          )
+          .sort((a, b) =>
+            (a.gameDate ?? "").localeCompare(b.gameDate ?? "") ||
+            (a.gameTime ?? "").localeCompare(b.gameTime ?? ""),
+          )[0] ?? null;
+  const listRows = heroGame ? rows.filter((g) => g.id !== heroGame.id) : rows;
+
   return (
     <>
       <TopBar active="/games" userInitials={session.username.slice(0, 2).toUpperCase()} />
@@ -94,6 +119,51 @@ export default async function GamesPage({
   function renderListing() {
     return (
       <>
+        {heroGame && (
+          <section
+            className="relative rounded-[16px] border border-[color:var(--hairline-2)] overflow-hidden"
+            style={{
+              background:
+                "radial-gradient(ellipse at top left, var(--next-game-tint), transparent 60%), var(--surface)",
+            }}
+          >
+            <Link
+              href={`/games/${heroGame.id}`}
+              aria-label={`Game details for ${heroGame.teamAName} vs ${heroGame.teamBName}`}
+              className="absolute inset-0 z-0 rounded-[16px]"
+            />
+            <div className="absolute top-2.5 right-2.5 z-10">
+              <Pill tone="brand">Next up</Pill>
+            </div>
+            <div className="relative z-[1] px-5 py-4 flex flex-col gap-2.5 pointer-events-none">
+              <div className="flex items-center gap-2.5 flex-wrap text-[12px] pr-[110px]">
+                <Pill tone="brand">
+                  Next · {fmtDate(heroGame.gameDate)}
+                  {heroGame.gameTime ? ` · ${fmtTime(heroGame.gameTime)}` : ""}
+                </Pill>
+                {heroGame.leagueName && (
+                  <span className="text-[color:var(--text-3)]">{heroGame.leagueName}</span>
+                )}
+              </div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="inline-flex items-center gap-2.5">
+                  <TeamBadge team="white" />
+                  <span className="font-extrabold text-[18px] text-[color:var(--text)]">
+                    {heroGame.teamAName}
+                  </span>
+                </div>
+                <span className="text-[color:var(--text-4)] text-[12px] font-medium">vs</span>
+                <div className="inline-flex items-center gap-2.5">
+                  <TeamBadge team="dark" />
+                  <span className="font-extrabold text-[18px] text-[color:var(--text)]">
+                    {heroGame.teamBName}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
         <SectionHead
           title="Games"
           count={
@@ -105,13 +175,13 @@ export default async function GamesPage({
 
         <FilterBar selected={filter.status} leagueId={filter.leagueId} leagues={allLeagues} />
 
-        {rows.length === 0 ? (
+        {listRows.length === 0 ? (
           <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-12 text-center text-[color:var(--text-3)] text-[14px]">
-            No games match the current filter.
+            {heroGame ? "No other games match the current filter." : "No games match the current filter."}
           </div>
         ) : (
           <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden">
-            {rows.map((g) => {
+            {listRows.map((g) => {
                 const completed =
                   (g.scoreA !== null && g.scoreB !== null) || g.winTeam !== null;
                 return (
