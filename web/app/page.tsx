@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { ChevronRight, ChevronUp, Check } from "lucide-react";
+import { ChevronRight, ChevronUp, Check, Pencil } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
+import { canManageLeague } from "@/lib/auth/perms";
+import { getViewCaps } from "@/lib/auth/view";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { CommissionerStrip } from "@/components/bdl/commissioner-strip";
@@ -107,6 +109,8 @@ export default async function Home() {
     activity,
     discover,
     leaguePlayerCount,
+    caps,
+    canManageThisLeague,
   ] = await Promise.all([
     getSeasonStats(me.id, currentLeague.id),
     getLastFive(me.id, currentLeague.id),
@@ -116,7 +120,10 @@ export default async function Home() {
     getRecentActivity(currentLeague.id, 3),
     getDiscoverLeagues(me.id, 5),
     getLeaguePlayerCount(currentLeague.id),
+    getViewCaps(session),
+    session ? canManageLeague(session, currentLeague.id) : Promise.resolve(false),
   ]);
+  const canEditNextGame = caps.canManage && canManageThisLeague;
 
   return (
     <>
@@ -140,49 +147,70 @@ export default async function Home() {
           <div className="grid grid-cols-2 gap-4 max-[1100px]:grid-cols-1 items-stretch">
             <CommissionerStrip leagueId={currentLeague.id} />
             <section
-              className="rounded-[16px] border border-[color:var(--hairline-2)] px-6 py-5 relative overflow-hidden flex flex-col gap-3.5"
+              className="group relative rounded-[16px] border border-[color:var(--hairline-2)] overflow-hidden hover:border-[color:var(--hairline-2)]"
               style={{
                 background:
                   "radial-gradient(ellipse at top left, var(--next-game-tint), transparent 60%), var(--surface)",
               }}
             >
-              <div className="flex items-center gap-2.5 flex-wrap text-[12px]">
-                <Pill tone="brand">
-                  Next · {fmtWD(nextGame.date)}
-                  {nextGame.time ? ` · ${fmtTime(nextGame.time)}` : ""}
-                </Pill>
-                {nextGame.venue && (
-                  <span className="text-[color:var(--text-3)]">{nextGame.venue}</span>
+              <Link
+                href={`/games/${nextGame.id}`}
+                aria-label={`Game details for ${nextGame.teamAName} vs ${nextGame.teamBName}`}
+                className="absolute inset-0 z-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand)] rounded-[16px]"
+              />
+              <div className="absolute top-2.5 right-2.5 z-10 flex items-center gap-1.5">
+                {nextGame.mySide ? (
+                  <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[color:var(--up-soft)] text-[color:var(--up)] text-[10.5px] font-bold uppercase tracking-[0.08em]">
+                    <Check size={11} strokeWidth={3} /> In
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[color:var(--brand)] text-white text-[10.5px] font-bold uppercase tracking-[0.08em] shadow-[var(--cta-shadow)]">
+                    <Check size={11} strokeWidth={3} /> I&apos;m In
+                  </span>
+                )}
+                {canEditNextGame && (
+                  <Link
+                    href={`/games/${nextGame.id}`}
+                    className="relative z-10 inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[color:var(--surface-2)] hover:bg-[color:var(--brand-soft)] border border-[color:var(--hairline-2)] text-[10.5px] font-bold uppercase tracking-[0.08em] text-[color:var(--text-2)] hover:text-[color:var(--brand-ink)]"
+                  >
+                    <Pencil size={10.5} /> Edit
+                  </Link>
                 )}
               </div>
-              <div className="flex items-center gap-3.5 flex-wrap">
-                <TeamPick
-                  name={nextGame.teamAName}
-                  record={`${nextGame.teamARecord.w}-${nextGame.teamARecord.l} last 5`}
-                  team="white"
-                  me={nextGame.mySide === "A"}
-                />
-                <span className="text-[color:var(--text-4)] text-[12px] font-medium">vs</span>
-                <TeamPick
-                  name={nextGame.teamBName}
-                  record={`${nextGame.teamBRecord.w}-${nextGame.teamBRecord.l} last 5`}
-                  team="dark"
-                  me={nextGame.mySide === "B"}
+              <div className="relative z-[1] px-5 py-3.5 flex flex-col gap-2.5 pointer-events-none">
+                <div className="flex items-center gap-2.5 flex-wrap text-[12px] pr-[120px]">
+                  <Pill tone="brand">
+                    Next · {fmtWD(nextGame.date)}
+                    {nextGame.time ? ` · ${fmtTime(nextGame.time)}` : ""}
+                  </Pill>
+                  {nextGame.venue && (
+                    <span className="text-[color:var(--text-3)]">{nextGame.venue}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <TeamPick
+                    name={nextGame.teamAName}
+                    record={`${nextGame.teamARecord.w}-${nextGame.teamARecord.l} last 5`}
+                    team="white"
+                    me={nextGame.mySide === "A"}
+                  />
+                  <span className="text-[color:var(--text-4)] text-[12px] font-medium">vs</span>
+                  <TeamPick
+                    name={nextGame.teamBName}
+                    record={`${nextGame.teamBRecord.w}-${nextGame.teamBRecord.l} last 5`}
+                    team="dark"
+                    me={nextGame.mySide === "B"}
+                  />
+                </div>
+                <ProbabilityBar
+                  aLabel={nextGame.teamAName}
+                  bLabel={nextGame.teamBName}
+                  a={nextGame.probA}
+                  b={nextGame.probB}
+                  compact
+                  showTop={false}
                 />
               </div>
-              <ProbabilityBar
-                aLabel={nextGame.teamAName}
-                bLabel={nextGame.teamBName}
-                a={nextGame.probA}
-                b={nextGame.probB}
-              />
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 justify-center h-[42px] px-5 rounded-[12px] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[13px] tracking-[0.02em] shadow-[var(--cta-shadow)] transition-transform active:scale-[0.97] mt-1"
-              >
-                <Check size={16} strokeWidth={2.5} />
-                I&apos;m In
-              </button>
             </section>
           </div>
         ) : (

@@ -71,7 +71,7 @@
   --badge-dot-border: var(--bg);
 
   /* Tint applied as a radial gradient on the Next Game hero card. */
-  --next-game-tint: rgba(212,175,55,.42);
+  --next-game-tint: rgba(212,175,55,.50);
 
   --tb-white-bg: #F5F4EF; --tb-white-fg: #0E0E0C;
   --tb-dark-bg: #0E0E0C;  --tb-dark-fg: #F5F4EF;
@@ -112,7 +112,7 @@
   --badge-dot-border: var(--surface);
 
   /* Light mode: silver — cool, slightly bluish gray. */
-  --next-game-tint: rgba(170,178,192,.45);
+  --next-game-tint: rgba(170,178,192,.54);
 
   --tb-white-bg: #FFFFFF; --tb-white-fg: #0E0E0C;
   --tb-dark-bg: #0E0E0C;  --tb-dark-fg: #F5F4EF;
@@ -133,7 +133,7 @@
   --mark-inset: rgba(255,255,255,.06);
   --cta-shadow: 0 4px 14px rgba(13,139,255,.30);
   --badge-dot-border: #000000;
-  --next-game-tint: rgba(212,175,55,.42);
+  --next-game-tint: rgba(212,175,55,.50);
   --tb-white-bg: #F5F4EF; --tb-white-fg: #0E0E0C;
   --tb-dark-bg: #0E0E0C;  --tb-dark-fg: #F5F4EF;
 }
