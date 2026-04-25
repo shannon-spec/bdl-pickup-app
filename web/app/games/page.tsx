@@ -16,6 +16,7 @@ import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
 import { TeamBadge } from "@/components/bdl/team-badge";
+import { ProbabilityBar } from "@/components/bdl/probability-bar";
 import { getGamesList } from "@/lib/queries/games";
 import { getLeaguesWithStats } from "@/lib/queries/leagues";
 import { GamesPageClient } from "./games-client";
@@ -93,6 +94,34 @@ export default async function GamesPage({
           )[0] ?? null;
   const listRows = heroGame ? rows.filter((g) => g.id !== heroGame.id) : rows;
 
+  // Last-5 win rate within the hero game's league → simple A/B odds.
+  let heroProb: { probA: number; probB: number } | null = null;
+  if (heroGame) {
+    const completedSameLeague = rows
+      .filter(
+        (g) =>
+          g.leagueId === heroGame.leagueId &&
+          ((g.scoreA !== null && g.scoreB !== null) || g.winTeam !== null),
+      )
+      .sort((a, b) => (a.gameDate ?? "").localeCompare(b.gameDate ?? ""))
+      .slice(-5);
+    let aW = 0, aTot = 0, bW = 0, bTot = 0;
+    for (const g of completedSameLeague) {
+      const w =
+        g.winTeam ??
+        (g.scoreA !== null && g.scoreB !== null
+          ? g.scoreA > g.scoreB ? "A" : g.scoreB > g.scoreA ? "B" : "Tie"
+          : null);
+      if (!w || w === "Tie") continue;
+      if (w === "A") { aW++; aTot++; bTot++; } else { bW++; bTot++; aTot++; }
+    }
+    const aRate = aTot > 0 ? aW / aTot : 0.5;
+    const bRate = bTot > 0 ? bW / bTot : 0.5;
+    const denom = aRate + bRate || 1;
+    const probA = Math.round((aRate / denom) * 100);
+    heroProb = { probA, probB: 100 - probA };
+  }
+
   return (
     <>
       <TopBar active="/games" userInitials={session.username.slice(0, 2).toUpperCase()} />
@@ -144,6 +173,9 @@ export default async function GamesPage({
                 {heroGame.leagueName && (
                   <span className="text-[color:var(--text-3)]">{heroGame.leagueName}</span>
                 )}
+                {heroGame.venue && (
+                  <span className="text-[color:var(--text-3)]">· {heroGame.venue}</span>
+                )}
               </div>
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="inline-flex items-center gap-2.5">
@@ -160,6 +192,15 @@ export default async function GamesPage({
                   </span>
                 </div>
               </div>
+              {heroProb && (
+                <ProbabilityBar
+                  aLabel={heroGame.teamAName}
+                  bLabel={heroGame.teamBName}
+                  a={heroProb.probA}
+                  b={heroProb.probB}
+                  compact
+                />
+              )}
             </div>
           </section>
         )}

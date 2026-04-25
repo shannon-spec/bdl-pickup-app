@@ -16,6 +16,7 @@ export type GameListRow = {
   leagueName: string | null;
   gameDate: string | null;
   gameTime: string | null;
+  venue: string | null;
   format: Game["format"];
   teamAName: string;
   teamBName: string;
@@ -38,6 +39,7 @@ export async function getGamesList(filter: GamesFilter = {}): Promise<GameListRo
       leagueName: games.leagueName,
       gameDate: games.gameDate,
       gameTime: games.gameTime,
+      venue: games.venue,
       format: games.format,
       teamAName: games.teamAName,
       teamBName: games.teamBName,
