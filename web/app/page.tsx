@@ -3,6 +3,7 @@ import { ChevronRight, ChevronUp, Check } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
+import { CommissionerStrip } from "@/components/bdl/commissioner-strip";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { StatBlock, StatRow } from "@/components/bdl/stat-block";
 import { TeamBadge } from "@/components/bdl/team-badge";
@@ -131,6 +132,7 @@ export default async function Home() {
         )}
 
         <ContextHeader />
+        <CommissionerStrip leagueId={currentLeague.id} />
 
         {/* Hero */}
         <section className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-7 pt-6 pb-5 max-sm:px-5 max-sm:pt-5 max-sm:pb-4">

@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { readSession } from "@/lib/auth/session";
 import { canManageLeague, isAdminLike } from "@/lib/auth/perms";
 import { TopBar } from "@/components/bdl/top-bar";
+import { CommissionerStrip } from "@/components/bdl/commissioner-strip";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
@@ -69,6 +70,8 @@ export default async function LeagueDetailPage({
         </div>
 
         <LeagueDetailClient detail={detail} isAdmin={isAdmin} />
+
+        <CommissionerStrip leagueId={detail.league.id} />
 
         <SectionHead title="Members" count={<span>{detail.members.length}</span>} />
         <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden">
