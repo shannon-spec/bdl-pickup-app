@@ -122,6 +122,78 @@ export default async function GamesPage({
     heroProb = { probA, probB: 100 - probA };
   }
 
+  // Team-vs-team season stats hero. Only meaningful when the listing
+  // is scoped to a single league (otherwise White / Dark may differ
+  // per-league and the lumped count is misleading).
+  type TeamStats = {
+    name: string;
+    wins: number;
+    losses: number;
+    pct: number | null;
+    streakType: "W" | "L" | null;
+    streakCount: number;
+  };
+  let teamStats: { a: TeamStats; b: TeamStats; totalCompleted: number } | null = null;
+  const distinctLeagues = new Set(rows.map((r) => r.leagueId).filter(Boolean));
+  if (distinctLeagues.size === 1) {
+    const completed = rows
+      .filter(
+        (g) =>
+          (g.scoreA !== null && g.scoreB !== null) || g.winTeam !== null,
+      )
+      .sort((a, b) => (a.gameDate ?? "").localeCompare(b.gameDate ?? ""));
+    let aW = 0, aL = 0, bW = 0, bL = 0;
+    for (const g of completed) {
+      const w =
+        g.winTeam ??
+        (g.scoreA !== null && g.scoreB !== null
+          ? g.scoreA > g.scoreB ? "A" : g.scoreB > g.scoreA ? "B" : "Tie"
+          : null);
+      if (!w || w === "Tie") continue;
+      if (w === "A") { aW++; bL++; } else { bW++; aL++; }
+    }
+    const streak = (forSide: "A" | "B") => {
+      let type: "W" | "L" | null = null;
+      let count = 0;
+      for (let i = completed.length - 1; i >= 0; i--) {
+        const g = completed[i];
+        const w =
+          g.winTeam ??
+          (g.scoreA !== null && g.scoreB !== null
+            ? g.scoreA > g.scoreB ? "A" : g.scoreB > g.scoreA ? "B" : "Tie"
+            : null);
+        if (!w || w === "Tie") break;
+        const won = w === forSide;
+        if (type === null) {
+          type = won ? "W" : "L";
+          count = 1;
+        } else if (type === (won ? "W" : "L")) count++;
+        else break;
+      }
+      return { streakType: type, streakCount: count };
+    };
+    const sample = completed[0] ?? rows[0];
+    const aName = sample?.teamAName ?? "White";
+    const bName = sample?.teamBName ?? "Dark";
+    teamStats = {
+      totalCompleted: completed.length,
+      a: {
+        name: aName,
+        wins: aW,
+        losses: aL,
+        pct: aW + aL > 0 ? (aW / (aW + aL)) * 100 : null,
+        ...streak("A"),
+      },
+      b: {
+        name: bName,
+        wins: bW,
+        losses: bL,
+        pct: bW + bL > 0 ? (bW / (bW + bL)) * 100 : null,
+        ...streak("B"),
+      },
+    };
+  }
+
   return (
     <>
       <TopBar active="/games" userInitials={session.username.slice(0, 2).toUpperCase()} />
@@ -203,6 +275,13 @@ export default async function GamesPage({
               )}
             </div>
           </section>
+        )}
+
+        {teamStats && teamStats.totalCompleted > 0 && (
+          <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
+            <TeamSeasonCard t={teamStats.a} side="A" />
+            <TeamSeasonCard t={teamStats.b} side="B" />
+          </div>
         )}
 
         <SectionHead
@@ -357,6 +436,113 @@ function FilterBar({
           </noscript>
         </form>
       )}
+    </div>
+  );
+}
+
+/**
+ * Season summary card for one team. Mirrors the gold/silver tinting used
+ * elsewhere — silver for the A side ("White"-style team), gold for B
+ * ("Dark"-style team). Win % is null when the team hasn't played yet.
+ */
+function TeamSeasonCard({
+  t,
+  side,
+}: {
+  t: {
+    name: string;
+    wins: number;
+    losses: number;
+    pct: number | null;
+    streakType: "W" | "L" | null;
+    streakCount: number;
+  };
+  side: "A" | "B";
+}) {
+  const isSilver = side === "A";
+  const tint = isSilver ? "rgba(170,178,192,.22)" : "rgba(212,175,55,.22)";
+  const border = isSilver ? "rgba(170,178,192,.45)" : "rgba(212,175,55,.55)";
+  const initial = (t.name[0] ?? "?").toUpperCase();
+  const streakTone =
+    t.streakType === "W"
+      ? "text-[color:var(--up)]"
+      : t.streakType === "L"
+        ? "text-[color:var(--down)]"
+        : "text-[color:var(--text-3)]";
+  return (
+    <section
+      className="rounded-[16px] border border-[color:var(--hairline-2)] overflow-hidden"
+      style={{
+        background: `linear-gradient(135deg, ${tint}, transparent 70%), var(--surface)`,
+        borderColor: border,
+      }}
+    >
+      <div className="px-5 py-4 flex flex-col gap-3">
+        <div className="flex items-center gap-2.5">
+          <span
+            aria-hidden
+            className={`inline-flex items-center justify-center w-9 h-9 rounded-[10px] font-extrabold text-[14px] ${
+              isSilver ? "bg-[var(--tb-white-bg)] text-[var(--tb-white-fg)]" : "bg-[var(--tb-dark-bg)] text-[var(--tb-dark-fg)]"
+            }`}
+            style={{
+              boxShadow: "inset 0 0 0 1px var(--mark-inset)",
+            }}
+          >
+            {initial}
+          </span>
+          <div className="flex flex-col leading-tight">
+            <span className="font-extrabold text-[16px] text-[color:var(--text)]">
+              {t.name}
+            </span>
+            <span className="text-[10.5px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
+              Season
+            </span>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <Stat label="Record">
+            <span className="font-[family-name:var(--mono)] num font-extrabold text-[20px]">
+              {t.wins}
+              <span className="text-[color:var(--text-4)] font-bold mx-[-2px]">–</span>
+              {t.losses}
+            </span>
+          </Stat>
+          <Stat label="Win %">
+            <span className="font-[family-name:var(--mono)] num font-extrabold text-[20px]">
+              {t.pct === null ? "—" : `${t.pct.toFixed(1)}`}
+              {t.pct !== null && (
+                <span className="text-[color:var(--text-3)] text-[12px] font-bold ml-0.5">
+                  %
+                </span>
+              )}
+            </span>
+          </Stat>
+          <Stat label="Streak">
+            <span
+              className={`font-[family-name:var(--mono)] num font-extrabold text-[20px] ${streakTone}`}
+            >
+              {t.streakType ? `${t.streakType}${t.streakCount}` : "—"}
+            </span>
+          </Stat>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Stat({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-[10px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
+        {label}
+      </span>
+      <span className="leading-none">{children}</span>
     </div>
   );
 }
