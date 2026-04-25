@@ -148,8 +148,8 @@ export async function addCommissioner(
   leagueId: string,
   playerId: string,
 ): Promise<ActionResult> {
-  await requireAdminOnly();
-  await requireAdminView();
+  await requireLeagueManager(leagueId);
+  await requireManageView();
   await db
     .insert(leagueCommissioners)
     .values({ leagueId, playerId })
@@ -162,8 +162,8 @@ export async function removeCommissioner(
   leagueId: string,
   playerId: string,
 ): Promise<ActionResult> {
-  await requireAdminOnly();
-  await requireAdminView();
+  await requireLeagueManager(leagueId);
+  await requireManageView();
   await db
     .delete(leagueCommissioners)
     .where(

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Mail, Phone } from "lucide-react";
 import { asc } from "drizzle-orm";
 import { readSession } from "@/lib/auth/session";
+import { canManageLeague } from "@/lib/auth/perms";
 import { getViewCaps } from "@/lib/auth/view";
 import {
   getLeagueContactAccess,
@@ -35,7 +36,10 @@ export async function CommissionerStrip({ leagueId }: { leagueId?: string }) {
   if (!id) return null;
 
   const caps = await getViewCaps(session);
-  const showAdminControls = caps.view === "admin";
+  // Commissioners and admins can both add/remove commissioners for the
+  // leagues they manage. The server action re-verifies on submit.
+  const hasPerms = await canManageLeague(session, id);
+  const showAdminControls = caps.canManage && hasPerms;
   const contactAccess = await getLeagueContactAccess(session, id, caps.view);
 
   const commissioners = await getLeagueCommissionerContacts(id, session);
