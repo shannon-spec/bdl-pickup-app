@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { db, leagues, leaguePlayers, leagueCommissioners } from "@/lib/db";
+import { db, leagues, leaguePlayers, leagueCommissioners, players } from "@/lib/db";
 import { requireAdminOnly, requireLeagueManager } from "@/lib/auth/perms";
 import { requireAdminView, requireManageView } from "@/lib/auth/view";
 
@@ -127,6 +127,40 @@ export async function addLeaguePlayer(
     .onConflictDoNothing();
   revalidatePath(`/leagues/${leagueId}`);
   return { ok: true };
+}
+
+const newPlayerSchema = z.object({
+  firstName: z.string().trim().min(1, "First name is required.").max(60),
+  lastName: z.string().trim().min(1, "Last name is required.").max(60),
+});
+
+export async function createAndAddLeagueMember(
+  leagueId: string,
+  formData: FormData,
+): Promise<ActionResult<{ id: string }>> {
+  await requireLeagueManager(leagueId);
+  await requireManageView();
+  const parsed = newPlayerSchema.safeParse(readForm(formData));
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "Validation failed.",
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+  const v = parsed.data;
+  const [row] = await db
+    .insert(players)
+    .values({ firstName: v.firstName, lastName: v.lastName })
+    .returning({ id: players.id });
+  await db
+    .insert(leaguePlayers)
+    .values({ leagueId, playerId: row.id })
+    .onConflictDoNothing();
+  revalidatePath(`/leagues/${leagueId}`);
+  revalidatePath("/roster");
+  revalidatePath("/");
+  return { ok: true, data: { id: row.id } };
 }
 
 export async function removeLeaguePlayer(
