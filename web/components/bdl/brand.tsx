@@ -14,7 +14,7 @@ export function Brand({ className, showSub = true }: { className?: string; showS
         </span>
         {showSub && (
           <span className="mt-1.5 text-[10.5px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)] whitespace-nowrap">
-            Ball Don't Lie · Pickup Tracker
+            Ball Don't Lie
           </span>
         )}
       </div>

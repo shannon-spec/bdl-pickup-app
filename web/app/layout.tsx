@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Footer } from "@/components/bdl/footer";
 import "./globals.css";
 
 const inter = Inter({
@@ -43,7 +44,10 @@ export default function RootLayout({
       className={`${inter.variable} ${jetbrainsMono.variable}`}
     >
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {children}
+          <Footer />
+        </ThemeProvider>
       </body>
     </html>
   );
