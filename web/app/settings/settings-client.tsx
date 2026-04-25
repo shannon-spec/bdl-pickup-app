@@ -162,7 +162,7 @@ SettingsClient.AddAdmin = function AddAdmin({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[#DC3D14] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)] self-start"
+        className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)] self-start"
       >
         <Plus size={14} strokeWidth={2.5} /> Add Super Admin
       </button>

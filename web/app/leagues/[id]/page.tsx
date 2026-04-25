@@ -30,7 +30,7 @@ export default async function LeagueDetailPage({
           <div
             className="w-14 h-14 rounded-full flex-shrink-0"
             style={{
-              background: "linear-gradient(135deg, var(--brand), #8B2FA0)",
+              background: "linear-gradient(135deg, var(--brand), var(--brand-2))",
               boxShadow: "inset 0 0 0 2px var(--mark-inset)",
             }}
           />

@@ -52,7 +52,7 @@ export default async function PlayerProfilePage({
         <div className="flex items-center gap-4 max-sm:flex-col max-sm:items-start">
           <span
             className="inline-flex items-center justify-center w-16 h-16 rounded-full text-white font-extrabold text-[20px] flex-shrink-0"
-            style={{ background: "linear-gradient(135deg, var(--brand), #8B2FA0)" }}
+            style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-2))" }}
           >
             {initials}
           </span>

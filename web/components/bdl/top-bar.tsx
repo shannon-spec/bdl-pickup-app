@@ -159,7 +159,7 @@ function AvatarMenu({ initials }: { initials: string }) {
       <span
         aria-hidden
         className="inline-flex items-center justify-center w-[28px] h-[28px] rounded-full text-white font-extrabold text-[11px]"
-        style={{ background: "linear-gradient(135deg, var(--brand), #8B2FA0)" }}
+        style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-2))" }}
       >
         {initials}
       </span>

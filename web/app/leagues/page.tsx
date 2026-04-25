@@ -48,7 +48,7 @@ export default async function LeaguesPage() {
                   <div
                     className="w-9 h-9 rounded-full"
                     style={{
-                      background: "linear-gradient(135deg, var(--brand), #8B2FA0)",
+                      background: "linear-gradient(135deg, var(--brand), var(--brand-2))",
                       boxShadow: "inset 0 0 0 2px var(--mark-inset)",
                     }}
                   />

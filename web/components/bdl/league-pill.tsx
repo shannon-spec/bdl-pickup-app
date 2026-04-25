@@ -38,7 +38,7 @@ export function LeaguePill({
         aria-hidden
         className="rounded-full w-[34px] h-[34px] flex-shrink-0"
         style={{
-          background: "linear-gradient(135deg, var(--brand), #8B2FA0)",
+          background: "linear-gradient(135deg, var(--brand), var(--brand-2))",
           boxShadow: "inset 0 0 0 2px var(--mark-inset)",
         }}
       />

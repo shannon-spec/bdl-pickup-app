@@ -251,7 +251,7 @@ export default async function Home() {
             </div>
             <button
               type="button"
-              className="inline-flex items-center gap-2 justify-center h-[46px] px-5 rounded-[12px] bg-[color:var(--brand)] hover:bg-[#DC3D14] text-white font-bold text-[14px] tracking-[0.02em] shadow-[var(--cta-shadow)] transition-transform active:scale-[0.97] max-md:w-full"
+              className="inline-flex items-center gap-2 justify-center h-[46px] px-5 rounded-[12px] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[14px] tracking-[0.02em] shadow-[var(--cta-shadow)] transition-transform active:scale-[0.97] max-md:w-full"
             >
               <Check size={18} strokeWidth={2.5} />
               I&apos;m In
@@ -474,7 +474,7 @@ function EmptyCard({
       {cta && (
         <Link
           href={cta.href}
-          className="inline-flex items-center gap-2 h-11 px-5 rounded-[12px] bg-[color:var(--brand)] hover:bg-[#DC3D14] text-white font-bold text-[13px] tracking-[0.04em] uppercase shadow-[var(--cta-shadow)]"
+          className="inline-flex items-center gap-2 h-11 px-5 rounded-[12px] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[13px] tracking-[0.04em] uppercase shadow-[var(--cta-shadow)]"
         >
           {cta.label} <ChevronRight size={14} />
         </Link>
@@ -608,7 +608,7 @@ function LbRow({
       <span className="inline-flex items-center gap-2.5 min-w-0">
         <span
           className="inline-flex items-center justify-center w-7 h-7 rounded-full text-white font-bold text-[11px]"
-          style={{ background: "linear-gradient(135deg, var(--brand), #8B2FA0)" }}
+          style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-2))" }}
         >
           {initials}
         </span>
@@ -661,7 +661,7 @@ function DiscoverCard({
       <span
         className="w-8 h-8 rounded-full"
         style={{
-          background: "linear-gradient(135deg, var(--brand), #8B2FA0)",
+          background: "linear-gradient(135deg, var(--brand), var(--brand-2))",
           boxShadow: "inset 0 0 0 2px var(--mark-inset)",
         }}
       />
