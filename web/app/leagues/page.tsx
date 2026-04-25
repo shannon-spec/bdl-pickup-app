@@ -21,11 +21,16 @@ export default async function LeaguesPage() {
   const caps = await getViewCaps(session);
   if (!caps.canManage) redirect("/");
   const isAdmin = isAdminLike(session);
-  const commishLeagueIds = isAdmin ? null : await getMyCommissionerLeagueIds(session);
-  if (!isAdmin && (!commishLeagueIds || commishLeagueIds.length === 0)) redirect("/");
+  const useAdminScope = caps.view === "admin" && isAdmin;
+  const commishLeagueIds = useAdminScope
+    ? null
+    : await getMyCommissionerLeagueIds(session);
+  if (!useAdminScope && (!commishLeagueIds || commishLeagueIds.length === 0)) {
+    redirect("/");
+  }
 
   const rows = await getLeaguesWithStats(
-    isAdmin ? undefined : { scopeIds: commishLeagueIds! },
+    useAdminScope ? undefined : { scopeIds: commishLeagueIds! },
   );
 
   return (

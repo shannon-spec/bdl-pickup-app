@@ -36,8 +36,15 @@ export default async function GamesPage({
   const caps = await getViewCaps(session);
   if (!caps.canManage) redirect("/");
   const isAdmin = isAdminLike(session);
-  const commishLeagueIds = isAdmin ? null : await getMyCommissionerLeagueIds(session);
-  if (!isAdmin && (!commishLeagueIds || commishLeagueIds.length === 0)) redirect("/");
+  // Lens-driven scoping: in commissioner view, even a super admin sees
+  // only the leagues they actually commission. Real admin view = all.
+  const useAdminScope = caps.view === "admin" && isAdmin;
+  const commishLeagueIds = useAdminScope
+    ? null
+    : await getMyCommissionerLeagueIds(session);
+  if (!useAdminScope && (!commishLeagueIds || commishLeagueIds.length === 0)) {
+    redirect("/");
+  }
 
   const sp = await searchParams;
   const filter = {
@@ -47,11 +54,10 @@ export default async function GamesPage({
 
   const [rowsAll, allLeaguesAll] = await Promise.all([
     getGamesList(filter),
-    getLeaguesWithStats(isAdmin ? undefined : { scopeIds: commishLeagueIds! }),
+    getLeaguesWithStats(useAdminScope ? undefined : { scopeIds: commishLeagueIds! }),
   ]);
 
-  // Filter games to commissioner's leagues if not admin
-  const rows = isAdmin
+  const rows = useAdminScope
     ? rowsAll
     : rowsAll.filter((g) => g.leagueId && commishLeagueIds!.includes(g.leagueId));
   const allLeagues = allLeaguesAll;

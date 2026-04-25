@@ -1,14 +1,24 @@
-"use client";
-
 import Link from "next/link";
-import { Home, Trophy, Compass, User, Check } from "lucide-react";
+import { Home, Trophy, Compass, User, Check, Trophy as Leagues } from "lucide-react";
+import { readSession } from "@/lib/auth/session";
+import { getViewCaps } from "@/lib/auth/view";
 import { cn } from "@/lib/utils";
 
 /**
  * Fixed bottom app bar (mobile only). 5 slots; center slot is a
- * brand FAB-style quick action ("I'm In").
+ * brand FAB-style quick action ("I'm In"). The two side slots adapt
+ * to the active view — managers get fast access to Leagues / Profile,
+ * players see Discover / Profile.
  */
-export function MobileBottomBar({ active = "home" }: { active?: "home" | "leaderboard" | "discover" | "profile" }) {
+export async function MobileBottomBar({
+  active = "home",
+}: {
+  active?: "home" | "leaderboard" | "discover" | "profile" | "leagues";
+}) {
+  const session = await readSession();
+  const caps = await getViewCaps(session);
+  const showLeagues = caps.canManage;
+
   return (
     <nav
       aria-label="Primary mobile navigation"
@@ -41,7 +51,21 @@ export function MobileBottomBar({ active = "home" }: { active?: "home" | "leader
             <Check size={22} strokeWidth={2.5} />
           </button>
         </div>
-        <NavItem href="/discover" icon={<Compass size={20} />} label="Discover" active={active === "discover"} />
+        {showLeagues ? (
+          <NavItem
+            href="/leagues"
+            icon={<Leagues size={20} />}
+            label="Leagues"
+            active={active === "leagues"}
+          />
+        ) : (
+          <NavItem
+            href="/discover"
+            icon={<Compass size={20} />}
+            label="Discover"
+            active={active === "discover"}
+          />
+        )}
         <NavItem href="/profile" icon={<User size={20} />} label="Profile" active={active === "profile"} />
       </div>
     </nav>

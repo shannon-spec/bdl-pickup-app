@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { asc } from "drizzle-orm";
 import { readSession } from "@/lib/auth/session";
+import { getViewCaps } from "@/lib/auth/view";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
@@ -16,6 +17,8 @@ export default async function SettingsPage() {
   const session = await readSession();
   const isAdmin = session?.role === "owner" || session?.role === "super_admin";
   if (!isAdmin) redirect("/");
+  const caps = await getViewCaps(session);
+  if (caps.view !== "admin") redirect("/");
 
   const admins = await db.select().from(superAdmins).orderBy(asc(superAdmins.username));
   const allPlayers = await db

@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { readSession } from "@/lib/auth/session";
-import { canManageLeague, isAdminLike } from "@/lib/auth/perms";
+import { canManageLeague } from "@/lib/auth/perms";
 import { getViewCaps } from "@/lib/auth/view";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { TopBar } from "@/components/bdl/top-bar";
@@ -29,7 +29,7 @@ export default async function LeagueDetailPage({
   const caps = await getViewCaps(session);
   if (!caps.canManage) redirect("/");
 
-  const isAdmin = isAdminLike(session);
+  const isAdmin = caps.view === "admin";
   const detail = await getLeagueDetail(id);
   if (!detail) notFound();
   const pendingInvites = await getInvitesForLeague(id);

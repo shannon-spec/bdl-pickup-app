@@ -1,21 +1,38 @@
-"use client";
-
 import Link from "next/link";
 import { Bell, LogOut, Settings } from "lucide-react";
 import { Brand } from "./brand";
 import { ThemeToggle } from "./theme-toggle";
 import { signOut } from "@/lib/auth/actions";
+import { readSession } from "@/lib/auth/session";
+import { getViewCaps, type View } from "@/lib/auth/view";
 import { cn } from "@/lib/utils";
 
-const navItems = [
-  { label: "My League", href: "/" },
-  { label: "Roster", href: "/roster" },
-  { label: "Discover", href: "/discover" },
-  { label: "Leaderboard", href: "/leaderboard" },
-  { label: "Activity", href: "/activity" },
+type NavItem = { label: string; href: string; views: View[] };
+
+const NAV_ITEMS: NavItem[] = [
+  { label: "My League", href: "/", views: ["player", "commissioner", "admin"] },
+  { label: "Roster", href: "/roster", views: ["admin"] },
+  { label: "Leagues", href: "/leagues", views: ["commissioner", "admin"] },
+  { label: "Games", href: "/games", views: ["commissioner", "admin"] },
+  { label: "Discover", href: "/discover", views: ["player", "commissioner", "admin"] },
+  { label: "Leaderboard", href: "/leaderboard", views: ["player", "commissioner", "admin"] },
+  { label: "Activity", href: "/activity", views: ["player", "commissioner", "admin"] },
 ];
 
-export function TopBar({ active = "/", userInitials = "ST" }: { active?: string; userInitials?: string }) {
+export async function TopBar({
+  active = "/",
+  userInitials = "ST",
+}: {
+  active?: string;
+  userInitials?: string;
+}) {
+  const session = await readSession();
+  const caps = await getViewCaps(session);
+  const view = caps.view;
+
+  const visibleNav = NAV_ITEMS.filter((item) => item.views.includes(view));
+  const showSettings = view === "admin";
+
   return (
     <header
       className={cn(
@@ -38,7 +55,7 @@ export function TopBar({ active = "/", userInitials = "ST" }: { active?: string;
         </Link>
 
         <nav className="flex items-center justify-center gap-7" aria-label="Primary">
-          {navItems.map((item) => {
+          {visibleNav.map((item) => {
             const isActive = item.href === active;
             return (
               <Link
@@ -50,9 +67,7 @@ export function TopBar({ active = "/", userInitials = "ST" }: { active?: string;
                   isActive
                     ? "text-[color:var(--text)] font-semibold"
                     : "text-[color:var(--text-3)]",
-                  // Below md: hide all but active
                   !isActive && "max-md:hidden",
-                  // Below sm: hide entire nav
                   "max-sm:hidden",
                 )}
                 data-active={isActive || undefined}
@@ -65,74 +80,67 @@ export function TopBar({ active = "/", userInitials = "ST" }: { active?: string;
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Link
-            href="/settings"
-            aria-label="Settings"
-            className="relative inline-flex items-center justify-center w-[34px] h-[34px] rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[color:var(--text-2)] hover:text-[color:var(--text)] transition-colors"
+          {showSettings && (
+            <Link
+              href="/settings"
+              aria-label="Settings"
+              className="relative inline-flex items-center justify-center w-[34px] h-[34px] rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[color:var(--text-2)] hover:text-[color:var(--text)] transition-colors"
+            >
+              <Settings size={16} />
+            </Link>
+          )}
+          <button
+            type="button"
+            aria-label="Notifications"
+            className={cn(
+              "relative inline-flex items-center justify-center",
+              "w-[34px] h-[34px] rounded-[var(--r-lg)]",
+              "border border-[color:var(--hairline-2)] bg-[color:var(--surface)]",
+              "text-[color:var(--text-2)] hover:text-[color:var(--text)]",
+              "transition-colors",
+            )}
           >
-            <Settings size={16} />
-          </Link>
-          <IconButton aria-label="Notifications">
             <Bell size={16} />
             <span
               aria-hidden
               className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[color:var(--brand)]"
               style={{ boxShadow: "0 0 0 2px var(--badge-dot-border)" }}
             />
-          </IconButton>
+          </button>
           <form action={signOut}>
-            <IconButton aria-label="Sign out" type="submit">
+            <button
+              type="submit"
+              aria-label="Sign out"
+              className={cn(
+                "relative inline-flex items-center justify-center",
+                "w-[34px] h-[34px] rounded-[var(--r-lg)]",
+                "border border-[color:var(--hairline-2)] bg-[color:var(--surface)]",
+                "text-[color:var(--text-2)] hover:text-[color:var(--text)]",
+                "transition-colors",
+              )}
+            >
               <LogOut size={16} />
-            </IconButton>
+            </button>
           </form>
-          <AvatarMenu initials={userInitials} />
+          <button
+            type="button"
+            aria-label="Account menu"
+            className={cn(
+              "inline-flex items-center gap-2 rounded-full h-[38px] pr-3 pl-1",
+              "border border-[color:var(--hairline-2)] bg-[color:var(--surface)]",
+              "hover:border-[color:var(--text-4)] transition-colors",
+            )}
+          >
+            <span
+              aria-hidden
+              className="inline-flex items-center justify-center w-[28px] h-[28px] rounded-full text-white font-extrabold text-[11px]"
+              style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-2))" }}
+            >
+              {userInitials}
+            </span>
+          </button>
         </div>
       </div>
     </header>
-  );
-}
-
-function IconButton({
-  children,
-  className,
-  ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return (
-    <button
-      type="button"
-      className={cn(
-        "relative inline-flex items-center justify-center",
-        "w-[34px] h-[34px] rounded-[var(--r-lg)]",
-        "border border-[color:var(--hairline-2)] bg-[color:var(--surface)]",
-        "text-[color:var(--text-2)] hover:text-[color:var(--text)]",
-        "transition-colors",
-        className,
-      )}
-      {...props}
-    >
-      {children}
-    </button>
-  );
-}
-
-function AvatarMenu({ initials }: { initials: string }) {
-  return (
-    <button
-      type="button"
-      aria-label="Account menu"
-      className={cn(
-        "inline-flex items-center gap-2 rounded-full h-[38px] pr-3 pl-1",
-        "border border-[color:var(--hairline-2)] bg-[color:var(--surface)]",
-        "hover:border-[color:var(--text-4)] transition-colors",
-      )}
-    >
-      <span
-        aria-hidden
-        className="inline-flex items-center justify-center w-[28px] h-[28px] rounded-full text-white font-extrabold text-[11px]"
-        style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-2))" }}
-      >
-        {initials}
-      </span>
-    </button>
   );
 }

@@ -58,7 +58,7 @@ export async function CommissionerStrip({ leagueId }: { leagueId?: string }) {
       ) : (
         <div className="flex flex-wrap gap-2.5">
           {commissioners.map((c) => (
-            <Card key={c.id} c={c} canSeePrivate={caps.isAdmin} />
+            <Card key={c.id} c={c} canSeePrivate={caps.view === "admin"} />
           ))}
         </div>
       )}
