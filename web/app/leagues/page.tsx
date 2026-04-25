@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
+import { isAdminLike, getMyCommissionerLeagueIds } from "@/lib/auth/perms";
 import { TopBar } from "@/components/bdl/top-bar";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
@@ -14,16 +15,20 @@ export const metadata = { title: "Leagues · BDL" };
 
 export default async function LeaguesPage() {
   const session = await readSession();
-  const isAdmin = session?.role === "owner" || session?.role === "super_admin";
-  if (!isAdmin) redirect("/");
+  if (!session) redirect("/login");
+  const isAdmin = isAdminLike(session);
+  const commishLeagueIds = isAdmin ? null : await getMyCommissionerLeagueIds(session);
+  if (!isAdmin && (!commishLeagueIds || commishLeagueIds.length === 0)) redirect("/");
 
-  const rows = await getLeaguesWithStats();
+  const rows = await getLeaguesWithStats(
+    isAdmin ? undefined : { scopeIds: commishLeagueIds! },
+  );
 
   return (
     <>
       <TopBar active="/leagues" userInitials={session.username.slice(0, 2).toUpperCase()} />
       <PageFrame>
-        <LeaguesPageClient>
+        <LeaguesPageClient canCreate={isAdmin}>
           <SectionHead
             title="Leagues"
             count={

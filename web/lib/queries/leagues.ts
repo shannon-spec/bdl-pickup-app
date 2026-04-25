@@ -16,8 +16,13 @@ export type LeagueListRow = League & {
   completedGames: number;
 };
 
-export async function getLeaguesWithStats(): Promise<LeagueListRow[]> {
-  const all = await db.select().from(leagues).orderBy(asc(leagues.name));
+export async function getLeaguesWithStats(opts?: {
+  scopeIds?: string[];
+}): Promise<LeagueListRow[]> {
+  const baseAll = await db.select().from(leagues).orderBy(asc(leagues.name));
+  const all = opts?.scopeIds
+    ? baseAll.filter((l) => opts.scopeIds!.includes(l.id))
+    : baseAll;
   if (all.length === 0) return [];
   const ids = all.map((l) => l.id);
 

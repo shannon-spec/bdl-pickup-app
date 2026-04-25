@@ -1,10 +1,12 @@
 import { notFound, redirect } from "next/navigation";
 import { readSession } from "@/lib/auth/session";
+import { canManageLeague, isAdminLike } from "@/lib/auth/perms";
 import { TopBar } from "@/components/bdl/top-bar";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
 import { getLeagueDetail } from "@/lib/queries/leagues";
+import { getInvitesForLeague } from "@/lib/queries/invites";
 import { LeagueDetailClient } from "./league-detail-client";
 
 export const dynamic = "force-dynamic";
@@ -15,12 +17,16 @@ export default async function LeagueDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const session = await readSession();
-  const isAdmin = session?.role === "owner" || session?.role === "super_admin";
-  if (!isAdmin) redirect("/");
+  if (!session) redirect("/login");
 
   const { id } = await params;
+  const canManage = await canManageLeague(session, id);
+  if (!canManage) redirect("/leagues");
+
+  const isAdmin = isAdminLike(session);
   const detail = await getLeagueDetail(id);
   if (!detail) notFound();
+  const pendingInvites = await getInvitesForLeague(id);
 
   return (
     <>
@@ -55,7 +61,7 @@ export default async function LeagueDetailPage({
           </div>
         </div>
 
-        <LeagueDetailClient detail={detail} />
+        <LeagueDetailClient detail={detail} isAdmin={isAdmin} />
 
         <SectionHead title="Members" count={<span>{detail.members.length}</span>} />
         <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden">
@@ -79,26 +85,44 @@ export default async function LeagueDetailPage({
           excludeIds={detail.members.map((m) => m.id)}
         />
 
-        <SectionHead title="Commissioners" count={<span>{detail.commissioners.length}</span>} />
-        <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden">
-          {detail.commissioners.length === 0 ? (
-            <div className="px-5 py-8 text-center text-[color:var(--text-3)] text-[14px]">
-              No commissioners.
+        {isAdmin && (
+          <>
+            <SectionHead title="Commissioners" count={<span>{detail.commissioners.length}</span>} />
+            <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden">
+              {detail.commissioners.length === 0 ? (
+                <div className="px-5 py-8 text-center text-[color:var(--text-3)] text-[14px]">
+                  No commissioners.
+                </div>
+              ) : (
+                detail.commissioners.map((c) => (
+                  <LeagueDetailClient.CommissionerRow
+                    key={c.id}
+                    leagueId={detail.league.id}
+                    player={c}
+                  />
+                ))
+              )}
             </div>
-          ) : (
-            detail.commissioners.map((c) => (
-              <LeagueDetailClient.CommissionerRow
-                key={c.id}
-                leagueId={detail.league.id}
-                player={c}
-              />
-            ))
-          )}
-        </div>
-        <LeagueDetailClient.AddCommissioner
+            <LeagueDetailClient.AddCommissioner
+              leagueId={detail.league.id}
+              allPlayers={detail.allPlayers}
+              excludeIds={detail.commissioners.map((c) => c.id)}
+            />
+          </>
+        )}
+
+        <SectionHead title="Invites" count={<span>{pendingInvites.length}</span>} />
+        <LeagueDetailClient.Invites
           leagueId={detail.league.id}
-          allPlayers={detail.allPlayers}
-          excludeIds={detail.commissioners.map((c) => c.id)}
+          invites={pendingInvites.map((i) => ({
+            id: i.id,
+            firstName: i.firstName,
+            lastName: i.lastName,
+            email: i.email,
+            cell: i.cell,
+            status: i.status,
+            createdAt: i.createdAt.toISOString(),
+          }))}
         />
       </PageFrame>
       <MobileBottomBar active="home" />

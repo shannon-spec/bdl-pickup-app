@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
+import { canManageGame } from "@/lib/auth/perms";
 import { TopBar } from "@/components/bdl/top-bar";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
@@ -32,10 +33,11 @@ export default async function GameDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const session = await readSession();
-  const isAdmin = session?.role === "owner" || session?.role === "super_admin";
-  if (!isAdmin) redirect("/");
-
+  if (!session) redirect("/login");
   const { id } = await params;
+  const allowed = await canManageGame(session, id);
+  if (!allowed) redirect("/games");
+
   const detail = await getGameDetail(id);
   if (!detail) notFound();
 

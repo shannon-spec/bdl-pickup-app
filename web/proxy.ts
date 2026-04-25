@@ -20,14 +20,17 @@ const PUBLIC_PATHS = [
   "/sitemap.xml",
 ];
 
+const PUBLIC_PREFIXES = ["/invite/"];
+
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow Next internals, static assets, API routes
+  // Allow Next internals, static assets, API routes, public flows
   if (
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/api/") ||
-    PUBLIC_PATHS.includes(pathname)
+    PUBLIC_PATHS.includes(pathname) ||
+    PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))
   ) {
     return NextResponse.next();
   }

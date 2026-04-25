@@ -4,7 +4,7 @@ import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db, games, gameRoster, leagues } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth/session";
+import { requireGameManager, requireLeagueManager } from "@/lib/auth/perms";
 
 export type ActionResult<T = unknown> =
   | { ok: true; data?: T }
@@ -40,7 +40,6 @@ const nullable = (s?: string | null) => {
 };
 
 export async function createGame(formData: FormData): Promise<ActionResult<{ id: string }>> {
-  await requireAdmin();
   const parsed = gameSchema.safeParse(readForm(formData));
   if (!parsed.success) {
     return {
@@ -50,6 +49,7 @@ export async function createGame(formData: FormData): Promise<ActionResult<{ id:
     };
   }
   const v = parsed.data;
+  await requireLeagueManager(v.leagueId);
   const [league] = await db
     .select({ name: leagues.name, teamA: leagues.teamAName, teamB: leagues.teamBName })
     .from(leagues)
@@ -79,7 +79,7 @@ export async function updateGame(
   id: string,
   formData: FormData,
 ): Promise<ActionResult<{ id: string }>> {
-  await requireAdmin();
+  await requireGameManager(id);
   const parsed = gameSchema.safeParse(readForm(formData));
   if (!parsed.success) {
     return {
@@ -106,7 +106,7 @@ export async function updateGame(
 }
 
 export async function deleteGame(id: string): Promise<ActionResult> {
-  await requireAdmin();
+  await requireGameManager(id);
   await db.delete(games).where(eq(games.id, id));
   revalidatePath("/games");
   revalidatePath("/");
@@ -117,7 +117,7 @@ export async function setGameScore(
   id: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireAdmin();
+  await requireGameManager(id);
   const parsed = scoreSchema.safeParse(readForm(formData));
   if (!parsed.success) {
     return {
@@ -158,7 +158,7 @@ export async function setGameRosterPlayer(
   playerId: string,
   side: "A" | "B" | "invited" | null,
 ): Promise<ActionResult> {
-  await requireAdmin();
+  await requireGameManager(gameId);
   if (side === null) {
     await db
       .delete(gameRoster)

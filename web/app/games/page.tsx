@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
+import { isAdminLike, getMyCommissionerLeagueIds } from "@/lib/auth/perms";
 import { TopBar } from "@/components/bdl/top-bar";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
@@ -27,8 +28,10 @@ export default async function GamesPage({
   searchParams: Promise<{ league?: string; status?: "all" | "upcoming" | "completed" }>;
 }) {
   const session = await readSession();
-  const isAdmin = session?.role === "owner" || session?.role === "super_admin";
-  if (!isAdmin) redirect("/");
+  if (!session) redirect("/login");
+  const isAdmin = isAdminLike(session);
+  const commishLeagueIds = isAdmin ? null : await getMyCommissionerLeagueIds(session);
+  if (!isAdmin && (!commishLeagueIds || commishLeagueIds.length === 0)) redirect("/");
 
   const sp = await searchParams;
   const filter = {
@@ -36,10 +39,16 @@ export default async function GamesPage({
     status: (sp.status ?? "all") as "all" | "upcoming" | "completed",
   };
 
-  const [rows, allLeagues] = await Promise.all([
+  const [rowsAll, allLeaguesAll] = await Promise.all([
     getGamesList(filter),
-    getLeaguesWithStats(),
+    getLeaguesWithStats(isAdmin ? undefined : { scopeIds: commishLeagueIds! }),
   ]);
+
+  // Filter games to commissioner's leagues if not admin
+  const rows = isAdmin
+    ? rowsAll
+    : rowsAll.filter((g) => g.leagueId && commishLeagueIds!.includes(g.leagueId));
+  const allLeagues = allLeaguesAll;
 
   return (
     <>

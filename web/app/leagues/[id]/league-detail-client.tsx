@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Plus, Trash2, X } from "lucide-react";
+import { Copy, Mail, Pencil, Plus, Trash2, X } from "lucide-react";
 import type { LeagueDetail } from "@/lib/queries/leagues";
 import {
   addCommissioner,
@@ -11,10 +11,21 @@ import {
   removeCommissioner,
   removeLeaguePlayer,
 } from "@/lib/actions/leagues";
+import { createInvite, deleteInvite } from "@/lib/actions/invites";
 import { LeagueSheet } from "../league-sheet";
 import { Pill } from "@/components/bdl/pill";
 
 type PlayerLite = { id: string; firstName: string; lastName: string };
+
+type InviteLite = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  cell: string | null;
+  status: "pending" | "accepted" | "expired";
+  createdAt: string;
+};
 
 function Row({ children }: { children: React.ReactNode }) {
   return (
@@ -24,7 +35,13 @@ function Row({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function LeagueDetailClient({ detail }: { detail: LeagueDetail }) {
+export function LeagueDetailClient({
+  detail,
+  isAdmin,
+}: {
+  detail: LeagueDetail;
+  isAdmin: boolean;
+}) {
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
@@ -50,13 +67,15 @@ export function LeagueDetailClient({ detail }: { detail: LeagueDetail }) {
         >
           <Pencil size={14} /> Edit
         </button>
-        <button
-          type="button"
-          onClick={() => setConfirmDel(true)}
-          className="inline-flex items-center gap-2 h-9 px-3 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[12px] font-medium text-[color:var(--down)] hover:bg-[color:var(--down-soft)]"
-        >
-          <Trash2 size={14} /> Delete
-        </button>
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={() => setConfirmDel(true)}
+            className="inline-flex items-center gap-2 h-9 px-3 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[12px] font-medium text-[color:var(--down)] hover:bg-[color:var(--down-soft)]"
+          >
+            <Trash2 size={14} /> Delete
+          </button>
+        )}
       </div>
 
       <LeagueSheet
@@ -280,3 +299,161 @@ function PlayerAdder({
   );
 }
 
+LeagueDetailClient.Invites = function Invites({
+  leagueId,
+  invites,
+}: {
+  leagueId: string;
+  invites: InviteLite[];
+}) {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const onSubmit = (formData: FormData) => {
+    setError(null);
+    formData.set("leagueId", leagueId);
+    start(async () => {
+      const res = await createInvite(formData);
+      if (res.ok) {
+        router.refresh();
+        const form = document.getElementById("invite-form") as HTMLFormElement | null;
+        form?.reset();
+      } else {
+        setError(res.error);
+      }
+    });
+  };
+
+  const copyLink = async (id: string) => {
+    const url = `${window.location.origin}/invite/${id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      // ignore
+    }
+  };
+
+  const onDel = (id: string) =>
+    start(async () => {
+      const res = await deleteInvite(id);
+      if (res.ok) router.refresh();
+    });
+
+  const pendingInvites = invites.filter((i) => i.status === "pending");
+  const acceptedInvites = invites.filter((i) => i.status === "accepted");
+
+  return (
+    <>
+      <form
+        id="invite-form"
+        action={onSubmit}
+        className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-5 flex flex-col gap-3"
+      >
+        <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)]">
+          Invite a New Player
+        </div>
+        <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
+          <input
+            name="firstName"
+            placeholder="First name *"
+            required
+            className="h-10 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface-2)] px-3 text-[14px] outline-none focus:border-[color:var(--brand)]"
+          />
+          <input
+            name="lastName"
+            placeholder="Last name *"
+            required
+            className="h-10 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface-2)] px-3 text-[14px] outline-none focus:border-[color:var(--brand)]"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
+          <input
+            name="email"
+            type="email"
+            placeholder="Email *"
+            required
+            className="h-10 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface-2)] px-3 text-[14px] outline-none focus:border-[color:var(--brand)]"
+          />
+          <input
+            name="cell"
+            placeholder="Cell (optional)"
+            className="h-10 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface-2)] px-3 text-[14px] outline-none focus:border-[color:var(--brand)]"
+          />
+        </div>
+        {error && (
+          <div className="text-[12px] text-[color:var(--down)] bg-[color:var(--down-soft)] rounded-[var(--r-md)] px-3 py-2">
+            {error}
+          </div>
+        )}
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={pending}
+            className="inline-flex items-center gap-2 h-10 px-5 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)] disabled:opacity-60"
+          >
+            <Mail size={14} /> {pending ? "Creating…" : "Generate Invite Link"}
+          </button>
+        </div>
+      </form>
+
+      {pendingInvites.length > 0 && (
+        <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden mt-3">
+          {pendingInvites.map((inv) => {
+            const url =
+              typeof window !== "undefined" ? `${window.location.origin}/invite/${inv.id}` : "";
+            return (
+              <div
+                key={inv.id}
+                className="grid grid-cols-[1fr_auto_auto] items-center gap-3 px-5 py-3 border-t border-[color:var(--hairline)] first:border-t-0 max-sm:grid-cols-1 max-sm:gap-1.5"
+              >
+                <div className="min-w-0">
+                  <div className="font-bold text-[14px]">
+                    {inv.firstName} {inv.lastName}
+                  </div>
+                  <div className="text-[11.5px] text-[color:var(--text-3)] truncate">
+                    {inv.email}
+                    {inv.cell ? ` · ${inv.cell}` : ""}
+                  </div>
+                  <div className="text-[10.5px] text-[color:var(--text-4)] mt-0.5 truncate font-[family-name:var(--mono)]">
+                    {url}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => copyLink(inv.id)}
+                  className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[12px] font-medium hover:bg-[color:var(--surface-2)]"
+                >
+                  <Copy size={13} /> {copiedId === inv.id ? "Copied!" : "Copy link"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDel(inv.id)}
+                  aria-label="Delete invite"
+                  className="w-9 h-9 inline-flex items-center justify-center rounded-[var(--r-md)] text-[color:var(--text-3)] hover:text-[color:var(--down)] hover:bg-[color:var(--down-soft)]"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {acceptedInvites.length > 0 && (
+        <div className="text-[11.5px] text-[color:var(--text-3)] mt-2">
+          {acceptedInvites.length} accepted
+        </div>
+      )}
+
+      {pendingInvites.length === 0 && acceptedInvites.length === 0 && (
+        <div className="text-[12px] text-[color:var(--text-3)] mt-2">
+          No invites yet. Add a name + email above to generate a shareable signup link.
+        </div>
+      )}
+    </>
+  );
+};
