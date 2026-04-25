@@ -97,3 +97,23 @@ export async function clearSessionCookie() {
 }
 
 export const SESSION_COOKIE = COOKIE;
+
+/** Throws when the caller isn't a signed-in admin. Use in server actions. */
+export async function requireAdmin(): Promise<Session> {
+  const session = await readSession();
+  if (!session) {
+    throw new Error("Not authenticated.");
+  }
+  if (session.role !== "owner" && session.role !== "super_admin") {
+    throw new Error("Forbidden — admin role required.");
+  }
+  return session;
+}
+
+/** Same as requireAdmin but only owners pass. */
+export async function requireOwner(): Promise<Session> {
+  const session = await readSession();
+  if (!session) throw new Error("Not authenticated.");
+  if (session.role !== "owner") throw new Error("Forbidden — owner role required.");
+  return session;
+}

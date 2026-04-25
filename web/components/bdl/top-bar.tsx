@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { label: "My League", href: "/" },
-  { label: "Players", href: "/players" },
+  { label: "Roster", href: "/roster" },
   { label: "Discover", href: "/discover" },
   { label: "Leaderboard", href: "/leaderboard" },
   { label: "Activity", href: "/activity" },
