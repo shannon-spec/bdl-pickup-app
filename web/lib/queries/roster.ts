@@ -15,6 +15,17 @@ export type RosterRow = Pick<
   | "status"
 >;
 
+// Higher number = stronger. Sort descending so Pro lands at the top
+// and "Not Rated" sinks to the bottom.
+const LEVEL_RANK: Record<RosterRow["level"], number> = {
+  "Pro": 5,
+  "Game Changer": 4,
+  "Advanced": 3,
+  "Intermediate": 2,
+  "Novice": 1,
+  "Not Rated": 0,
+};
+
 export async function getRoster(search?: string): Promise<RosterRow[]> {
   const q = search?.trim();
   const where =
@@ -27,7 +38,7 @@ export async function getRoster(search?: string): Promise<RosterRow[]> {
         )
       : undefined;
 
-  return db
+  const rows = await db
     .select({
       id: players.id,
       firstName: players.firstName,
@@ -43,6 +54,14 @@ export async function getRoster(search?: string): Promise<RosterRow[]> {
     .from(players)
     .where(where)
     .orderBy(asc(players.lastName), asc(players.firstName));
+
+  return rows.sort((a, b) => {
+    const d = LEVEL_RANK[b.level] - LEVEL_RANK[a.level];
+    if (d !== 0) return d;
+    const ln = a.lastName.localeCompare(b.lastName);
+    if (ln !== 0) return ln;
+    return a.firstName.localeCompare(b.firstName);
+  });
 }
 
 export async function getPlayer(id: string): Promise<Player | null> {

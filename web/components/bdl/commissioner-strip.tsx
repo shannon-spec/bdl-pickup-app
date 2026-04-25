@@ -13,20 +13,28 @@ import { CommissionerAdminControls } from "./commissioner-admin-controls";
 /**
  * League commissioner contact strip. Renders only when the viewer is
  * a league member, a commissioner, or an admin. Admins also see
- * inline controls to add and remove commissioners.
+ * inline controls to add and remove commissioners — but only in
+ * `manage` mode (hidden in player view).
  */
-export async function CommissionerStrip({ leagueId }: { leagueId?: string }) {
+export async function CommissionerStrip({
+  leagueId,
+  mode = "manage",
+}: {
+  leagueId?: string;
+  mode?: "player" | "manage";
+}) {
   const session = await readSession();
   if (!session) return null;
   const id = leagueId ?? (await getActiveLeagueId());
   if (!id) return null;
   const isAdmin = session.role === "owner" || session.role === "super_admin";
+  const showAdminControls = isAdmin && mode === "manage";
   const commissioners = await getLeagueCommissionerContacts(id, session);
   if (!commissioners) return null;
 
-  // Admins also need an "eligible to add" list so they can pick someone new.
+  // Only fetch the "eligible to add" list when we're going to render the controls.
   let eligible: { id: string; firstName: string; lastName: string }[] = [];
-  if (isAdmin) {
+  if (showAdminControls) {
     const all = await db
       .select({
         id: players.id,
@@ -39,7 +47,7 @@ export async function CommissionerStrip({ leagueId }: { leagueId?: string }) {
     eligible = all.filter((p) => !onCommish.has(p.id));
   }
 
-  if (commissioners.length === 0 && !isAdmin) return null;
+  if (commissioners.length === 0 && !showAdminControls) return null;
 
   return (
     <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-5 py-4">
@@ -57,7 +65,7 @@ export async function CommissionerStrip({ leagueId }: { leagueId?: string }) {
           ))}
         </div>
       )}
-      {isAdmin && (
+      {showAdminControls && (
         <CommissionerAdminControls
           leagueId={id}
           commissioners={commissioners.map((c) => ({

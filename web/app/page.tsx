@@ -133,8 +133,7 @@ export default async function Home() {
         )}
 
         <ContextHeader />
-        <CommissionerStrip leagueId={currentLeague.id} />
-        <MembersStrip leagueId={currentLeague.id} />
+        <CommissionerStrip leagueId={currentLeague.id} mode="player" />
 
         {/* Hero */}
         <section className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-7 pt-6 pb-5 max-sm:px-5 max-sm:pt-5 max-sm:pb-4">
@@ -442,6 +441,8 @@ export default async function Home() {
             ))}
           </div>
         </div>
+
+        <MembersStrip leagueId={currentLeague.id} mode="player" />
       </PageFrame>
       <MobileBottomBar active="home" />
     </>

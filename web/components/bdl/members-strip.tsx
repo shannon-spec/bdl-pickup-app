@@ -14,16 +14,23 @@ import { MembersAdminControls } from "./members-admin-controls";
  * League members strip. Top-of-page module mirroring CommissionerStrip.
  * - Members of the league (and admins/commissioners) see the list
  * - League managers (admin / commissioner of the league) see inline
- *   controls at the bottom for adding + removing members
+ *   controls at the bottom for adding + removing members — but only
+ *   in `manage` mode (hidden in player view).
  */
-export async function MembersStrip({ leagueId }: { leagueId?: string }) {
+export async function MembersStrip({
+  leagueId,
+  mode = "manage",
+}: {
+  leagueId?: string;
+  mode?: "player" | "manage";
+}) {
   const session = await readSession();
   if (!session) return null;
   const id = leagueId ?? (await getActiveLeagueId());
   if (!id) return null;
   const members = await getLeagueMembers(id, session);
   if (!members) return null;
-  const canManage = await canManageLeague(session, id);
+  const canManage = (await canManageLeague(session, id)) && mode === "manage";
   const eligible = canManage ? await getEligibleNonMembers(id) : [];
 
   if (members.length === 0 && !canManage) return null;

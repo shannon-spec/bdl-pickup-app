@@ -81,7 +81,7 @@ export function RosterClient({
       <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden max-sm:hidden">
         <div
           aria-busy={pending}
-          className={`grid grid-cols-[2fr_2fr_1fr_1fr_1fr_72px] px-5 py-3 border-b border-[color:var(--hairline)] text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)] ${
+          className={`grid grid-cols-[2fr_2fr_1fr_1fr_1.1fr_1fr_72px] px-5 py-3 border-b border-[color:var(--hairline)] text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)] ${
             pending ? "opacity-60" : ""
           }`}
         >
@@ -89,6 +89,7 @@ export function RosterClient({
           <span>Contact</span>
           <span>City</span>
           <span>Pos</span>
+          <span>Grade</span>
           <span>Status</span>
           <span></span>
         </div>
@@ -100,13 +101,13 @@ export function RosterClient({
           rows.map((r) => (
             <div
               key={r.id}
-              className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr_72px] items-center px-5 py-3 border-t border-[color:var(--hairline)] hover:bg-[color:var(--surface-2)] transition-colors text-[14px]"
+              className="grid grid-cols-[2fr_2fr_1fr_1fr_1.1fr_1fr_72px] items-center px-5 py-3 border-t border-[color:var(--hairline)] hover:bg-[color:var(--surface-2)] transition-colors text-[14px]"
             >
               <Link
                 href={`/players/${r.id}`}
                 className="font-bold text-[color:var(--text)] hover:text-[color:var(--brand)] truncate"
               >
-                {r.lastName}, {r.firstName}
+                {r.firstName} {r.lastName}
               </Link>
               <span className="text-[color:var(--text-3)] text-[12.5px] truncate">
                 {r.email || r.cell || "—"}
@@ -115,6 +116,9 @@ export function RosterClient({
                 {r.city ? `${r.city}${r.state ? `, ${r.state}` : ""}` : "—"}
               </span>
               <span className="text-[color:var(--text-2)] text-[12.5px]">{r.position || "—"}</span>
+              <span>
+                <GradePill level={r.level} />
+              </span>
               <span>
                 <StatusPill status={r.status} />
               </span>
@@ -145,11 +149,12 @@ export function RosterClient({
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="font-bold text-[15px]">
-                  {r.lastName}, {r.firstName}
+                  {r.firstName} {r.lastName}
                 </span>
                 <StatusPill status={r.status} />
               </div>
-              <div className="text-[12.5px] text-[color:var(--text-3)] flex flex-wrap gap-x-3 gap-y-0.5">
+              <div className="text-[12.5px] text-[color:var(--text-3)] flex flex-wrap gap-x-3 gap-y-0.5 items-center">
+                <GradePill level={r.level} />
                 {r.position && <span>{r.position}</span>}
                 {r.city && (
                   <span>
@@ -196,6 +201,21 @@ function StatusPill({ status }: { status: RosterRow["status"] }) {
     case "IR":
       return <Pill tone="loss">IR</Pill>;
   }
+}
+
+function GradePill({ level }: { level: RosterRow["level"] }) {
+  if (level === "Pro" || level === "Game Changer") {
+    return <Pill tone="brand">{level}</Pill>;
+  }
+  if (level === "Advanced") {
+    return <Pill tone="win">{level}</Pill>;
+  }
+  if (level === "Not Rated") {
+    return (
+      <span className="text-[color:var(--text-3)] text-[12px]">—</span>
+    );
+  }
+  return <Pill tone="neutral">{level}</Pill>;
 }
 
 function RowAction({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
