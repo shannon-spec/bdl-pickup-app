@@ -1,11 +1,15 @@
 /**
- * BDL initial seed — ports the legacy localStorage seed into Neon.
+ * BDL initial seed — ports the legacy localStorage seed into Neon
+ * and populates per-game rosters so the dashboard's player stats
+ * have real data to compute on.
  *
  * Idempotent: clears all tables in FK-safe order, then inserts:
  *   - 28 roster players
  *   - 1 CPA League
  *   - 28 league_players rows linking all players to CPA League
  *   - 30 completed games from the 2026 game log
+ *   - ~300 game_roster rows (5 A + 5 B per game) with the recorded
+ *     game winner placed on the winning team
  *   - 2 super admins (admin + shannon), both linked to Shannon Terry
  *
  * Run with: npm run db:seed
@@ -18,9 +22,9 @@ import {
   leagues,
   leaguePlayers,
   games,
+  gameRoster,
   superAdmins,
   invites,
-  gameRoster,
   leagueCommissioners,
 } from "../lib/db/schema";
 
@@ -64,12 +68,7 @@ const ROSTER_NAMES: { firstName: string; lastName: string }[] = [
   { firstName: "Tyler", lastName: "Pennington" },
 ];
 
-const GAME_LOG_2026: {
-  d: string;
-  sA: number;
-  sB: number;
-  gw: string;
-}[] = [
+const GAME_LOG_2026: { d: string; sA: number; sB: number; gw: string }[] = [
   { d: "2026-01-02", sA: 138, sB: 151, gw: "dj" },
   { d: "2026-01-05", sA: 150, sB: 137, gw: "jake" },
   { d: "2026-01-07", sA: 150, sB: 131, gw: "jake" },
@@ -102,16 +101,34 @@ const GAME_LOG_2026: {
   { d: "2026-03-16", sA: 142, sB: 150, gw: "dj" },
 ];
 
+/* Deterministic PRNG so reseeds produce identical rosters. */
+function mulberry32(seed: number) {
+  return function () {
+    let t = (seed += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffleSeeded<T>(arr: T[], seed: number): T[] {
+  const rand = mulberry32(seed);
+  const out = arr.slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
 async function main() {
   console.log("Clearing existing data…");
-  // FK-safe order: junctions and dependents first, then roots.
   await db.delete(invites);
   await db.delete(gameRoster);
   await db.delete(games);
   await db.delete(leagueCommissioners);
   await db.delete(leaguePlayers);
   await db.delete(superAdmins);
-  await db.delete(leagues);
   await db.delete(players);
 
   console.log(`Inserting ${ROSTER_NAMES.length} players…`);
@@ -124,15 +141,12 @@ async function main() {
       lastName: players.lastName,
     });
 
-  // Build a first-name lookup for the game log GW resolver
   const byFirstName = new Map<string, string>();
   for (const p of insertedPlayers) byFirstName.set(p.firstName.toLowerCase(), p.id);
   const shannonId = insertedPlayers.find(
     (p) => p.firstName === "Shannon" && p.lastName === "Terry",
-  )?.id;
-  // Nickname aliases from the legacy seed
-  if (shannonId) byFirstName.set("shawn", shannonId);
-  // RA and DJ are already correct via lowercase map
+  )!.id;
+  byFirstName.set("shawn", shannonId); // legacy nickname
 
   console.log("Inserting CPA League…");
   const [cpa] = await db
@@ -144,7 +158,7 @@ async function main() {
       schedule: "Tuesdays & Thursdays · 7:00 PM",
       startTime: "12:00:00",
       startTimeType: "fixed",
-      days: [1, 3, 5], // Mon Wed Fri
+      days: [1, 3, 5],
       teamAName: "White",
       teamBName: "Dark",
     })
@@ -156,28 +170,103 @@ async function main() {
     .values(insertedPlayers.map((p) => ({ leagueId: cpa.id, playerId: p.id })));
 
   console.log(`Inserting ${GAME_LOG_2026.length} games…`);
-  await db.insert(games).values(
-    GAME_LOG_2026.map((g) => {
-      const gwId = g.gw ? byFirstName.get(g.gw) ?? null : null;
-      const winTeam =
-        g.sA > g.sB ? ("A" as const) : g.sB > g.sA ? ("B" as const) : ("Tie" as const);
-      return {
-        leagueId: cpa.id,
-        leagueName: cpa.name,
-        teamAName: "White",
-        teamBName: "Dark",
-        format: "5v5" as const,
-        numInvites: 0,
-        gameDate: g.d,
-        gameTime: "12:00:00",
-        scoreA: g.sA,
-        scoreB: g.sB,
-        winTeam,
-        locked: true,
-        gameWinner: gwId,
-      };
-    }),
-  );
+  const insertedGames = await db
+    .insert(games)
+    .values(
+      GAME_LOG_2026.map((g) => {
+        const gwId = g.gw ? byFirstName.get(g.gw) ?? null : null;
+        const winTeam =
+          g.sA > g.sB ? ("A" as const) : g.sB > g.sA ? ("B" as const) : ("Tie" as const);
+        return {
+          leagueId: cpa.id,
+          leagueName: cpa.name,
+          teamAName: "White",
+          teamBName: "Dark",
+          format: "5v5" as const,
+          numInvites: 0,
+          gameDate: g.d,
+          gameTime: "12:00:00",
+          scoreA: g.sA,
+          scoreB: g.sB,
+          winTeam,
+          locked: true,
+          gameWinner: gwId,
+        };
+      }),
+    )
+    .returning({
+      id: games.id,
+      gameDate: games.gameDate,
+      winTeam: games.winTeam,
+      gameWinner: games.gameWinner,
+    });
+
+  console.log("Generating game rosters…");
+  // Roster rule: every game has 10 players (5 A + 5 B). Shannon is in ~85%
+  // of games (sits 4 of 30). The recorded game winner always plays on the
+  // winning team. Remaining slots filled by a deterministic shuffle
+  // seeded by date so reseeds produce identical rosters.
+  const SHANNON_OFF = new Set(["2026-01-12", "2026-02-09", "2026-02-23", "2026-03-11"]);
+
+  type RosterRow = { gameId: string; playerId: string; side: "A" | "B" | "invited" };
+  const rosterRows: RosterRow[] = [];
+
+  for (const g of insertedGames) {
+    if (!g.gameDate) continue;
+    const seed = parseInt(g.gameDate.replace(/-/g, ""), 10);
+    const all = insertedPlayers.map((p) => p.id);
+    const winnerId = g.gameWinner;
+    const shannonHere = !SHANNON_OFF.has(g.gameDate);
+
+    // Build attendees: winner first (if any), Shannon second (if attending),
+    // then fill from a deterministic shuffle of the remaining roster.
+    const attendees: string[] = [];
+    if (winnerId) attendees.push(winnerId);
+    if (shannonHere && !attendees.includes(shannonId)) attendees.push(shannonId);
+    for (const id of shuffleSeeded(all, seed)) {
+      if (attendees.length >= 10) break;
+      if (!attendees.includes(id)) attendees.push(id);
+    }
+
+    const winSide = g.winTeam === "A" || g.winTeam === "B" ? g.winTeam : "A";
+    const loseSide: "A" | "B" = winSide === "A" ? "B" : "A";
+
+    let aCount = 0;
+    let bCount = 0;
+    const assigned: { playerId: string; side: "A" | "B" }[] = [];
+
+    if (winnerId) {
+      assigned.push({ playerId: winnerId, side: winSide });
+      if (winSide === "A") aCount++;
+      else bCount++;
+    }
+
+    // Distribute remaining attendees evenly across the two sides.
+    // Shannon and everyone else use the same balance rule — no bias toward
+    // the winning team — so her record reflects whichever side she landed
+    // on game-by-game.
+    for (const id of attendees) {
+      if (winnerId && id === winnerId) continue;
+      let side: "A" | "B";
+      if (aCount >= 5) side = "B";
+      else if (bCount >= 5) side = "A";
+      else side = aCount <= bCount ? "A" : "B";
+      assigned.push({ playerId: id, side });
+      if (side === "A") aCount++;
+      else bCount++;
+    }
+
+    for (const a of assigned) {
+      rosterRows.push({ gameId: g.id, playerId: a.playerId, side: a.side });
+    }
+    void loseSide; // referenced for clarity above
+  }
+
+  console.log(`Inserting ${rosterRows.length} game_roster rows…`);
+  // Chunk inserts to keep payloads small.
+  for (let i = 0; i < rosterRows.length; i += 200) {
+    await db.insert(gameRoster).values(rosterRows.slice(i, i + 200));
+  }
 
   console.log("Seeding super admins…");
   await db.insert(superAdmins).values([
@@ -186,14 +275,14 @@ async function main() {
       role: "owner",
       firstName: "Shannon",
       lastName: "Terry",
-      playerId: shannonId ?? null,
+      playerId: shannonId,
     },
     {
       username: "shannon",
       role: "owner",
       firstName: "Shannon",
       lastName: "Terry",
-      playerId: shannonId ?? null,
+      playerId: shannonId,
     },
   ]);
 
@@ -201,7 +290,8 @@ async function main() {
   console.log(`  players: ${insertedPlayers.length}`);
   console.log(`  leagues: 1 (CPA League)`);
   console.log(`  league_players: ${insertedPlayers.length}`);
-  console.log(`  games: ${GAME_LOG_2026.length}`);
+  console.log(`  games: ${insertedGames.length}`);
+  console.log(`  game_roster: ${rosterRows.length}`);
   console.log(`  super_admins: 2 (admin, shannon)`);
 }
 
