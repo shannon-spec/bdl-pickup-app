@@ -238,9 +238,31 @@ export default async function GamesPage({
                       <span className="text-[color:var(--text-3)] text-[12px] mr-2">
                         {g.leagueName}
                       </span>
-                      <span className="font-bold">{g.teamAName}</span>
+                      <span
+                        className={
+                          g.winTeam === "A"
+                            ? "font-extrabold text-[color:var(--text)]"
+                            : g.winTeam === "B"
+                              ? "font-medium text-[color:var(--text-3)]"
+                              : "font-bold"
+                        }
+                      >
+                        {g.winTeam === "A" && "✓ "}
+                        {g.teamAName}
+                      </span>
                       <span className="text-[color:var(--text-4)] mx-2 font-medium">vs</span>
-                      <span className="font-bold">{g.teamBName}</span>
+                      <span
+                        className={
+                          g.winTeam === "B"
+                            ? "font-extrabold text-[color:var(--text)]"
+                            : g.winTeam === "A"
+                              ? "font-medium text-[color:var(--text-3)]"
+                              : "font-bold"
+                        }
+                      >
+                        {g.winTeam === "B" && "✓ "}
+                        {g.teamBName}
+                      </span>
                     </div>
                     <div className="font-[family-name:var(--mono)] text-[13px] num">
                       {g.scoreA !== null && g.scoreB !== null ? (
