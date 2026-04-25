@@ -1,18 +1,19 @@
 import Link from "next/link";
 import { Mail, Phone } from "lucide-react";
+import { asc } from "drizzle-orm";
 import { readSession } from "@/lib/auth/session";
 import { getActiveLeagueId } from "@/lib/cookies/active-league";
 import {
   getLeagueCommissionerContacts,
   type CommissionerContact,
 } from "@/lib/queries/commissioners";
+import { db, players } from "@/lib/db";
+import { CommissionerAdminControls } from "./commissioner-admin-controls";
 
 /**
- * League commissioner contact strip. Mount on any page that has a
- * league context — only renders when the viewer is allowed to see
- * commissioners (league member, commissioner, or admin).
- *
- * If `leagueId` is not provided, falls back to the active-league cookie.
+ * League commissioner contact strip. Renders only when the viewer is
+ * a league member, a commissioner, or an admin. Admins also see
+ * inline controls to add and remove commissioners.
  */
 export async function CommissionerStrip({ leagueId }: { leagueId?: string }) {
   const session = await readSession();
@@ -21,18 +22,52 @@ export async function CommissionerStrip({ leagueId }: { leagueId?: string }) {
   if (!id) return null;
   const isAdmin = session.role === "owner" || session.role === "super_admin";
   const commissioners = await getLeagueCommissionerContacts(id, session);
-  if (!commissioners || commissioners.length === 0) return null;
+  if (!commissioners) return null;
+
+  // Admins also need an "eligible to add" list so they can pick someone new.
+  let eligible: { id: string; firstName: string; lastName: string }[] = [];
+  if (isAdmin) {
+    const all = await db
+      .select({
+        id: players.id,
+        firstName: players.firstName,
+        lastName: players.lastName,
+      })
+      .from(players)
+      .orderBy(asc(players.lastName), asc(players.firstName));
+    const onCommish = new Set(commissioners.map((c) => c.id));
+    eligible = all.filter((p) => !onCommish.has(p.id));
+  }
+
+  if (commissioners.length === 0 && !isAdmin) return null;
 
   return (
     <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-5 py-4">
       <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)] mb-3">
         Commissioner{commissioners.length === 1 ? "" : "s"}
       </div>
-      <div className="flex flex-wrap gap-2.5">
-        {commissioners.map((c) => (
-          <Card key={c.id} c={c} canSeePrivate={isAdmin} />
-        ))}
-      </div>
+      {commissioners.length === 0 ? (
+        <div className="text-[12.5px] text-[color:var(--text-3)] mb-3">
+          No commissioners yet.
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-2.5">
+          {commissioners.map((c) => (
+            <Card key={c.id} c={c} canSeePrivate={isAdmin} />
+          ))}
+        </div>
+      )}
+      {isAdmin && (
+        <CommissionerAdminControls
+          leagueId={id}
+          commissioners={commissioners.map((c) => ({
+            id: c.id,
+            firstName: c.firstName,
+            lastName: c.lastName,
+          }))}
+          eligible={eligible}
+        />
+      )}
     </div>
   );
 }
@@ -99,7 +134,6 @@ function Contact({
   href?: string;
 }) {
   if (!value) return null;
-  // Hide value from non-admins when flagged private
   const showValue = !isPrivate || canSeePrivate;
   const valueEl = showValue ? (
     <a

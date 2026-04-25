@@ -3,19 +3,13 @@ import { readSession } from "@/lib/auth/session";
 import { canManageLeague, isAdminLike } from "@/lib/auth/perms";
 import { TopBar } from "@/components/bdl/top-bar";
 import { CommissionerStrip } from "@/components/bdl/commissioner-strip";
+import { MembersStrip } from "@/components/bdl/members-strip";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
 import { getLeagueDetail } from "@/lib/queries/leagues";
 import { getInvitesForLeague } from "@/lib/queries/invites";
-import {
-  LeagueDetailClient,
-  MemberRow,
-  CommissionerRow,
-  AddMember,
-  AddCommissioner,
-  Invites,
-} from "./league-detail-client";
+import { LeagueDetailClient, Invites } from "./league-detail-client";
 
 export const dynamic = "force-dynamic";
 
@@ -72,54 +66,7 @@ export default async function LeagueDetailPage({
         <LeagueDetailClient detail={detail} isAdmin={isAdmin} />
 
         <CommissionerStrip leagueId={detail.league.id} />
-
-        <SectionHead title="Members" count={<span>{detail.members.length}</span>} />
-        <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden">
-          {detail.members.length === 0 ? (
-            <div className="px-5 py-12 text-center text-[color:var(--text-3)] text-[14px]">
-              No players assigned yet — add some below.
-            </div>
-          ) : (
-            detail.members.map((m) => (
-              <MemberRow
-                key={m.id}
-                leagueId={detail.league.id}
-                player={m}
-              />
-            ))
-          )}
-        </div>
-        <AddMember
-          leagueId={detail.league.id}
-          allPlayers={detail.allPlayers}
-          excludeIds={detail.members.map((m) => m.id)}
-        />
-
-        {isAdmin && (
-          <>
-            <SectionHead title="Commissioners" count={<span>{detail.commissioners.length}</span>} />
-            <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden">
-              {detail.commissioners.length === 0 ? (
-                <div className="px-5 py-8 text-center text-[color:var(--text-3)] text-[14px]">
-                  No commissioners.
-                </div>
-              ) : (
-                detail.commissioners.map((c) => (
-                  <CommissionerRow
-                    key={c.id}
-                    leagueId={detail.league.id}
-                    player={c}
-                  />
-                ))
-              )}
-            </div>
-            <AddCommissioner
-              leagueId={detail.league.id}
-              allPlayers={detail.allPlayers}
-              excludeIds={detail.commissioners.map((c) => c.id)}
-            />
-          </>
-        )}
+        <MembersStrip leagueId={detail.league.id} />
 
         <SectionHead title="Invites" count={<span>{pendingInvites.length}</span>} />
         <Invites
