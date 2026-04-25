@@ -211,7 +211,6 @@ export default async function Home() {
                   a={nextGame.probA}
                   b={nextGame.probB}
                   compact
-                  showTop={false}
                 />
               </div>
             </section>

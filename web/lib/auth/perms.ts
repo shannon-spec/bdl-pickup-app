@@ -8,7 +8,7 @@
  *   - everyone else (signed-in players) → read-only
  */
 import { and, eq } from "drizzle-orm";
-import { db, leagueCommissioners, games } from "@/lib/db";
+import { db, leagueCommissioners, leaguePlayers, games } from "@/lib/db";
 import { readSession, type Session } from "./session";
 
 export function isAdminLike(s: Session | null): boolean {
@@ -41,6 +41,17 @@ export async function getMyCommissionerLeagueIds(
     .select({ leagueId: leagueCommissioners.leagueId })
     .from(leagueCommissioners)
     .where(eq(leagueCommissioners.playerId, s.playerId));
+  return rows.map((r) => r.leagueId);
+}
+
+export async function getMyMemberLeagueIds(
+  s: Session | null,
+): Promise<string[]> {
+  if (!s || !s.playerId) return [];
+  const rows = await db
+    .select({ leagueId: leaguePlayers.leagueId })
+    .from(leaguePlayers)
+    .where(eq(leaguePlayers.playerId, s.playerId));
   return rows.map((r) => r.leagueId);
 }
 

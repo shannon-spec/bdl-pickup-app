@@ -2,7 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
-import { isAdminLike, getMyCommissionerLeagueIds } from "@/lib/auth/perms";
+import {
+  isAdminLike,
+  getMyCommissionerLeagueIds,
+  getMyMemberLeagueIds,
+} from "@/lib/auth/perms";
 import { getViewCaps } from "@/lib/auth/view";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
@@ -34,15 +38,17 @@ export default async function GamesPage({
   const session = await readSession();
   if (!session) redirect("/login");
   const caps = await getViewCaps(session);
-  if (!caps.canManage) redirect("/");
   const isAdmin = isAdminLike(session);
   // Lens-driven scoping: in commissioner view, even a super admin sees
   // only the leagues they actually commission. Real admin view = all.
+  // In player view, scope to leagues the viewer is a member of.
   const useAdminScope = caps.view === "admin" && isAdmin;
-  const commishLeagueIds = useAdminScope
+  const scopedLeagueIds = useAdminScope
     ? null
-    : await getMyCommissionerLeagueIds(session);
-  if (!useAdminScope && (!commishLeagueIds || commishLeagueIds.length === 0)) {
+    : caps.view === "commissioner"
+      ? await getMyCommissionerLeagueIds(session)
+      : await getMyMemberLeagueIds(session);
+  if (!useAdminScope && (!scopedLeagueIds || scopedLeagueIds.length === 0)) {
     redirect("/");
   }
 
@@ -54,12 +60,12 @@ export default async function GamesPage({
 
   const [rowsAll, allLeaguesAll] = await Promise.all([
     getGamesList(filter),
-    getLeaguesWithStats(useAdminScope ? undefined : { scopeIds: commishLeagueIds! }),
+    getLeaguesWithStats(useAdminScope ? undefined : { scopeIds: scopedLeagueIds! }),
   ]);
 
   const rows = useAdminScope
     ? rowsAll
-    : rowsAll.filter((g) => g.leagueId && commishLeagueIds!.includes(g.leagueId));
+    : rowsAll.filter((g) => g.leagueId && scopedLeagueIds!.includes(g.leagueId));
   const allLeagues = allLeaguesAll;
 
   return (
@@ -67,27 +73,45 @@ export default async function GamesPage({
       <TopBar active="/games" userInitials={session.username.slice(0, 2).toUpperCase()} />
       <PageFrame>
         <ContextHeader />
-        <CommissionerStrip leagueId={filter.leagueId ?? undefined} />
-        <MembersStrip leagueId={filter.leagueId ?? undefined} />
-        <GamesPageClient leagues={allLeagues}>
-          <SectionHead
-            title="Games"
-            count={
-              <span>
-                {rows.length} game{rows.length === 1 ? "" : "s"}
-              </span>
-            }
-          />
+        {caps.canManage && (
+          <>
+            <CommissionerStrip leagueId={filter.leagueId ?? undefined} />
+            <MembersStrip leagueId={filter.leagueId ?? undefined} />
+          </>
+        )}
+        {caps.canManage ? (
+          <GamesPageClient leagues={allLeagues}>
+            {renderListing()}
+          </GamesPageClient>
+        ) : (
+          renderListing()
+        )}
+      </PageFrame>
+      <MobileBottomBar active="home" />
+    </>
+  );
 
-          <FilterBar selected={filter.status} leagueId={filter.leagueId} leagues={allLeagues} />
+  function renderListing() {
+    return (
+      <>
+        <SectionHead
+          title="Games"
+          count={
+            <span>
+              {rows.length} game{rows.length === 1 ? "" : "s"}
+            </span>
+          }
+        />
 
-          {rows.length === 0 ? (
-            <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-12 text-center text-[color:var(--text-3)] text-[14px]">
-              No games match the current filter.
-            </div>
-          ) : (
-            <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden">
-              {rows.map((g) => {
+        <FilterBar selected={filter.status} leagueId={filter.leagueId} leagues={allLeagues} />
+
+        {rows.length === 0 ? (
+          <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-12 text-center text-[color:var(--text-3)] text-[14px]">
+            No games match the current filter.
+          </div>
+        ) : (
+          <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden">
+            {rows.map((g) => {
                 const completed =
                   (g.scoreA !== null && g.scoreB !== null) || g.winTeam !== null;
                 return (
@@ -139,13 +163,11 @@ export default async function GamesPage({
                   </Link>
                 );
               })}
-            </div>
-          )}
-        </GamesPageClient>
-      </PageFrame>
-      <MobileBottomBar active="home" />
-    </>
-  );
+          </div>
+        )}
+      </>
+    );
+  }
 }
 
 function FilterBar({
