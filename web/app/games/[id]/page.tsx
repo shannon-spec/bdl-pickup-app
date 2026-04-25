@@ -9,7 +9,12 @@ import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { TeamBadge } from "@/components/bdl/team-badge";
 import { Pill } from "@/components/bdl/pill";
 import { getGameDetail } from "@/lib/queries/games";
-import { GameDetailClient } from "./game-detail-client";
+import {
+  GameScore,
+  RosterRow,
+  AddRoster,
+  DangerZone,
+} from "./game-detail-client";
 
 export const dynamic = "force-dynamic";
 
@@ -116,7 +121,7 @@ export default async function GameDetailPage({
             </div>
           </div>
 
-          <GameDetailClient.Score detail={detail} />
+          <GameScore detail={detail} />
         </div>
 
         <SectionHead title={`${game.teamAName ?? "White"} (${detail.rosterA.length})`} />
@@ -128,14 +133,14 @@ export default async function GameDetailPage({
         <SectionHead title={`Invited (${detail.invited.length})`} />
         <RosterPanel detail={detail} side="invited" />
 
-        <GameDetailClient.AddRoster
+        <AddRoster
           gameId={game.id}
           eligible={detail.eligible}
           allLeagues={detail.allLeagues}
           currentLeagueId={game.leagueId ?? null}
         />
 
-        <GameDetailClient.DangerZone gameId={game.id} />
+        <DangerZone gameId={game.id} />
       </PageFrame>
       <MobileBottomBar active="home" />
     </>
@@ -159,7 +164,7 @@ function RosterPanel({
         </div>
       ) : (
         list.map((p) => (
-          <GameDetailClient.RosterRow
+          <RosterRow
             key={p.id}
             gameId={detail.game.id}
             playerId={p.id}

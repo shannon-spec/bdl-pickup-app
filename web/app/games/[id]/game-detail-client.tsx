@@ -6,11 +6,7 @@ import { Plus, Trash2 } from "lucide-react";
 import type { GameDetail } from "@/lib/queries/games";
 import { deleteGame, setGameRosterPlayer, setGameScore } from "@/lib/actions/games";
 
-export function GameDetailClient(_: { children?: React.ReactNode }) {
-  return null;
-}
-
-GameDetailClient.Score = function Score({ detail }: { detail: GameDetail }) {
+export function GameScore({ detail }: { detail: GameDetail }) {
   const router = useRouter();
   const { game } = detail;
   const [error, setError] = useState<string | null>(null);
@@ -89,7 +85,7 @@ GameDetailClient.Score = function Score({ detail }: { detail: GameDetail }) {
   );
 };
 
-GameDetailClient.RosterRow = function RosterRow({
+export function RosterRow({
   gameId,
   playerId,
   name,
@@ -143,7 +139,7 @@ GameDetailClient.RosterRow = function RosterRow({
   );
 };
 
-GameDetailClient.AddRoster = function AddRoster({
+export function AddRoster({
   gameId,
   eligible,
   allLeagues,
@@ -214,7 +210,7 @@ GameDetailClient.AddRoster = function AddRoster({
   );
 };
 
-GameDetailClient.DangerZone = function DangerZone({ gameId }: { gameId: string }) {
+export function DangerZone({ gameId }: { gameId: string }) {
   const router = useRouter();
   const [confirm, setConfirm] = useState(false);
   const [pending, start] = useTransition();

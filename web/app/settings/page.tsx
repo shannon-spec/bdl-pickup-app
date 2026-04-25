@@ -7,7 +7,7 @@ import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
 import { db, superAdmins, players } from "@/lib/db";
-import { SettingsClient } from "./settings-client";
+import { AdminRow, AddAdmin } from "./settings-client";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Settings · BDL" };
@@ -52,7 +52,7 @@ export default async function SettingsPage() {
             </p>
           </div>
           {admins.map((a) => (
-            <SettingsClient.AdminRow
+            <AdminRow
               key={a.id}
               admin={{
                 id: a.id,
@@ -68,7 +68,7 @@ export default async function SettingsPage() {
           ))}
         </div>
 
-        <SettingsClient.AddAdmin allPlayers={allPlayers} />
+        <AddAdmin allPlayers={allPlayers} />
       </PageFrame>
       <MobileBottomBar active="home" />
     </>

@@ -132,7 +132,7 @@ export function LeagueDetailClient({
   );
 }
 
-LeagueDetailClient.MemberRow = function MemberRow({
+export function MemberRow({
   leagueId,
   player,
 }: {
@@ -172,7 +172,7 @@ LeagueDetailClient.MemberRow = function MemberRow({
   );
 };
 
-LeagueDetailClient.CommissionerRow = function CommissionerRow({
+export function CommissionerRow({
   leagueId,
   player,
 }: {
@@ -204,7 +204,7 @@ LeagueDetailClient.CommissionerRow = function CommissionerRow({
   );
 };
 
-LeagueDetailClient.AddMember = function AddMember({
+export function AddMember({
   leagueId,
   allPlayers,
   excludeIds,
@@ -224,7 +224,7 @@ LeagueDetailClient.AddMember = function AddMember({
   );
 };
 
-LeagueDetailClient.AddCommissioner = function AddCommish({
+export function AddCommissioner({
   leagueId,
   allPlayers,
   excludeIds,
@@ -299,7 +299,7 @@ function PlayerAdder({
   );
 }
 
-LeagueDetailClient.Invites = function Invites({
+export function Invites({
   leagueId,
   invites,
 }: {

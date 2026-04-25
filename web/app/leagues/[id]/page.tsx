@@ -7,7 +7,14 @@ import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
 import { getLeagueDetail } from "@/lib/queries/leagues";
 import { getInvitesForLeague } from "@/lib/queries/invites";
-import { LeagueDetailClient } from "./league-detail-client";
+import {
+  LeagueDetailClient,
+  MemberRow,
+  CommissionerRow,
+  AddMember,
+  AddCommissioner,
+  Invites,
+} from "./league-detail-client";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +78,7 @@ export default async function LeagueDetailPage({
             </div>
           ) : (
             detail.members.map((m) => (
-              <LeagueDetailClient.MemberRow
+              <MemberRow
                 key={m.id}
                 leagueId={detail.league.id}
                 player={m}
@@ -79,7 +86,7 @@ export default async function LeagueDetailPage({
             ))
           )}
         </div>
-        <LeagueDetailClient.AddMember
+        <AddMember
           leagueId={detail.league.id}
           allPlayers={detail.allPlayers}
           excludeIds={detail.members.map((m) => m.id)}
@@ -95,7 +102,7 @@ export default async function LeagueDetailPage({
                 </div>
               ) : (
                 detail.commissioners.map((c) => (
-                  <LeagueDetailClient.CommissionerRow
+                  <CommissionerRow
                     key={c.id}
                     leagueId={detail.league.id}
                     player={c}
@@ -103,7 +110,7 @@ export default async function LeagueDetailPage({
                 ))
               )}
             </div>
-            <LeagueDetailClient.AddCommissioner
+            <AddCommissioner
               leagueId={detail.league.id}
               allPlayers={detail.allPlayers}
               excludeIds={detail.commissioners.map((c) => c.id)}
@@ -112,7 +119,7 @@ export default async function LeagueDetailPage({
         )}
 
         <SectionHead title="Invites" count={<span>{pendingInvites.length}</span>} />
-        <LeagueDetailClient.Invites
+        <Invites
           leagueId={detail.league.id}
           invites={pendingInvites.map((i) => ({
             id: i.id,

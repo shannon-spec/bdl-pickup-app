@@ -19,11 +19,7 @@ type AdminRowProps = {
   allPlayers: { id: string; firstName: string; lastName: string }[];
 };
 
-export function SettingsClient(_: { children?: React.ReactNode }) {
-  return null;
-}
-
-SettingsClient.AdminRow = function AdminRow({ admin, allPlayers }: AdminRowProps) {
+export function AdminRow({ admin, allPlayers }: AdminRowProps) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [sending, setSending] = useState<"idle" | "sending" | "sent" | "error">("idle");
@@ -129,9 +125,9 @@ SettingsClient.AdminRow = function AdminRow({ admin, allPlayers }: AdminRowProps
       )}
     </div>
   );
-};
+}
 
-SettingsClient.AddAdmin = function AddAdmin({
+export function AddAdmin({
   allPlayers,
 }: {
   allPlayers: { id: string; firstName: string; lastName: string }[];
@@ -234,7 +230,7 @@ SettingsClient.AddAdmin = function AddAdmin({
       )}
     </>
   );
-};
+}
 
 const inputCx =
   "w-full h-10 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface-2)] px-3 text-[14px] text-[color:var(--text)] outline-none focus:border-[color:var(--brand)] transition-colors placeholder:text-[color:var(--text-4)]";
