@@ -96,14 +96,20 @@ export function RosterRow({
   playerId,
   name,
   currentSide,
+  teamAName,
+  teamBName,
 }: {
   gameId: string;
   playerId: string;
   name: string;
   currentSide: "A" | "B" | "invited";
+  teamAName: string;
+  teamBName: string;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const sideLabel = (s: "A" | "B" | "invited") =>
+    s === "invited" ? "Invited" : s === "A" ? teamAName : teamBName;
   return (
     <div className="flex items-center justify-between gap-3 px-5 py-2.5 border-t border-[color:var(--hairline)] first:border-t-0 hover:bg-[color:var(--surface-2)] text-[14px]">
       <Link
@@ -127,7 +133,7 @@ export function RosterRow({
               }
               className="text-[10.5px] font-semibold uppercase tracking-[0.06em] px-2.5 py-1 rounded-full border border-[color:var(--hairline-2)] text-[color:var(--text-2)] hover:text-[color:var(--text)] hover:bg-[color:var(--surface-2)] disabled:opacity-60"
             >
-              → {s === "invited" ? "Invited" : s === "A" ? "Team A" : "Team B"}
+              → {sideLabel(s)}
             </button>
           ),
         )}
@@ -155,11 +161,15 @@ export function AddRoster({
   eligible,
   allLeagues,
   currentLeagueId,
+  teamAName,
+  teamBName,
 }: {
   gameId: string;
   eligible: { id: string; firstName: string; lastName: string }[];
   allLeagues: { id: string; name: string }[];
   currentLeagueId: string | null;
+  teamAName: string;
+  teamBName: string;
 }) {
   const router = useRouter();
   const [playerId, setPlayerId] = useState("");
@@ -196,8 +206,8 @@ export function AddRoster({
         onChange={(e) => setSide(e.target.value as typeof side)}
         className="h-10 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-3 text-[14px] outline-none cursor-pointer"
       >
-        <option value="A">Team A</option>
-        <option value="B">Team B</option>
+        <option value="A">{teamAName}</option>
+        <option value="B">{teamBName}</option>
         <option value="invited">Invited</option>
       </select>
       <button

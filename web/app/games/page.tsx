@@ -238,31 +238,17 @@ export default async function GamesPage({
                       <span className="text-[color:var(--text-3)] text-[12px] mr-2">
                         {g.leagueName}
                       </span>
-                      <span
-                        className={
-                          g.winTeam === "A"
-                            ? "font-extrabold text-[color:var(--text)]"
-                            : g.winTeam === "B"
-                              ? "font-medium text-[color:var(--text-3)]"
-                              : "font-bold"
-                        }
-                      >
-                        {g.winTeam === "A" && "✓ "}
-                        {g.teamAName}
-                      </span>
+                      <TeamLabel
+                        side="A"
+                        winTeam={g.winTeam}
+                        name={g.teamAName}
+                      />
                       <span className="text-[color:var(--text-4)] mx-2 font-medium">vs</span>
-                      <span
-                        className={
-                          g.winTeam === "B"
-                            ? "font-extrabold text-[color:var(--text)]"
-                            : g.winTeam === "A"
-                              ? "font-medium text-[color:var(--text-3)]"
-                              : "font-bold"
-                        }
-                      >
-                        {g.winTeam === "B" && "✓ "}
-                        {g.teamBName}
-                      </span>
+                      <TeamLabel
+                        side="B"
+                        winTeam={g.winTeam}
+                        name={g.teamBName}
+                      />
                     </div>
                     <div className="font-[family-name:var(--mono)] text-[13px] num">
                       {g.scoreA !== null && g.scoreB !== null ? (
@@ -372,5 +358,51 @@ function FilterBar({
         </form>
       )}
     </div>
+  );
+}
+
+/**
+ * Team-name label on a games row. The winning side (A=White, B=Dark) gets
+ * a shaded pill — silver for white-team wins, gold for dark-team wins —
+ * to telegraph the result without any extra "Won by …" copy. The losing
+ * side dims to text-3 to keep the row focused on the winner.
+ */
+function TeamLabel({
+  side,
+  winTeam,
+  name,
+}: {
+  side: "A" | "B";
+  winTeam: "A" | "B" | "Tie" | null;
+  name: string;
+}) {
+  const isWinner = winTeam === side;
+  const isLoser = winTeam === "A" || winTeam === "B" ? !isWinner : false;
+  if (isWinner) {
+    const isSilver = side === "A"; // White wins → silver; Dark wins → gold
+    return (
+      <span
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-extrabold text-[color:var(--text)] border"
+        style={{
+          background: isSilver
+            ? "rgba(170,178,192,.22)"
+            : "rgba(212,175,55,.22)",
+          borderColor: isSilver
+            ? "rgba(170,178,192,.45)"
+            : "rgba(212,175,55,.55)",
+        }}
+      >
+        ✓ {name}
+      </span>
+    );
+  }
+  return (
+    <span
+      className={
+        isLoser ? "font-medium text-[color:var(--text-3)]" : "font-bold"
+      }
+    >
+      {name}
+    </span>
   );
 }

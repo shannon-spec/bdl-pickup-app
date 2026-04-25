@@ -146,6 +146,8 @@ export default async function GameDetailPage({
           eligible={detail.eligible}
           allLeagues={detail.allLeagues}
           currentLeagueId={game.leagueId ?? null}
+          teamAName={game.teamAName ?? "White"}
+          teamBName={game.teamBName ?? "Dark"}
         />
 
         <DangerZone gameId={game.id} />
@@ -178,6 +180,8 @@ function RosterPanel({
             playerId={p.id}
             name={`${p.firstName} ${p.lastName}`}
             currentSide={side}
+            teamAName={detail.game.teamAName ?? "White"}
+            teamBName={detail.game.teamBName ?? "Dark"}
           />
         ))
       )}
