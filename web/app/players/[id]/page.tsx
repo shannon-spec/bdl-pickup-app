@@ -91,7 +91,7 @@ export default async function PlayerProfilePage({
               )}
             </div>
           </div>
-          {isAdmin && <EditPlayerButton player={player} />}
+          {isAdmin && <EditPlayerButton playerId={player.id} />}
         </div>
 
         {/* Career stats */}

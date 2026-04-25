@@ -119,7 +119,10 @@ export function RosterClient({
                 <StatusPill status={r.status} />
               </span>
               <span className="flex items-center justify-end gap-1">
-                <RowAction onEdit={() => setMode({ kind: "edit", row: r })} onDelete={() => setConfirm(r)} />
+                <RowAction
+                  onEdit={() => router.push(`/players/${r.id}/edit`)}
+                  onDelete={() => setConfirm(r)}
+                />
               </span>
             </div>
           ))
@@ -137,7 +140,7 @@ export function RosterClient({
             <button
               key={r.id}
               type="button"
-              onClick={() => setMode({ kind: "edit", row: r })}
+              onClick={() => router.push(`/players/${r.id}/edit`)}
               className="text-left rounded-[14px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-4 py-3 flex flex-col gap-1.5"
             >
               <div className="flex items-center justify-between gap-2">
