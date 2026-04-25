@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Mail, Phone } from "lucide-react";
 import { asc } from "drizzle-orm";
 import { readSession } from "@/lib/auth/session";
+import { getViewCaps } from "@/lib/auth/view";
 import { getActiveLeagueId } from "@/lib/cookies/active-league";
 import {
   getLeagueCommissionerContacts,
@@ -12,27 +13,23 @@ import { CommissionerAdminControls } from "./commissioner-admin-controls";
 
 /**
  * League commissioner contact strip. Renders only when the viewer is
- * a league member, a commissioner, or an admin. Admins also see
- * inline controls to add and remove commissioners — but only in
- * `manage` mode (hidden in player view).
+ * a league member, a commissioner, or an admin. Admin-only inline
+ * controls (add/remove commissioner) appear when the active view is
+ * "admin" — purely a UI lensing decision; the perm checks still gate
+ * the actions on the server.
  */
-export async function CommissionerStrip({
-  leagueId,
-  mode = "manage",
-}: {
-  leagueId?: string;
-  mode?: "player" | "manage";
-}) {
+export async function CommissionerStrip({ leagueId }: { leagueId?: string }) {
   const session = await readSession();
   if (!session) return null;
   const id = leagueId ?? (await getActiveLeagueId());
   if (!id) return null;
-  const isAdmin = session.role === "owner" || session.role === "super_admin";
-  const showAdminControls = isAdmin && mode === "manage";
+
+  const caps = await getViewCaps(session);
+  const showAdminControls = caps.view === "admin";
+
   const commissioners = await getLeagueCommissionerContacts(id, session);
   if (!commissioners) return null;
 
-  // Only fetch the "eligible to add" list when we're going to render the controls.
   let eligible: { id: string; firstName: string; lastName: string }[] = [];
   if (showAdminControls) {
     const all = await db
@@ -61,7 +58,7 @@ export async function CommissionerStrip({
       ) : (
         <div className="flex flex-wrap gap-2.5">
           {commissioners.map((c) => (
-            <Card key={c.id} c={c} canSeePrivate={isAdmin} />
+            <Card key={c.id} c={c} canSeePrivate={caps.isAdmin} />
           ))}
         </div>
       )}

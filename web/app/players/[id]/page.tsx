@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, ChevronUp } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
+import { getViewCaps } from "@/lib/auth/view";
 import { TopBar } from "@/components/bdl/top-bar";
+import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
@@ -36,7 +38,8 @@ export default async function PlayerProfilePage({
   const { player } = profile;
   const initials = `${player.firstName[0] ?? ""}${player.lastName[0] ?? ""}`.toUpperCase();
   const isMe = session.playerId === player.id;
-  const isAdmin = session.role === "owner" || session.role === "super_admin";
+  const caps = await getViewCaps(session);
+  const canEdit = caps.view === "admin";
 
   return (
     <>
@@ -45,6 +48,7 @@ export default async function PlayerProfilePage({
         userInitials={session.username.slice(0, 2).toUpperCase()}
       />
       <PageFrame>
+        <ContextHeader />
         <Link
           href="/roster"
           className="inline-flex items-center gap-1.5 text-[12px] text-[color:var(--text-3)] hover:text-[color:var(--text)] -mb-2"
@@ -92,7 +96,7 @@ export default async function PlayerProfilePage({
               )}
             </div>
           </div>
-          {isAdmin && <EditPlayerButton playerId={player.id} />}
+          {canEdit && <EditPlayerButton playerId={player.id} />}
         </div>
 
         {/* Career stats */}

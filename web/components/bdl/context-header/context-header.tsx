@@ -1,3 +1,5 @@
+import { readSession } from "@/lib/auth/session";
+import { getViewCaps } from "@/lib/auth/view";
 import { getSessionContext } from "@/lib/queries/session-context";
 import { ContextHeaderClient } from "./context-header-client";
 
@@ -11,5 +13,7 @@ import { ContextHeaderClient } from "./context-header-client";
 export async function ContextHeader() {
   const ctx = await getSessionContext();
   if (!ctx) return null;
-  return <ContextHeaderClient ctx={ctx} />;
+  const session = await readSession();
+  const caps = await getViewCaps(session);
+  return <ContextHeaderClient ctx={ctx} view={caps.view} options={caps.options} />;
 }

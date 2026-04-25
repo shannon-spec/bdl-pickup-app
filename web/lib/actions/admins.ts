@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db, superAdmins } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/session";
+import { requireAdminView } from "@/lib/auth/view";
 
 export type ActionResult<T = unknown> =
   | { ok: true; data?: T }
@@ -34,6 +35,7 @@ export async function createSuperAdmin(
   formData: FormData,
 ): Promise<ActionResult<{ id: string }>> {
   await requireAdmin();
+  await requireAdminView();
   const parsed = adminSchema.safeParse(readForm(formData));
   if (!parsed.success) {
     return {
@@ -72,6 +74,7 @@ export async function setLinkedPlayer(
   playerId: string | null,
 ): Promise<ActionResult> {
   await requireAdmin();
+  await requireAdminView();
   await db.update(superAdmins).set({ playerId }).where(eq(superAdmins.id, adminId));
   revalidatePath("/settings");
   revalidatePath("/");
@@ -80,6 +83,7 @@ export async function setLinkedPlayer(
 
 export async function deleteSuperAdmin(adminId: string): Promise<ActionResult> {
   await requireAdmin();
+  await requireAdminView();
   // Owners are protected
   const [admin] = await db
     .select()

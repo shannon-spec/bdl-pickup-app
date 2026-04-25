@@ -5,6 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db, leagues, leaguePlayers, leagueCommissioners } from "@/lib/db";
 import { requireAdminOnly, requireLeagueManager } from "@/lib/auth/perms";
+import { requireAdminView, requireManageView } from "@/lib/auth/view";
 
 const FORMATS = ["5v5", "5v5-series", "3v3", "3v3-series"] as const;
 
@@ -37,6 +38,7 @@ const nullable = (s?: string | null) => {
 
 export async function createLeague(formData: FormData): Promise<ActionResult<{ id: string }>> {
   await requireAdminOnly();
+  await requireManageView();
   const parsed = leagueSchema.safeParse(readForm(formData));
   if (!parsed.success) {
     return {
@@ -71,6 +73,7 @@ export async function updateLeague(
   formData: FormData,
 ): Promise<ActionResult<{ id: string }>> {
   await requireLeagueManager(id);
+  await requireManageView();
   const parsed = leagueSchema.safeParse(readForm(formData));
   if (!parsed.success) {
     return {
@@ -104,6 +107,7 @@ export async function updateLeague(
 
 export async function deleteLeague(id: string): Promise<ActionResult> {
   await requireAdminOnly();
+  await requireAdminView();
   await db.delete(leagues).where(eq(leagues.id, id));
   revalidatePath("/leagues");
   revalidatePath("/");
@@ -116,6 +120,7 @@ export async function addLeaguePlayer(
   teamName?: string | null,
 ): Promise<ActionResult> {
   await requireLeagueManager(leagueId);
+  await requireManageView();
   await db
     .insert(leaguePlayers)
     .values({ leagueId, playerId, teamName: teamName ?? null })
@@ -129,6 +134,7 @@ export async function removeLeaguePlayer(
   playerId: string,
 ): Promise<ActionResult> {
   await requireLeagueManager(leagueId);
+  await requireManageView();
   await db
     .delete(leaguePlayers)
     .where(
@@ -143,6 +149,7 @@ export async function addCommissioner(
   playerId: string,
 ): Promise<ActionResult> {
   await requireAdminOnly();
+  await requireAdminView();
   await db
     .insert(leagueCommissioners)
     .values({ leagueId, playerId })
@@ -156,6 +163,7 @@ export async function removeCommissioner(
   playerId: string,
 ): Promise<ActionResult> {
   await requireAdminOnly();
+  await requireAdminView();
   await db
     .delete(leagueCommissioners)
     .where(

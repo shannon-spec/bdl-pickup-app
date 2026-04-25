@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
+import { getViewCaps } from "@/lib/auth/view";
 import { TopBar } from "@/components/bdl/top-bar";
+import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { getPlayer } from "@/lib/queries/roster";
@@ -19,6 +21,8 @@ export default async function EditPlayerPage({
   const session = await readSession();
   const isAdmin = session?.role === "owner" || session?.role === "super_admin";
   if (!isAdmin) redirect("/");
+  const caps = await getViewCaps(session);
+  if (caps.view !== "admin") redirect("/");
 
   const { id } = await params;
   const player = await getPlayer(id);
@@ -31,6 +35,7 @@ export default async function EditPlayerPage({
         userInitials={session.username.slice(0, 2).toUpperCase()}
       />
       <PageFrame>
+        <ContextHeader />
         <Link
           href={`/players/${player.id}`}
           className="inline-flex items-center gap-1.5 text-[12px] text-[color:var(--text-3)] hover:text-[color:var(--text)] -mb-2"

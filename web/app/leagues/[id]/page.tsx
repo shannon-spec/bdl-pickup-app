@@ -1,6 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { readSession } from "@/lib/auth/session";
 import { canManageLeague, isAdminLike } from "@/lib/auth/perms";
+import { getViewCaps } from "@/lib/auth/view";
+import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { TopBar } from "@/components/bdl/top-bar";
 import { CommissionerStrip } from "@/components/bdl/commissioner-strip";
 import { MembersStrip } from "@/components/bdl/members-strip";
@@ -24,6 +26,8 @@ export default async function LeagueDetailPage({
   const { id } = await params;
   const canManage = await canManageLeague(session, id);
   if (!canManage) redirect("/leagues");
+  const caps = await getViewCaps(session);
+  if (!caps.canManage) redirect("/");
 
   const isAdmin = isAdminLike(session);
   const detail = await getLeagueDetail(id);
@@ -34,6 +38,7 @@ export default async function LeagueDetailPage({
     <>
       <TopBar active="/leagues" userInitials={session.username.slice(0, 2).toUpperCase()} />
       <PageFrame>
+        <ContextHeader />
         <div className="flex items-center gap-4 max-sm:flex-col max-sm:items-start">
           <div
             className="w-14 h-14 rounded-full flex-shrink-0"

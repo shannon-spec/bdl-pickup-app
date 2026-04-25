@@ -1,10 +1,19 @@
 "use client";
 
 import type { SessionContext } from "@/lib/queries/session-context";
+import type { View } from "@/lib/cookies/active-view";
 import { LeagueSwitcher } from "./league-switcher";
 import { RoleToggle } from "./role-toggle";
 
-export function ContextHeaderClient({ ctx }: { ctx: SessionContext }) {
+export function ContextHeaderClient({
+  ctx,
+  view,
+  options,
+}: {
+  ctx: SessionContext;
+  view: View;
+  options: View[];
+}) {
   return (
     <div
       className="flex items-start justify-between gap-[18px] flex-wrap max-sm:flex-col max-sm:items-stretch"
@@ -20,12 +29,8 @@ export function ContextHeaderClient({ ctx }: { ctx: SessionContext }) {
           />
         )}
       </div>
-      {ctx.activeLeagueId && (
-        <RoleToggle
-          leagues={ctx.leagues}
-          activeLeagueId={ctx.activeLeagueId}
-          isSuperAdmin={ctx.user.isSuperAdmin}
-        />
+      {options.length > 1 && (
+        <RoleToggle view={view} options={options} />
       )}
     </div>
   );

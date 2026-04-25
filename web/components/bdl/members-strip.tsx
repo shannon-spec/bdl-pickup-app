@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { readSession } from "@/lib/auth/session";
 import { canManageLeague } from "@/lib/auth/perms";
+import { getViewCaps } from "@/lib/auth/view";
 import { getActiveLeagueId } from "@/lib/cookies/active-league";
 import {
   getLeagueMembers,
@@ -12,28 +13,24 @@ import { MembersAdminControls } from "./members-admin-controls";
 
 /**
  * League members strip. Top-of-page module mirroring CommissionerStrip.
- * - Members of the league (and admins/commissioners) see the list
- * - League managers (admin / commissioner of the league) see inline
- *   controls at the bottom for adding + removing members — but only
- *   in `manage` mode (hidden in player view).
+ * Members of the league (and admins/commissioners) see the list. Add /
+ * remove controls only render when the active view is management-capable
+ * AND the user actually has manage perms — otherwise it's a read-only
+ * roster of pills.
  */
-export async function MembersStrip({
-  leagueId,
-  mode = "manage",
-}: {
-  leagueId?: string;
-  mode?: "player" | "manage";
-}) {
+export async function MembersStrip({ leagueId }: { leagueId?: string }) {
   const session = await readSession();
   if (!session) return null;
   const id = leagueId ?? (await getActiveLeagueId());
   if (!id) return null;
   const members = await getLeagueMembers(id, session);
   if (!members) return null;
-  const canManage = (await canManageLeague(session, id)) && mode === "manage";
-  const eligible = canManage ? await getEligibleNonMembers(id) : [];
+  const caps = await getViewCaps(session);
+  const hasPerms = await canManageLeague(session, id);
+  const showAdminControls = caps.canManage && hasPerms;
+  const eligible = showAdminControls ? await getEligibleNonMembers(id) : [];
 
-  if (members.length === 0 && !canManage) return null;
+  if (members.length === 0 && !showAdminControls) return null;
 
   return (
     <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-5 py-4">
@@ -58,7 +55,7 @@ export async function MembersStrip({
         </div>
       )}
 
-      {canManage && (
+      {showAdminControls && (
         <MembersAdminControls
           leagueId={id}
           members={members.map((m) => ({

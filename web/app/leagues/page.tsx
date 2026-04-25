@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
 import { isAdminLike, getMyCommissionerLeagueIds } from "@/lib/auth/perms";
+import { getViewCaps } from "@/lib/auth/view";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
@@ -17,6 +18,8 @@ export const metadata = { title: "Leagues · BDL" };
 export default async function LeaguesPage() {
   const session = await readSession();
   if (!session) redirect("/login");
+  const caps = await getViewCaps(session);
+  if (!caps.canManage) redirect("/");
   const isAdmin = isAdminLike(session);
   const commishLeagueIds = isAdmin ? null : await getMyCommissionerLeagueIds(session);
   if (!isAdmin && (!commishLeagueIds || commishLeagueIds.length === 0)) redirect("/");
@@ -30,7 +33,7 @@ export default async function LeaguesPage() {
       <TopBar active="/leagues" userInitials={session.username.slice(0, 2).toUpperCase()} />
       <PageFrame>
         <ContextHeader />
-        <LeaguesPageClient canCreate={isAdmin}>
+        <LeaguesPageClient canCreate={caps.view === "admin"}>
           <SectionHead
             title="Leagues"
             count={

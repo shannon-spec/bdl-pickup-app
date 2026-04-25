@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
 import { isAdminLike, getMyCommissionerLeagueIds } from "@/lib/auth/perms";
+import { getViewCaps } from "@/lib/auth/view";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { CommissionerStrip } from "@/components/bdl/commissioner-strip";
@@ -32,6 +33,8 @@ export default async function GamesPage({
 }) {
   const session = await readSession();
   if (!session) redirect("/login");
+  const caps = await getViewCaps(session);
+  if (!caps.canManage) redirect("/");
   const isAdmin = isAdminLike(session);
   const commishLeagueIds = isAdmin ? null : await getMyCommissionerLeagueIds(session);
   if (!isAdmin && (!commishLeagueIds || commishLeagueIds.length === 0)) redirect("/");

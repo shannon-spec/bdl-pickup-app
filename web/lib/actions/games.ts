@@ -5,6 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db, games, gameRoster, leagues } from "@/lib/db";
 import { requireGameManager, requireLeagueManager } from "@/lib/auth/perms";
+import { requireManageView } from "@/lib/auth/view";
 
 export type ActionResult<T = unknown> =
   | { ok: true; data?: T }
@@ -50,6 +51,7 @@ export async function createGame(formData: FormData): Promise<ActionResult<{ id:
   }
   const v = parsed.data;
   await requireLeagueManager(v.leagueId);
+  await requireManageView();
   const [league] = await db
     .select({ name: leagues.name, teamA: leagues.teamAName, teamB: leagues.teamBName })
     .from(leagues)
@@ -80,6 +82,7 @@ export async function updateGame(
   formData: FormData,
 ): Promise<ActionResult<{ id: string }>> {
   await requireGameManager(id);
+  await requireManageView();
   const parsed = gameSchema.safeParse(readForm(formData));
   if (!parsed.success) {
     return {
@@ -107,6 +110,7 @@ export async function updateGame(
 
 export async function deleteGame(id: string): Promise<ActionResult> {
   await requireGameManager(id);
+  await requireManageView();
   await db.delete(games).where(eq(games.id, id));
   revalidatePath("/games");
   revalidatePath("/");
@@ -118,6 +122,7 @@ export async function setGameScore(
   formData: FormData,
 ): Promise<ActionResult> {
   await requireGameManager(id);
+  await requireManageView();
   const parsed = scoreSchema.safeParse(readForm(formData));
   if (!parsed.success) {
     return {
@@ -159,6 +164,7 @@ export async function setGameRosterPlayer(
   side: "A" | "B" | "invited" | null,
 ): Promise<ActionResult> {
   await requireGameManager(gameId);
+  await requireManageView();
   if (side === null) {
     await db
       .delete(gameRoster)

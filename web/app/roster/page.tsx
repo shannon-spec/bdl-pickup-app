@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { readSession } from "@/lib/auth/session";
+import { getViewCaps } from "@/lib/auth/view";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { CommissionerStrip } from "@/components/bdl/commissioner-strip";
@@ -22,6 +23,8 @@ export default async function RosterPage({
   const isAdmin =
     session?.role === "owner" || session?.role === "super_admin";
   if (!isAdmin) redirect("/");
+  const caps = await getViewCaps(session);
+  if (caps.view !== "admin") redirect("/");
 
   const { q } = await searchParams;
   const rows = await getRoster(q);

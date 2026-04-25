@@ -11,6 +11,7 @@ import {
   players,
 } from "@/lib/db";
 import { requireLeagueManager } from "@/lib/auth/perms";
+import { requireManageView } from "@/lib/auth/view";
 
 export type ActionResult<T = unknown> =
   | { ok: true; data?: T }
@@ -56,6 +57,7 @@ export async function createInvite(
   }
   const v = parsed.data;
   const session = await requireLeagueManager(v.leagueId);
+  await requireManageView();
 
   const [league] = await db
     .select({ id: leagues.id, name: leagues.name })
@@ -91,6 +93,7 @@ export async function deleteInvite(inviteId: string): Promise<ActionResult> {
     .limit(1);
   if (!inv) return { ok: false, error: "Invite not found." };
   if (inv.leagueId) await requireLeagueManager(inv.leagueId);
+  await requireManageView();
 
   await db.delete(invites).where(eq(invites.id, inviteId));
   if (inv.leagueId) revalidatePath(`/leagues/${inv.leagueId}`);

@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db, players } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/session";
+import { requireAdminView } from "@/lib/auth/view";
 
 const PLAYER_LEVELS = [
   "Not Rated",
@@ -123,6 +124,7 @@ function valuesFor(v: PlayerInput) {
 
 export async function createPlayer(formData: FormData): Promise<ActionResult<{ id: string }>> {
   await requireAdmin();
+  await requireAdminView();
   const parsed = playerSchema.safeParse(readForm(formData));
   if (!parsed.success) {
     return {
@@ -144,6 +146,7 @@ export async function updatePlayer(
   formData: FormData,
 ): Promise<ActionResult<{ id: string }>> {
   await requireAdmin();
+  await requireAdminView();
   const parsed = playerSchema.safeParse(readForm(formData));
   if (!parsed.success) {
     return {
@@ -161,6 +164,7 @@ export async function updatePlayer(
 
 export async function deletePlayer(id: string): Promise<ActionResult> {
   await requireAdmin();
+  await requireAdminView();
   await db.delete(players).where(eq(players.id, id));
   revalidatePath("/roster");
   revalidatePath("/");

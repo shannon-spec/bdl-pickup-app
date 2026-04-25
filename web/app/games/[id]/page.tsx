@@ -3,7 +3,9 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
 import { canManageGame } from "@/lib/auth/perms";
+import { getViewCaps } from "@/lib/auth/view";
 import { TopBar } from "@/components/bdl/top-bar";
+import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { TeamBadge } from "@/components/bdl/team-badge";
@@ -42,6 +44,8 @@ export default async function GameDetailPage({
   const { id } = await params;
   const allowed = await canManageGame(session, id);
   if (!allowed) redirect("/games");
+  const caps = await getViewCaps(session);
+  if (!caps.canManage) redirect("/");
 
   const detail = await getGameDetail(id);
   if (!detail) notFound();
@@ -54,6 +58,7 @@ export default async function GameDetailPage({
     <>
       <TopBar active="/games" userInitials={session.username.slice(0, 2).toUpperCase()} />
       <PageFrame>
+        <ContextHeader />
         <Link
           href="/games"
           className="inline-flex items-center gap-1.5 text-[12px] text-[color:var(--text-3)] hover:text-[color:var(--text)] -mb-2"

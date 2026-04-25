@@ -4,6 +4,7 @@ import { ChevronRight, Users, Trophy, Globe, Settings, BarChart3, Activity } fro
 import { count } from "drizzle-orm";
 import { readSession } from "@/lib/auth/session";
 import { isAdminLike } from "@/lib/auth/perms";
+import { getViewCaps } from "@/lib/auth/view";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
@@ -25,6 +26,8 @@ export default async function AdminPage() {
   const session = await readSession();
   if (!session) redirect("/login");
   if (!isAdminLike(session)) redirect("/");
+  const caps = await getViewCaps(session);
+  if (caps.view !== "admin") redirect("/");
 
   const [pCount] = await db.select({ n: count() }).from(players);
   const [lCount] = await db.select({ n: count() }).from(leagues);
