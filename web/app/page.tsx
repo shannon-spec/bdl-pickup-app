@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, ChevronUp, Check, Pencil } from "lucide-react";
+import { ArrowUpRight, ChevronRight, ChevronUp, Check, Pencil } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
 import { canManageLeague } from "@/lib/auth/perms";
 import { getViewCaps } from "@/lib/auth/view";
@@ -311,9 +311,11 @@ export default async function Home() {
               }}
             >
               {lastFive.map((g) => (
-                <div
+                <Link
                   key={g.id}
-                  className="flex flex-col gap-2.5 p-4 rounded-[12px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] min-w-[170px]"
+                  href={`/games/${g.id}`}
+                  aria-label={`Open game on ${fmtWDUpper(g.date)} vs ${g.opName}`}
+                  className="group relative flex flex-col gap-2.5 p-4 rounded-[12px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] hover:bg-[color:var(--surface-2)] hover:border-[color:var(--text-4)] transition-colors min-w-[170px]"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[10.5px] font-semibold tracking-[0.12em] uppercase text-[color:var(--text-3)]">
@@ -336,10 +338,15 @@ export default async function Home() {
                       <span className="text-[color:var(--text-3)]">—</span>
                     )}
                   </div>
-                  <div className="text-[11.5px] text-[color:var(--text-3)]">
-                    vs {g.opName}
+                  <div className="flex items-center justify-between gap-2 text-[11.5px] text-[color:var(--text-3)]">
+                    <span>vs {g.opName}</span>
+                    <ArrowUpRight
+                      size={14}
+                      className="text-[color:var(--text-4)] group-hover:text-[color:var(--brand-ink)] transition-colors"
+                      aria-hidden
+                    />
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
