@@ -133,7 +133,61 @@ export default async function Home() {
         )}
 
         <ContextHeader />
-        <CommissionerStrip leagueId={currentLeague.id} />
+
+        {/* Commissioners + Next Game side by side. If no upcoming game,
+            commissioner strip stretches full-width. */}
+        {nextGame ? (
+          <div className="grid grid-cols-2 gap-4 max-[1100px]:grid-cols-1 items-stretch">
+            <CommissionerStrip leagueId={currentLeague.id} />
+            <section
+              className="rounded-[16px] border border-[color:var(--hairline-2)] px-6 py-5 relative overflow-hidden flex flex-col gap-3.5"
+              style={{
+                background:
+                  "radial-gradient(ellipse at top left, var(--brand-soft), transparent 60%), var(--surface)",
+              }}
+            >
+              <div className="flex items-center gap-2.5 flex-wrap text-[12px]">
+                <Pill tone="brand">
+                  Next · {fmtWD(nextGame.date)}
+                  {nextGame.time ? ` · ${fmtTime(nextGame.time)}` : ""}
+                </Pill>
+                {nextGame.venue && (
+                  <span className="text-[color:var(--text-3)]">{nextGame.venue}</span>
+                )}
+              </div>
+              <div className="flex items-center gap-3.5 flex-wrap">
+                <TeamPick
+                  name={nextGame.teamAName}
+                  record={`${nextGame.teamARecord.w}-${nextGame.teamARecord.l} last 5`}
+                  team="white"
+                  me={nextGame.mySide === "A"}
+                />
+                <span className="text-[color:var(--text-4)] text-[12px] font-medium">vs</span>
+                <TeamPick
+                  name={nextGame.teamBName}
+                  record={`${nextGame.teamBRecord.w}-${nextGame.teamBRecord.l} last 5`}
+                  team="dark"
+                  me={nextGame.mySide === "B"}
+                />
+              </div>
+              <ProbabilityBar
+                aLabel={nextGame.teamAName}
+                bLabel={nextGame.teamBName}
+                a={nextGame.probA}
+                b={nextGame.probB}
+              />
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 justify-center h-[42px] px-5 rounded-[12px] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[13px] tracking-[0.02em] shadow-[var(--cta-shadow)] transition-transform active:scale-[0.97] mt-1"
+              >
+                <Check size={16} strokeWidth={2.5} />
+                I&apos;m In
+              </button>
+            </section>
+          </div>
+        ) : (
+          <CommissionerStrip leagueId={currentLeague.id} />
+        )}
 
         {/* Hero */}
         <section className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-7 pt-6 pb-5 max-sm:px-5 max-sm:pt-5 max-sm:pb-4">
@@ -204,57 +258,6 @@ export default async function Home() {
             />
           </StatRow>
         </section>
-
-        {/* Next game */}
-        {nextGame && (
-          <section
-            className="grid grid-cols-[1fr_auto] items-center gap-5 max-md:grid-cols-1 rounded-[16px] border border-[color:var(--hairline-2)] px-6 py-5 relative overflow-hidden"
-            style={{
-              background:
-                "radial-gradient(ellipse at top left, var(--brand-soft), transparent 60%), var(--surface)",
-            }}
-          >
-            <div className="flex flex-col gap-3.5 min-w-0">
-              <div className="flex items-center gap-2.5 flex-wrap text-[12px]">
-                <Pill tone="brand">
-                  Next · {fmtWD(nextGame.date)}
-                  {nextGame.time ? ` · ${fmtTime(nextGame.time)}` : ""}
-                </Pill>
-                {nextGame.venue && (
-                  <span className="text-[color:var(--text-3)]">{nextGame.venue}</span>
-                )}
-              </div>
-              <div className="flex items-center gap-3.5 flex-wrap">
-                <TeamPick
-                  name={nextGame.teamAName}
-                  record={`${nextGame.teamARecord.w}-${nextGame.teamARecord.l} last 5`}
-                  team="white"
-                  me={nextGame.mySide === "A"}
-                />
-                <span className="text-[color:var(--text-4)] text-[12px] font-medium">vs</span>
-                <TeamPick
-                  name={nextGame.teamBName}
-                  record={`${nextGame.teamBRecord.w}-${nextGame.teamBRecord.l} last 5`}
-                  team="dark"
-                  me={nextGame.mySide === "B"}
-                />
-              </div>
-              <ProbabilityBar
-                aLabel={nextGame.teamAName}
-                bLabel={nextGame.teamBName}
-                a={nextGame.probA}
-                b={nextGame.probB}
-              />
-            </div>
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 justify-center h-[46px] px-5 rounded-[12px] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[14px] tracking-[0.02em] shadow-[var(--cta-shadow)] transition-transform active:scale-[0.97] max-md:w-full"
-            >
-              <Check size={18} strokeWidth={2.5} />
-              I&apos;m In
-            </button>
-          </section>
-        )}
 
         {/* Last 5 */}
         {lastFive.length > 0 && (
