@@ -73,7 +73,6 @@ const GAME_LOG_2026: { d: string; sA: number; sB: number; gw: string }[] = [
   { d: "2026-01-05", sA: 150, sB: 137, gw: "jake" },
   { d: "2026-01-07", sA: 150, sB: 131, gw: "jake" },
   { d: "2026-01-09", sA: 150, sB: 132, gw: "jake" },
-  { d: "2026-01-12", sA: 23, sB: 27, gw: "" },
   { d: "2026-01-14", sA: 146, sB: 151, gw: "dj" },
   { d: "2026-01-16", sA: 150, sB: 128, gw: "craig" },
   { d: "2026-01-19", sA: 139, sB: 150, gw: "dj" },
@@ -206,7 +205,7 @@ async function main() {
   // of games (sits 4 of 30). The recorded game winner always plays on the
   // winning team. Remaining slots filled by a deterministic shuffle
   // seeded by date so reseeds produce identical rosters.
-  const SHANNON_OFF = new Set(["2026-01-12", "2026-02-09", "2026-02-23", "2026-03-11"]);
+  const SHANNON_OFF = new Set(["2026-02-09", "2026-02-23", "2026-03-11"]);
 
   type RosterRow = { gameId: string; playerId: string; side: "A" | "B" | "invited" };
   const rosterRows: RosterRow[] = [];
