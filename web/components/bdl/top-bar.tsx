@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, LogOut, Search } from "lucide-react";
+import { Bell, LogOut, Search, Settings } from "lucide-react";
 import { Brand } from "./brand";
 import { ThemeToggle } from "./theme-toggle";
 import { signOut } from "@/lib/auth/actions";
@@ -66,6 +66,13 @@ export function TopBar({ active = "/", userInitials = "ST" }: { active?: string;
         <div className="flex items-center gap-2">
           <SearchPill />
           <ThemeToggle />
+          <Link
+            href="/settings"
+            aria-label="Settings"
+            className="relative inline-flex items-center justify-center w-[34px] h-[34px] rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[color:var(--text-2)] hover:text-[color:var(--text)] transition-colors"
+          >
+            <Settings size={16} />
+          </Link>
           <IconButton aria-label="Notifications">
             <Bell size={16} />
             <span
