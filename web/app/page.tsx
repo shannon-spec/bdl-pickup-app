@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChevronRight, ChevronUp, Check } from "lucide-react";
+import { readSession } from "@/lib/auth/session";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextStrip } from "@/components/bdl/context-strip";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
@@ -14,10 +15,15 @@ import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
  * mocked data so we can verify tokens, primitives, responsive
  * behavior, and light/dark parity before wiring real data.
  */
-export default function Home() {
+export default async function Home() {
+  const session = await readSession();
+  const initials = session?.username
+    ? session.username.slice(0, 2).toUpperCase()
+    : "ST";
+
   return (
     <>
-      <TopBar active="/" userInitials="ST" />
+      <TopBar active="/" userInitials={initials} />
       <PageFrame>
         <ContextStrip
           leagueName="CPA League"

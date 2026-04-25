@@ -8,7 +8,7 @@ import { neon } from "@neondatabase/serverless";
 const sql = neon(process.env.DATABASE_URL!);
 
 async function main() {
-  const rows = await sql<{ table_name: string; row_count: string }[]>`
+  const rows = (await sql`
     SELECT
       table_name,
       (xpath('/row/c/text()',
@@ -16,7 +16,7 @@ async function main() {
     FROM information_schema.tables
     WHERE table_schema = 'public'
     ORDER BY table_name
-  `;
+  `) as { table_name: string; row_count: string }[];
   if (rows.length === 0) {
     console.error("No tables found in the public schema.");
     process.exit(1);

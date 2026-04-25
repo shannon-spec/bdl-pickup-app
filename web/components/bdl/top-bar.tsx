@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, Search } from "lucide-react";
+import { Bell, LogOut, Search } from "lucide-react";
 import { Brand } from "./brand";
 import { ThemeToggle } from "./theme-toggle";
+import { signOut } from "@/lib/auth/actions";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -73,6 +74,11 @@ export function TopBar({ active = "/", userInitials = "ST" }: { active?: string;
               style={{ boxShadow: "0 0 0 2px var(--badge-dot-border)" }}
             />
           </IconButton>
+          <form action={signOut}>
+            <IconButton aria-label="Sign out" type="submit">
+              <LogOut size={16} />
+            </IconButton>
+          </form>
           <AvatarMenu initials={userInitials} />
         </div>
       </div>

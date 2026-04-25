@@ -12,7 +12,8 @@
     "db:push": "dotenv -e .env.local -- drizzle-kit push",
     "db:studio": "dotenv -e .env.local -- drizzle-kit studio",
     "db:pull-env": "npx vercel@latest env pull .env.local",
-    "db:verify": "dotenv -e .env.local -- tsx scripts/verify-db.ts"
+    "db:verify": "dotenv -e .env.local -- tsx scripts/verify-db.ts",
+    "db:seed": "dotenv -e .env.local -- tsx scripts/seed.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -21,6 +22,7 @@
     "clsx": "^2.1.1",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
+    "jose": "^6.2.2",
     "lucide-react": "^1.11.0",
     "next": "16.2.4",
     "next-themes": "^0.4.6",
