@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Search, X, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import type { RosterRow } from "@/lib/queries/roster";
@@ -101,9 +102,12 @@ export function RosterClient({
               key={r.id}
               className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr_72px] items-center px-5 py-3 border-t border-[color:var(--hairline)] hover:bg-[color:var(--surface-2)] transition-colors text-[14px]"
             >
-              <span className="font-bold text-[color:var(--text)]">
+              <Link
+                href={`/players/${r.id}`}
+                className="font-bold text-[color:var(--text)] hover:text-[color:var(--brand)] truncate"
+              >
                 {r.lastName}, {r.firstName}
-              </span>
+              </Link>
               <span className="text-[color:var(--text-3)] text-[12.5px] truncate">
                 {r.email || r.cell || "—"}
               </span>
