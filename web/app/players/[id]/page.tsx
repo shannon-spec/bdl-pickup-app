@@ -8,6 +8,7 @@ import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
 import { StatBlock, StatRow } from "@/components/bdl/stat-block";
 import { getPlayerProfile } from "@/lib/queries/player-profile";
+import { EditPlayerButton } from "./edit-button";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,7 @@ export default async function PlayerProfilePage({
   const { player } = profile;
   const initials = `${player.firstName[0] ?? ""}${player.lastName[0] ?? ""}`.toUpperCase();
   const isMe = session.playerId === player.id;
+  const isAdmin = session.role === "owner" || session.role === "super_admin";
 
   return (
     <>
@@ -49,7 +51,7 @@ export default async function PlayerProfilePage({
           <ArrowLeft size={13} /> Roster
         </Link>
 
-        <div className="flex items-center gap-4 max-sm:flex-col max-sm:items-start">
+        <div className="flex items-start gap-4 max-sm:flex-col max-sm:items-start">
           <span
             className="inline-flex items-center justify-center w-16 h-16 rounded-full text-white font-extrabold text-[20px] flex-shrink-0"
             style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-2))" }}
@@ -89,6 +91,7 @@ export default async function PlayerProfilePage({
               )}
             </div>
           </div>
+          {isAdmin && <EditPlayerButton player={player} />}
         </div>
 
         {/* Career stats */}
