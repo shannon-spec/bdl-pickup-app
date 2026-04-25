@@ -11,7 +11,8 @@
     "db:migrate": "dotenv -e .env.local -- drizzle-kit migrate",
     "db:push": "dotenv -e .env.local -- drizzle-kit push",
     "db:studio": "dotenv -e .env.local -- drizzle-kit studio",
-    "db:pull-env": "vercel env pull .env.local"
+    "db:pull-env": "npx vercel@latest env pull .env.local",
+    "db:verify": "dotenv -e .env.local -- tsx scripts/verify-db.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -40,6 +41,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }
