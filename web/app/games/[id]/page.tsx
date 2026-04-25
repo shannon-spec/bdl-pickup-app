@@ -13,6 +13,7 @@ import { Pill } from "@/components/bdl/pill";
 import { getGameDetail } from "@/lib/queries/games";
 import {
   GameScore,
+  GameMetaEditor,
   RosterRow,
   AddRoster,
   DangerZone,
@@ -128,6 +129,8 @@ export default async function GameDetailPage({
 
           <GameScore detail={detail} />
         </div>
+
+        <GameMetaEditor detail={detail} />
 
         <SectionHead title={`${game.teamAName ?? "White"} (${detail.rosterA.length})`} />
         <RosterPanel detail={detail} side="A" />

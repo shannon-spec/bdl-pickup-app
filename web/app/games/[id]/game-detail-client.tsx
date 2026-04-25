@@ -3,9 +3,14 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Pencil, Plus, Trash2 } from "lucide-react";
 import type { GameDetail } from "@/lib/queries/games";
-import { deleteGame, setGameRosterPlayer, setGameScore } from "@/lib/actions/games";
+import {
+  deleteGame,
+  setGameRosterPlayer,
+  setGameScore,
+  updateGame,
+} from "@/lib/actions/games";
 
 export function GameScore({ detail }: { detail: GameDetail }) {
   const router = useRouter();
@@ -215,6 +220,135 @@ export function AddRoster({
     </div>
   );
 };
+
+export function GameMetaEditor({ detail }: { detail: GameDetail }) {
+  const router = useRouter();
+  const { game } = detail;
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+
+  const onSubmit = (formData: FormData) => {
+    setError(null);
+    if (game.leagueId) formData.set("leagueId", game.leagueId);
+    start(async () => {
+      const res = await updateGame(game.id, formData);
+      if (res.ok) {
+        setOpen(false);
+        router.refresh();
+      } else setError(res.error);
+    });
+  };
+
+  return (
+    <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)]">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between gap-3 px-5 py-3.5 text-left"
+      >
+        <span className="inline-flex items-center gap-2">
+          <Pencil size={13} className="text-[color:var(--text-3)]" />
+          <span className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)]">
+            Edit Game Details
+          </span>
+        </span>
+        <ChevronDown
+          size={16}
+          className={`text-[color:var(--text-3)] transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <form
+          action={onSubmit}
+          className="grid grid-cols-2 gap-3 px-5 pb-5 max-sm:grid-cols-1"
+        >
+          <Field label="Date">
+            <input
+              name="gameDate"
+              type="date"
+              required
+              defaultValue={game.gameDate ?? ""}
+              className={inputCx}
+            />
+          </Field>
+          <Field label="Time">
+            <input
+              name="gameTime"
+              type="time"
+              defaultValue={game.gameTime ?? ""}
+              className={inputCx}
+            />
+          </Field>
+          <Field label="Venue / Location">
+            <input
+              name="venue"
+              type="text"
+              defaultValue={game.venue ?? ""}
+              maxLength={120}
+              placeholder="e.g. Fortis"
+              className={inputCx}
+            />
+          </Field>
+          <Field label="Format">
+            <select
+              name="format"
+              defaultValue={game.format}
+              className={selectCx}
+            >
+              <option value="5v5">5 v 5</option>
+              <option value="5v5-series">5 v 5 — series</option>
+              <option value="3v3">3 v 3</option>
+              <option value="3v3-series">3 v 3 — series</option>
+            </select>
+          </Field>
+          <Field label="Team A name">
+            <input
+              name="teamAName"
+              type="text"
+              defaultValue={game.teamAName ?? "White"}
+              maxLength={40}
+              required
+              className={inputCx}
+            />
+          </Field>
+          <Field label="Team B name">
+            <input
+              name="teamBName"
+              type="text"
+              defaultValue={game.teamBName ?? "Dark"}
+              maxLength={40}
+              required
+              className={inputCx}
+            />
+          </Field>
+          {error && (
+            <div className="col-span-full text-[12px] text-[color:var(--down)] bg-[color:var(--down-soft)] rounded-[var(--r-md)] px-3 py-2">
+              {error}
+            </div>
+          )}
+          <div className="col-span-full flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="h-10 px-4 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[13px] font-medium hover:bg-[color:var(--surface-2)]"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={pending}
+              className="h-10 px-5 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)] disabled:opacity-60"
+            >
+              {pending ? "Saving…" : "Save changes"}
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
 
 export function DangerZone({ gameId }: { gameId: string }) {
   const router = useRouter();

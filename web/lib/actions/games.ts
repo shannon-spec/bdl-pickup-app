@@ -19,6 +19,8 @@ const gameSchema = z.object({
   gameTime: z.string().optional().or(z.literal("")),
   venue: z.string().trim().max(120).optional().or(z.literal("")),
   format: z.enum(FORMATS).default("5v5"),
+  teamAName: z.string().trim().min(1).max(40).optional().or(z.literal("")),
+  teamBName: z.string().trim().min(1).max(40).optional().or(z.literal("")),
 });
 
 const scoreSchema = z.object({
@@ -92,6 +94,8 @@ export async function updateGame(
     };
   }
   const v = parsed.data;
+  const tA = (v.teamAName ?? "").trim();
+  const tB = (v.teamBName ?? "").trim();
   await db
     .update(games)
     .set({
@@ -100,6 +104,8 @@ export async function updateGame(
       gameTime: nullable(v.gameTime),
       venue: nullable(v.venue),
       format: v.format,
+      ...(tA ? { teamAName: tA } : {}),
+      ...(tB ? { teamBName: tB } : {}),
     })
     .where(eq(games.id, id));
   revalidatePath("/games");
