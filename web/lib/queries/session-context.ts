@@ -22,7 +22,12 @@ export type SessionLeague = {
 };
 
 export type SessionContext = {
-  user: { id: string; displayName: string; isSuperAdmin: boolean };
+  user: {
+    id: string;
+    displayName: string;
+    isSuperAdmin: boolean;
+    playerId: string | null;
+  };
   leagues: SessionLeague[];
   activeLeagueId: string | null;
 };
@@ -133,7 +138,12 @@ export async function getSessionContext(): Promise<SessionContext | null> {
     null;
 
   return {
-    user: { id: session.adminId, displayName, isSuperAdmin },
+    user: {
+      id: session.adminId,
+      displayName,
+      isSuperAdmin,
+      playerId: session.playerId ?? null,
+    },
     leagues: sessionLeagues,
     activeLeagueId,
   };
