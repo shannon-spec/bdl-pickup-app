@@ -8,6 +8,13 @@
       "when": 1777074057238,
       "tag": "0000_yummy_vulture",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777117669772,
+      "tag": "0001_cultured_thunderbolt",
+      "breakpoints": true
     }
   ]
 }

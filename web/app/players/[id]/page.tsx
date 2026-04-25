@@ -9,6 +9,7 @@ import { Pill } from "@/components/bdl/pill";
 import { StatBlock, StatRow } from "@/components/bdl/stat-block";
 import { getPlayerProfile } from "@/lib/queries/player-profile";
 import { EditPlayerButton } from "./edit-button";
+import type { Player as PlayerType } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -237,37 +238,181 @@ export default async function PlayerProfilePage({
         )}
 
         {/* Contact (admins/commissioners only get to see PII; we show what's not flagged private) */}
-        {(player.email || player.cell) && (
-          <div>
-            <SectionHead title="Contact" />
-            <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-5 py-4 flex flex-col gap-2 text-[14px]">
-              {player.email && !player.emailPrivate && (
-                <div>
-                  <span className="text-[color:var(--text-3)] mr-2">Email</span>
-                  <a
-                    href={`mailto:${player.email}`}
-                    className="font-medium hover:text-[color:var(--brand)]"
-                  >
-                    {player.email}
-                  </a>
-                </div>
-              )}
-              {player.cell && !player.cellPrivate && (
-                <div>
-                  <span className="text-[color:var(--text-3)] mr-2">Cell</span>
-                  <a
-                    href={`tel:${player.cell}`}
-                    className="font-medium hover:text-[color:var(--brand)]"
-                  >
-                    {player.cell}
-                  </a>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+        {/* Player info + contact (side-by-side cards) */}
+        <div className="grid grid-cols-2 gap-4 max-[1100px]:grid-cols-1">
+          <PlayerInfoCard player={player} />
+          <ContactCard player={player} />
+        </div>
       </PageFrame>
       <MobileBottomBar active="profile" />
     </>
+  );
+}
+
+const fmtBirthday = (d: string | null) => {
+  if (!d) return null;
+  const dt = new Date(d + "T00:00:00");
+  const months = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ];
+  return `${months[dt.getMonth()]} ${dt.getDate()}, ${dt.getFullYear()}`;
+};
+
+const ageFromBirthday = (d: string | null): number | null => {
+  if (!d) return null;
+  const dt = new Date(d + "T00:00:00");
+  if (Number.isNaN(dt.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - dt.getFullYear();
+  const m = today.getMonth() - dt.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < dt.getDate())) age--;
+  return age;
+};
+
+const fmtHeight = (ft: number | null, inch: number | null): string | null => {
+  if (ft === null && inch === null) return null;
+  const f = ft ?? 0;
+  const i = inch ?? 0;
+  // Show "6'4.5\"" — drop trailing .0
+  const inStr = Number.isInteger(i) ? String(i) : String(i);
+  return `${f}'${inStr}"`;
+};
+
+function PlayerInfoCard({ player }: { player: PlayerType }) {
+  const birthday = fmtBirthday(player.birthday);
+  const age = ageFromBirthday(player.birthday);
+  const height = fmtHeight(player.heightFt, player.heightIn);
+  const hometown = player.city
+    ? `${player.city}${player.state ? `, ${player.state}` : ""}`
+    : null;
+  const zip = player.zip;
+
+  // Hide the whole card if there's nothing to show.
+  const hasAny =
+    birthday ||
+    age !== null ||
+    height ||
+    player.weight !== null ||
+    hometown ||
+    zip ||
+    player.college ||
+    player.sport ||
+    player.highestLevel;
+  if (!hasAny) return null;
+
+  return (
+    <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6">
+      <div className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)] flex items-center gap-2 mb-5">
+        <span aria-hidden className="w-[3px] h-[12px] rounded-sm bg-[color:var(--brand)]" />
+        Player Info
+      </div>
+      <div className="grid grid-cols-2 gap-x-6 gap-y-5 max-sm:grid-cols-1">
+        {birthday && <Field label="Birthday" value={birthday} />}
+        {age !== null && <Field label="Age" value={String(age)} />}
+        {height && <Field label="Height" value={height} />}
+        {player.weight !== null && (
+          <Field label="Weight" value={`${player.weight} lbs`} />
+        )}
+        {hometown && <Field label="Hometown" value={hometown} />}
+        {zip && <Field label="ZIP" value={zip} mono />}
+        {player.college && <Field label="College" value={player.college} />}
+        {player.sport && <Field label="Sport" value={player.sport} />}
+        {player.highestLevel && (
+          <Field label="Highest Level" value={player.highestLevel} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ContactCard({ player }: { player: PlayerType }) {
+  const showEmail = player.email && !player.emailPrivate;
+  const showCell = player.cell && !player.cellPrivate;
+  if (!showEmail && !showCell && !player.emailPrivate && !player.cellPrivate) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6">
+      <div className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)] flex items-center gap-2 mb-5">
+        <span aria-hidden className="w-[3px] h-[12px] rounded-sm bg-[color:var(--brand)]" />
+        Contact
+      </div>
+      <div className="grid grid-cols-2 gap-x-6 gap-y-5 max-sm:grid-cols-1">
+        <ContactField
+          label="Cell"
+          value={player.cell}
+          isPrivate={player.cellPrivate}
+          href={player.cell ? `tel:${player.cell}` : undefined}
+        />
+        <ContactField
+          label="Email"
+          value={player.email}
+          isPrivate={player.emailPrivate}
+          href={player.email ? `mailto:${player.email}` : undefined}
+        />
+      </div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[10.5px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
+        {label}
+      </span>
+      <span
+        className={`font-bold text-[15.5px] text-[color:var(--text)] ${mono ? "font-[family-name:var(--mono)] num" : ""}`}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function ContactField({
+  label,
+  value,
+  isPrivate,
+  href,
+}: {
+  label: string;
+  value: string | null;
+  isPrivate: boolean;
+  href?: string;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[10.5px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)] flex items-center gap-2">
+        <span>{label}</span>
+        {isPrivate && (
+          <span className="text-[9.5px] font-bold tracking-[0.08em] uppercase px-1.5 py-0.5 rounded-full bg-[color:var(--brand-soft)] text-[color:var(--brand-ink)]">
+            Private
+          </span>
+        )}
+      </span>
+      {value && !isPrivate ? (
+        <a
+          href={href}
+          className="font-bold text-[15.5px] text-[color:var(--text)] hover:text-[color:var(--brand)]"
+        >
+          {value}
+        </a>
+      ) : (
+        <span className="font-medium text-[14px] text-[color:var(--text-3)]">
+          {value ? "Hidden" : "—"}
+        </span>
+      )}
+    </div>
   );
 }

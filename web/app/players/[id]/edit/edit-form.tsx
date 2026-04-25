@@ -7,8 +7,9 @@ import type { Player } from "@/lib/db";
 import { deletePlayer, updatePlayer } from "@/lib/actions/roster";
 
 const POSITIONS = ["", "PG", "SG", "SF", "PF", "C", "G", "F"];
-const LEVELS = ["Not Rated", "Novice", "Intermediate", "Advanced", "Game Changer", "Pro"];
+const GRADES = ["Not Rated", "Novice", "Intermediate", "Advanced", "Game Changer", "Pro"];
 const STATUSES = ["Active", "Inactive", "IR"];
+const HIGHEST_LEVELS = ["", "Pro", "College", "High School", "N/A"];
 
 export function EditPlayerForm({ player }: { player: Player }) {
   const router = useRouter();
@@ -45,7 +46,7 @@ export function EditPlayerForm({ player }: { player: Player }) {
 
   return (
     <>
-      <form action={onSubmit} className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6 max-sm:p-4 flex flex-col gap-4">
+      <form action={onSubmit} className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6 max-sm:p-4 flex flex-col gap-5">
         <Section title="Identity">
           <Row>
             <Field label="First Name *" error={fieldErrors.firstName?.[0]}>
@@ -66,6 +67,14 @@ export function EditPlayerForm({ player }: { player: Player }) {
               />
             </Field>
           </Row>
+          <Field label="Birthday" hint="YYYY-MM-DD" error={fieldErrors.birthday?.[0]}>
+            <input
+              name="birthday"
+              type="date"
+              defaultValue={player.birthday ?? ""}
+              className={inputCx}
+            />
+          </Field>
         </Section>
 
         <Section title="Contact">
@@ -86,11 +95,11 @@ export function EditPlayerForm({ player }: { player: Player }) {
               placeholder="555-555-5555"
             />
           </Field>
-          <Row>
+          <div className="grid grid-cols-[2fr_1fr_1.2fr] gap-3 max-sm:grid-cols-1">
             <Field label="City" error={fieldErrors.city?.[0]}>
               <input name="city" defaultValue={player.city ?? ""} className={inputCx} />
             </Field>
-            <Field label="State" error={fieldErrors.state?.[0]} hint="2 letters">
+            <Field label="State" hint="2 letters" error={fieldErrors.state?.[0]}>
               <input
                 name="state"
                 defaultValue={player.state ?? ""}
@@ -99,7 +108,52 @@ export function EditPlayerForm({ player }: { player: Player }) {
                 style={{ textTransform: "uppercase" }}
               />
             </Field>
-          </Row>
+            <Field label="ZIP" error={fieldErrors.zip?.[0]}>
+              <input
+                name="zip"
+                defaultValue={player.zip ?? ""}
+                inputMode="numeric"
+                className={inputCx}
+                placeholder="37205"
+              />
+            </Field>
+          </div>
+        </Section>
+
+        <Section title="Physical">
+          <div className="grid grid-cols-[1fr_1fr_1.2fr] gap-3 max-sm:grid-cols-1">
+            <Field label="Height — ft" error={fieldErrors.heightFt?.[0]}>
+              <input
+                name="heightFt"
+                type="number"
+                min={3}
+                max={8}
+                defaultValue={player.heightFt ?? ""}
+                className={inputCx}
+              />
+            </Field>
+            <Field label="Height — in" hint="0–11.5, step 0.5" error={fieldErrors.heightIn?.[0]}>
+              <input
+                name="heightIn"
+                type="number"
+                min={0}
+                max={11.5}
+                step={0.5}
+                defaultValue={player.heightIn ?? ""}
+                className={inputCx}
+              />
+            </Field>
+            <Field label="Weight — lbs" error={fieldErrors.weight?.[0]}>
+              <input
+                name="weight"
+                type="number"
+                min={50}
+                max={500}
+                defaultValue={player.weight ?? ""}
+                className={inputCx}
+              />
+            </Field>
+          </div>
         </Section>
 
         <Section title="Basketball">
@@ -117,13 +171,13 @@ export function EditPlayerForm({ player }: { player: Player }) {
                 ))}
               </select>
             </Field>
-            <Field label="Level" error={fieldErrors.level?.[0]}>
+            <Field label="Grade" error={fieldErrors.level?.[0]}>
               <select
                 name="level"
                 defaultValue={player.level ?? "Not Rated"}
                 className={selectCx}
               >
-                {LEVELS.map((l) => (
+                {GRADES.map((l) => (
                   <option key={l} value={l}>
                     {l}
                   </option>
@@ -131,6 +185,36 @@ export function EditPlayerForm({ player }: { player: Player }) {
               </select>
             </Field>
           </Row>
+          <Row>
+            <Field label="College" error={fieldErrors.college?.[0]}>
+              <input name="college" defaultValue={player.college ?? ""} className={inputCx} />
+            </Field>
+            <Field label="Highest Level Played" error={fieldErrors.highestLevel?.[0]}>
+              <select
+                name="highestLevel"
+                defaultValue={player.highestLevel ?? ""}
+                className={selectCx}
+              >
+                {HIGHEST_LEVELS.map((l) => (
+                  <option key={l || "_"} value={l}>
+                    {l || "—"}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </Row>
+          <Field
+            label="Sport"
+            hint="Sport played at the highest level"
+            error={fieldErrors.sport?.[0]}
+          >
+            <input
+              name="sport"
+              defaultValue={player.sport ?? ""}
+              className={inputCx}
+              placeholder="Basketball"
+            />
+          </Field>
           <Field label="Status" error={fieldErrors.status?.[0]}>
             <select
               name="status"

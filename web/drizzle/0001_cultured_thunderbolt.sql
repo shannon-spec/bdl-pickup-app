@@ -1,0 +1,1 @@
+ALTER TABLE "players" ALTER COLUMN "height_in" SET DATA TYPE real;
