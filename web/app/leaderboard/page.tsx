@@ -49,7 +49,6 @@ export default async function LeaderboardPage({
         />
 
         <div className="grid grid-cols-2 gap-3 max-[1100px]:grid-cols-1">
-          <Board title="Most Wins" rows={data.topWins} valueKey="wins" valueLabel="W" />
           <Board
             title="Highest Win %"
             rows={data.topWinPct}
@@ -57,15 +56,26 @@ export default async function LeaderboardPage({
             valueLabel="Win %"
             isPercent
           />
+          <Board title="Most Wins" rows={data.topWins} valueKey="wins" valueLabel="W" />
         </div>
 
         <div className="grid grid-cols-2 gap-3 max-[1100px]:grid-cols-1">
+          <Board
+            title="Most Games Played"
+            rows={data.topGamesPlayed}
+            valueKey="gamesPlayed"
+            valueLabel="GP"
+            playedOf={data.totalCompleted}
+          />
           <Board
             title="Game Winner Awards"
             rows={data.topGW}
             valueKey="gameWinnerCount"
             valueLabel="GW"
           />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 max-[1100px]:grid-cols-1">
           <Board
             title="Heroes · Margin ≤ 3"
             rows={data.topHeroes}
@@ -73,10 +83,10 @@ export default async function LeaderboardPage({
             valueLabel="HERO"
             hero
           />
+          <Board title="Most Losses" rows={data.topLosses} valueKey="losses" valueLabel="L" />
         </div>
 
         <div className="grid grid-cols-2 gap-3 max-[1100px]:grid-cols-1">
-          <Board title="Most Losses" rows={data.topLosses} valueKey="losses" valueLabel="L" />
           <Board
             title="Lowest Win %"
             rows={data.lowWinPct}
@@ -101,6 +111,7 @@ function Board({
   negative,
   full,
   hero,
+  playedOf,
 }: {
   title: string;
   rows: LbPlayer[];
@@ -110,6 +121,12 @@ function Board({
   negative?: boolean;
   full?: boolean;
   hero?: boolean;
+  /**
+   * When set, the GP slot shows "% played" derived from gamesPlayed /
+   * playedOf — used by the Most Games Played board to surface
+   * attendance share without adding a sixth column.
+   */
+  playedOf?: number;
 }) {
   return (
     <div
@@ -173,7 +190,9 @@ function Board({
                 {p.wins}-{p.losses}
               </span>
               <span className="font-[family-name:var(--mono)] num text-[12px] text-[color:var(--text-3)] text-right max-sm:hidden">
-                {p.gamesPlayed} GP
+                {playedOf && playedOf > 0
+                  ? `${Math.round((p.gamesPlayed / playedOf) * 100)}%`
+                  : `${p.gamesPlayed} GP`}
               </span>
               <span
                 className={`font-extrabold text-[13.5px] num text-right ${

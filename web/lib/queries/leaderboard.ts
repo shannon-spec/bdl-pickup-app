@@ -25,6 +25,7 @@ export type LeaderboardData = {
   minGames: number;
   topWins: LbPlayer[];
   topWinPct: LbPlayer[];
+  topGamesPlayed: LbPlayer[];
   topGW: LbPlayer[];
   topHeroes: LbPlayer[];
   lowWinPct: LbPlayer[];
@@ -174,6 +175,12 @@ export async function getLeaderboard(opts: {
   const topWins = [...allPlayers]
     .sort((a, b) => b.wins - a.wins || a.gamesPlayed - b.gamesPlayed)
     .slice(0, 10);
+  // Most games played — straight gamesPlayed sort. Tie-break on wins
+  // so a high-attendance player who's also winning ranks above one
+  // with the same GP but a worse record.
+  const topGamesPlayed = [...allPlayers]
+    .sort((a, b) => b.gamesPlayed - a.gamesPlayed || b.wins - a.wins)
+    .slice(0, 10);
   const topLosses = [...allPlayers]
     .sort((a, b) => b.losses - a.losses || b.gamesPlayed - a.gamesPlayed)
     .slice(0, 10);
@@ -207,6 +214,7 @@ export async function getLeaderboard(opts: {
     minGames,
     topWins,
     topWinPct,
+    topGamesPlayed,
     topGW,
     topHeroes,
     lowWinPct,
