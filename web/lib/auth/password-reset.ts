@@ -5,6 +5,7 @@ import { eq, isNotNull, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { headers } from "next/headers";
 import { db, players, passwordResetTokens } from "@/lib/db";
+import { readSession } from "./session";
 
 const TOKEN_TTL_MIN = 30;
 const MIN_PASSWORD_LEN = 8;
@@ -179,6 +180,62 @@ export async function resetPassword(
     .update(passwordResetTokens)
     .set({ usedAt: new Date() })
     .where(eq(passwordResetTokens.token, token));
+
+  return { ok: true };
+}
+
+/**
+ * Signed-in self-serve password change. Requires the player to enter
+ * their current password (defense against session hijack / shared
+ * device). Super admins use a shared-password env gate, so this only
+ * applies to player accounts.
+ */
+export async function changePassword(
+  formData: FormData,
+): Promise<ResetResult> {
+  const session = await readSession();
+  if (!session?.playerId) {
+    return { ok: false, error: "Sign in to change your password." };
+  }
+
+  const current = String(formData.get("current") ?? "");
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+
+  if (!current) return { ok: false, error: "Enter your current password." };
+  if (password.length < MIN_PASSWORD_LEN) {
+    return {
+      ok: false,
+      error: `New password must be at least ${MIN_PASSWORD_LEN} characters.`,
+    };
+  }
+  if (password !== confirm) {
+    return { ok: false, error: "New passwords don't match." };
+  }
+  if (current === password) {
+    return {
+      ok: false,
+      error: "New password must be different from your current one.",
+    };
+  }
+
+  const [player] = await db
+    .select({ id: players.id, passwordHash: players.passwordHash })
+    .from(players)
+    .where(eq(players.id, session.playerId))
+    .limit(1);
+
+  if (!player || !player.passwordHash) {
+    return { ok: false, error: "Account has no password set." };
+  }
+  const ok = await bcrypt.compare(current, player.passwordHash);
+  if (!ok) return { ok: false, error: "Current password is incorrect." };
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  await db
+    .update(players)
+    .set({ passwordHash })
+    .where(eq(players.id, player.id));
 
   return { ok: true };
 }

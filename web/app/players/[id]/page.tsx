@@ -105,7 +105,17 @@ export default async function PlayerProfilePage({
               )}
             </div>
           </div>
-          {canEdit && <EditPlayerButton playerId={player.id} />}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {isMe && (
+              <Link
+                href="/account"
+                className="inline-flex items-center gap-2 h-9 px-3 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[12px] font-medium hover:bg-[color:var(--surface-2)] transition-colors"
+              >
+                Account
+              </Link>
+            )}
+            {canEdit && <EditPlayerButton playerId={player.id} />}
+          </div>
         </div>
 
         {/* Career stats */}

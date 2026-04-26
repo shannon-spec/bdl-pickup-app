@@ -20,6 +20,7 @@ const AUTH_REQUIRED_PREFIXES = [
   "/settings",
   "/roster",
   "/leagues/new",
+  "/account",
 ];
 // Specific deeper routes that need auth (edit forms). Kept separate
 // so /leagues/[id] (read) stays public.
