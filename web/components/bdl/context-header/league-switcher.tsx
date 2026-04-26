@@ -5,15 +5,19 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ChevronDown, Plus } from "lucide-react";
 import type { SessionLeague } from "@/lib/queries/session-context";
+import type { View } from "@/lib/cookies/active-view";
 import { setActiveLeagueAction } from "@/lib/cookies/active-league";
 
 export function LeagueSwitcher({
   leagues,
   activeLeagueId,
+  view,
 }: {
   leagues: SessionLeague[];
   activeLeagueId: string;
+  view: View;
 }) {
+  const canCreate = view === "commissioner" || view === "admin";
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
@@ -159,7 +163,7 @@ export function LeagueSwitcher({
 
           <div className="border-t border-[color:var(--hairline)]">
             <Link
-              href="/discover"
+              href={canCreate ? "/leagues/new" : "/discover"}
               onClick={() => setOpen(false)}
               className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[color:var(--surface-2)] transition-colors"
             >
@@ -170,7 +174,7 @@ export function LeagueSwitcher({
                 <Plus size={14} />
               </span>
               <span className="text-[13.5px] font-medium text-[color:var(--text-2)]">
-                Join another league
+                {canCreate ? "Create another league" : "Join another league"}
               </span>
             </Link>
           </div>

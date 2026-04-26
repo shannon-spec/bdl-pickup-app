@@ -40,6 +40,7 @@ export function ContextHeaderClient({
           <LeagueSwitcher
             leagues={ctx.leagues}
             activeLeagueId={ctx.activeLeagueId}
+            view={view}
           />
         )}
       </div>
