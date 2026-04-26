@@ -1,13 +1,13 @@
 "use server";
 
-import { eq, and, inArray, ne, sql as dsql } from "drizzle-orm";
+import { eq, and, inArray, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import {
   db,
   players,
   leaguePlayers,
-  leagueCommissioners,
+  superAdmins,
 } from "@/lib/db";
 import { readSession } from "@/lib/auth/session";
 import {
@@ -84,11 +84,12 @@ export async function setPlayerCredentials(
   if (conflict) {
     return { ok: false, error: "That username is already taken." };
   }
-  // Cross-check super_admins via raw SQL — schema is in scope.
-  const adminClash = await db.execute(
-    dsql`SELECT 1 FROM super_admins WHERE username = ${usernameRaw} LIMIT 1`,
-  );
-  if (adminClash.rows && adminClash.rows.length > 0) {
+  const [adminClash] = await db
+    .select({ id: superAdmins.id })
+    .from(superAdmins)
+    .where(eq(superAdmins.username, usernameRaw))
+    .limit(1);
+  if (adminClash) {
     return { ok: false, error: "That username is reserved for an admin account." };
   }
 
@@ -124,115 +125,3 @@ export async function clearPlayerCredentials(
   return { ok: true };
 }
 
-/**
- * Returns the player set the viewer is allowed to assign creds to:
- * all players for super admin, league members for commissioners.
- * Each row carries the current credential state so the UI can render
- * "Set" vs "Reset" actions without a second roundtrip.
- */
-export async function getCredentialPlayers(): Promise<{
-  rows: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string | null;
-    username: string | null;
-    hasPassword: boolean;
-    isCommissioner: boolean;
-    leagueNames: string[];
-  }[];
-  scope: "admin" | "commissioner" | "none";
-}> {
-  const session = await readSession();
-  if (!session) return { rows: [], scope: "none" };
-
-  let allowedPlayerIds: Set<string> | null = null; // null = all (admin)
-  if (!isAdminLike(session)) {
-    const myLeagues = await getMyCommissionerLeagueIds(session);
-    if (myLeagues.length === 0) return { rows: [], scope: "none" };
-    const memberRows = await db
-      .select({ playerId: leaguePlayers.playerId })
-      .from(leaguePlayers)
-      .where(inArray(leaguePlayers.leagueId, myLeagues));
-    allowedPlayerIds = new Set(memberRows.map((m) => m.playerId));
-  }
-
-  // Single query for player details + their league memberships +
-  // commissioner flag. We aggregate league names client-side to keep
-  // the SQL portable.
-  const playerRows = await db
-    .select({
-      id: players.id,
-      firstName: players.firstName,
-      lastName: players.lastName,
-      email: players.email,
-      username: players.username,
-      passwordHash: players.passwordHash,
-    })
-    .from(players)
-    .orderBy(players.lastName, players.firstName);
-
-  const filtered = allowedPlayerIds
-    ? playerRows.filter((p) => allowedPlayerIds!.has(p.id))
-    : playerRows;
-  if (filtered.length === 0) {
-    return {
-      rows: [],
-      scope: isAdminLike(session) ? "admin" : "commissioner",
-    };
-  }
-
-  const ids = filtered.map((p) => p.id);
-  const memberships = await db
-    .select({
-      playerId: leaguePlayers.playerId,
-      leagueId: leaguePlayers.leagueId,
-    })
-    .from(leaguePlayers)
-    .where(inArray(leaguePlayers.playerId, ids));
-  const commishRows = await db
-    .select({
-      playerId: leagueCommissioners.playerId,
-      leagueId: leagueCommissioners.leagueId,
-    })
-    .from(leagueCommissioners)
-    .where(inArray(leagueCommissioners.playerId, ids));
-
-  // Resolve league names in one shot
-  const leagueIdSet = new Set([
-    ...memberships.map((m) => m.leagueId),
-    ...commishRows.map((c) => c.leagueId),
-  ]);
-  const leaguesArr = leagueIdSet.size
-    ? await db.execute(
-        dsql`SELECT id, name FROM leagues WHERE id = ANY(${Array.from(leagueIdSet)}::uuid[])`,
-      )
-    : { rows: [] };
-  const leagueNameById = new Map<string, string>();
-  for (const r of (leaguesArr.rows ?? []) as Array<{ id: string; name: string }>) {
-    leagueNameById.set(r.id, r.name);
-  }
-
-  const memberLeaguesByPlayer = new Map<string, string[]>();
-  for (const m of memberships) {
-    const arr = memberLeaguesByPlayer.get(m.playerId) ?? [];
-    const name = leagueNameById.get(m.leagueId);
-    if (name) arr.push(name);
-    memberLeaguesByPlayer.set(m.playerId, arr);
-  }
-  const commishSet = new Set(commishRows.map((c) => c.playerId));
-
-  return {
-    rows: filtered.map((p) => ({
-      id: p.id,
-      firstName: p.firstName,
-      lastName: p.lastName,
-      email: p.email,
-      username: p.username,
-      hasPassword: !!p.passwordHash,
-      isCommissioner: commishSet.has(p.id),
-      leagueNames: memberLeaguesByPlayer.get(p.id) ?? [],
-    })),
-    scope: isAdminLike(session) ? "admin" : "commissioner",
-  };
-}

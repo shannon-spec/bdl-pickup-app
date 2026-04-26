@@ -8,7 +8,7 @@ import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
-import { getCredentialPlayers } from "@/lib/actions/credentials";
+import { getCredentialPlayers } from "@/lib/queries/credentials";
 import { CredentialsTable } from "./credentials-client";
 
 export const dynamic = "force-dynamic";
