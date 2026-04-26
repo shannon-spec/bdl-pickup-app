@@ -277,6 +277,27 @@ export const invites = pgTable(
   ],
 );
 
+/* ============== PASSWORD RESET TOKENS ============== */
+
+// One-shot reset tokens emailed to players when they hit Forgot
+// Password. Single-use (usedAt set on consumption), 30-min TTL.
+// Cascades on player delete so we never orphan a stale token.
+export const passwordResetTokens = pgTable(
+  "password_reset_tokens",
+  {
+    token: varchar("token", { length: 64 }).primaryKey(),
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("password_reset_player_idx").on(t.playerId)],
+);
+
 /* ============== RELATIONS ============== */
 
 export const playersRelations = relations(players, ({ many }) => ({
@@ -356,6 +377,8 @@ export type SuperAdmin = typeof superAdmins.$inferSelect;
 export type NewSuperAdmin = typeof superAdmins.$inferInsert;
 export type Invite = typeof invites.$inferSelect;
 export type NewInvite = typeof invites.$inferInsert;
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+export type NewPasswordResetToken = typeof passwordResetTokens.$inferInsert;
 
 // Suppress an unused-symbol warning when this file is imported as types-only.
 export const __schemaSqlMarker = sql`/* schema */`;
