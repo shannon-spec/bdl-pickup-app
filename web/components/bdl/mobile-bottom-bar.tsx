@@ -18,6 +18,9 @@ export async function MobileBottomBar({
   const session = await readSession();
   const caps = await getViewCaps(session);
   const showLeagues = caps.canManage;
+  // Profile destination — the user's player page if they have one
+  // linked, otherwise settings (admin accounts without a player).
+  const profileHref = session?.playerId ? `/players/${session.playerId}` : "/settings";
 
   return (
     <nav
@@ -66,7 +69,7 @@ export async function MobileBottomBar({
             active={active === "discover"}
           />
         )}
-        <NavItem href="/profile" icon={<User size={20} />} label="Profile" active={active === "profile"} />
+        <NavItem href={profileHref} icon={<User size={20} />} label="Profile" active={active === "profile"} />
       </div>
     </nav>
   );
