@@ -95,9 +95,6 @@ export function RosterRow({
   gameId,
   playerId,
   name,
-  currentSide,
-  teamAName,
-  teamBName,
 }: {
   gameId: string;
   playerId: string;
@@ -108,8 +105,6 @@ export function RosterRow({
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const sideLabel = (s: "A" | "B" | "invited") =>
-    s === "invited" ? "Invited" : s === "A" ? teamAName : teamBName;
   return (
     <div className="flex items-center justify-between gap-3 px-5 py-2.5 border-t border-[color:var(--hairline)] first:border-t-0 hover:bg-[color:var(--surface-2)] text-[14px]">
       <Link
@@ -118,54 +113,20 @@ export function RosterRow({
       >
         {name}
       </Link>
-      <div className="flex items-center gap-1.5">
-        {(["A", "B", "invited"] as const).map((s) => {
-          if (s === currentSide) return null;
-          const tint =
-            s === "A"
-              ? { bg: "rgba(170,178,192,.18)", border: "rgba(170,178,192,.45)", text: "var(--text)" }
-              : s === "B"
-                ? { bg: "rgba(212,175,55,.18)", border: "rgba(212,175,55,.55)", text: "var(--text)" }
-                : { bg: "var(--surface-2)", border: "var(--hairline-2)", text: "var(--text-2)" };
-          return (
-            <button
-              key={s}
-              type="button"
-              disabled={pending}
-              onClick={() =>
-                start(async () => {
-                  const res = await setGameRosterPlayer(gameId, playerId, s);
-                  if (res.ok) router.refresh();
-                })
-              }
-              title={`Move to ${sideLabel(s)}`}
-              aria-label={`Move ${name} to ${sideLabel(s)}`}
-              className="text-[10.5px] font-bold uppercase tracking-[0.08em] px-3 py-1 rounded-full border hover:brightness-110 disabled:opacity-60 transition-[filter] cursor-pointer"
-              style={{
-                background: tint.bg,
-                borderColor: tint.border,
-                color: tint.text,
-              }}
-            >
-              {sideLabel(s)}
-            </button>
-          );
-        })}
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() =>
-            start(async () => {
-              const res = await setGameRosterPlayer(gameId, playerId, null);
-              if (res.ok) router.refresh();
-            })
-          }
-          aria-label={`Remove ${name}`}
-          className="w-8 h-8 inline-flex items-center justify-center rounded-[var(--r-md)] text-[color:var(--text-3)] hover:text-[color:var(--down)] hover:bg-[color:var(--down-soft)] disabled:opacity-60"
-        >
-          <Trash2 size={14} />
-        </button>
-      </div>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() =>
+          start(async () => {
+            const res = await setGameRosterPlayer(gameId, playerId, null);
+            if (res.ok) router.refresh();
+          })
+        }
+        aria-label={`Remove ${name}`}
+        className="w-8 h-8 inline-flex items-center justify-center rounded-[var(--r-md)] text-[color:var(--text-3)] hover:text-[color:var(--down)] hover:bg-[color:var(--down-soft)] disabled:opacity-60"
+      >
+        <Trash2 size={14} />
+      </button>
     </div>
   );
 };
