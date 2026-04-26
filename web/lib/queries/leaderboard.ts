@@ -16,6 +16,7 @@ export type LbPlayer = {
   losses: number;
   gamesPlayed: number;
   gameWinnerCount: number;
+  heroCount: number;
   pct: number;
 };
 
@@ -25,6 +26,7 @@ export type LeaderboardData = {
   topWins: LbPlayer[];
   topWinPct: LbPlayer[];
   topGW: LbPlayer[];
+  topHeroes: LbPlayer[];
   lowWinPct: LbPlayer[];
   topLosses: LbPlayer[];
   leagueOptions: { id: string; name: string }[];
@@ -88,7 +90,13 @@ export async function getLeaderboard(opts: {
   const completedById = new Map(completed.map((g) => [g.id, g]));
   const stats = new Map<
     string,
-    { wins: number; losses: number; gamesPlayed: number; gameWinnerCount: number }
+    {
+      wins: number;
+      losses: number;
+      gamesPlayed: number;
+      gameWinnerCount: number;
+      heroCount: number;
+    }
   >();
   for (const r of rosterRows) {
     if (r.side !== "A" && r.side !== "B") continue;
@@ -109,6 +117,7 @@ export async function getLeaderboard(opts: {
       losses: 0,
       gamesPlayed: 0,
       gameWinnerCount: 0,
+      heroCount: 0,
     };
     cur.gamesPlayed++;
     if (win === "Tie") {
@@ -120,7 +129,8 @@ export async function getLeaderboard(opts: {
     }
     stats.set(r.playerId, cur);
   }
-  // Game winner counts (separate from W/L)
+  // Game winner + hero counts (separate from W/L). A "hero" is the
+  // gameWinner of a game decided by 3 points or fewer.
   for (const g of completed) {
     if (!g.gameWinner) continue;
     const cur = stats.get(g.gameWinner) ?? {
@@ -128,8 +138,16 @@ export async function getLeaderboard(opts: {
       losses: 0,
       gamesPlayed: 0,
       gameWinnerCount: 0,
+      heroCount: 0,
     };
     cur.gameWinnerCount++;
+    if (
+      g.scoreA !== null &&
+      g.scoreB !== null &&
+      Math.abs(g.scoreA - g.scoreB) <= 3
+    ) {
+      cur.heroCount++;
+    }
     stats.set(g.gameWinner, cur);
   }
 
@@ -146,6 +164,7 @@ export async function getLeaderboard(opts: {
       losses: s.losses,
       gamesPlayed: s.gamesPlayed,
       gameWinnerCount: s.gameWinnerCount,
+      heroCount: s.heroCount,
       pct: total > 0 ? (s.wins / total) * 100 : 0,
     });
   }
@@ -171,6 +190,10 @@ export async function getLeaderboard(opts: {
         b.gameWinnerCount - a.gameWinnerCount || a.gamesPlayed - b.gamesPlayed,
     )
     .slice(0, 10);
+  const topHeroes = [...allPlayers]
+    .filter((p) => p.heroCount > 0)
+    .sort((a, b) => b.heroCount - a.heroCount || a.gamesPlayed - b.gamesPlayed)
+    .slice(0, 10);
 
   // Year options derived from existing dates
   const dateYears = new Set<string>();
@@ -185,6 +208,7 @@ export async function getLeaderboard(opts: {
     topWins,
     topWinPct,
     topGW,
+    topHeroes,
     lowWinPct,
     topLosses,
     leagueOptions,

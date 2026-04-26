@@ -60,13 +60,21 @@ export default async function LeaderboardPage({
           />
         </div>
 
-        <Board
-          title="Game Winner Awards"
-          rows={data.topGW}
-          valueKey="gameWinnerCount"
-          valueLabel="GW"
-          full
-        />
+        <div className="grid grid-cols-2 gap-3 max-[1100px]:grid-cols-1">
+          <Board
+            title="Game Winner Awards"
+            rows={data.topGW}
+            valueKey="gameWinnerCount"
+            valueLabel="GW"
+          />
+          <Board
+            title="Heroes · Margin ≤ 3"
+            rows={data.topHeroes}
+            valueKey="heroCount"
+            valueLabel="HERO"
+            hero
+          />
+        </div>
 
         <div className="grid grid-cols-2 gap-3 max-[1100px]:grid-cols-1">
           <Board title="Most Losses" rows={data.topLosses} valueKey="losses" valueLabel="L" />
@@ -93,6 +101,7 @@ function Board({
   isPercent,
   negative,
   full,
+  hero,
 }: {
   title: string;
   rows: LbPlayer[];
@@ -101,15 +110,37 @@ function Board({
   isPercent?: boolean;
   negative?: boolean;
   full?: boolean;
+  hero?: boolean;
 }) {
   return (
     <div
-      className={`rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden ${
+      className={`rounded-[16px] border overflow-hidden ${
         full ? "col-span-full" : ""
+      } ${
+        hero
+          ? "bg-[color:var(--surface)]"
+          : "border-[color:var(--hairline-2)] bg-[color:var(--surface)]"
       }`}
+      style={
+        hero
+          ? {
+              borderColor: "rgba(234,67,53,.45)",
+              background:
+                "linear-gradient(135deg, rgba(234,67,53,.10), transparent 60%), var(--surface)",
+            }
+          : undefined
+      }
     >
-      <div className="px-5 py-3 border-b border-[color:var(--hairline)] flex items-center justify-between">
-        <span className="text-[11.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)]">
+      <div
+        className="px-5 py-3 border-b border-[color:var(--hairline)] flex items-center justify-between"
+        style={hero ? { borderColor: "rgba(234,67,53,.25)" } : undefined}
+      >
+        <span
+          className={`text-[11.5px] font-bold tracking-[0.14em] uppercase ${
+            hero ? "text-[color:var(--down)]" : "text-[color:var(--text-2)]"
+          }`}
+        >
+          {hero ? "★ " : ""}
           {title}
         </span>
         <span className="text-[10.5px] uppercase tracking-[0.16em] text-[color:var(--text-3)]">
@@ -147,7 +178,9 @@ function Board({
               </span>
               <span
                 className={`font-extrabold text-[13.5px] num text-right ${
-                  negative
+                  hero
+                    ? "text-[color:var(--down)]"
+                    : negative
                     ? "text-[color:var(--down)]"
                     : isPercent && value >= 60
                     ? "text-[color:var(--up)]"
