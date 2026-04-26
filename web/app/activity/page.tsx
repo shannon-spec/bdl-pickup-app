@@ -1,17 +1,15 @@
 import Link from "next/link";
-import { desc } from "drizzle-orm";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
-import { db, games } from "@/lib/db";
+import { getActivityEvents } from "@/lib/queries/activity";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Activity · BDL" };
 
-const fmtDate = (d: string | null) => {
-  if (!d) return "—";
+const fmtDate = (d: string) => {
   const dt = new Date(d + "T00:00:00");
   return `${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][dt.getDay()]} · ${
     ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][dt.getMonth()]
@@ -19,59 +17,20 @@ const fmtDate = (d: string | null) => {
 };
 
 export default async function ActivityPage() {
-  const all = await db.select().from(games).orderBy(desc(games.gameDate));
+  const events = await getActivityEvents();
 
-  const events: { gameId: string; date: string; type: "result" | "scheduled"; text: string; winner?: string }[] = [];
-  for (const g of all) {
-    if (!g.gameDate) continue;
-    const isComplete =
-      (g.scoreA !== null && g.scoreB !== null) || g.winTeam !== null;
-    if (isComplete) {
-      const win =
-        g.winTeam ??
-        (g.scoreA !== null && g.scoreB !== null
-          ? g.scoreA > g.scoreB
-            ? "A"
-            : g.scoreB > g.scoreA
-              ? "B"
-              : "Tie"
-          : null);
-      if (!win || win === "Tie") continue;
-      const winnerTeam = win === "A" ? g.teamAName ?? "White" : g.teamBName ?? "Dark";
-      const loserTeam = win === "A" ? g.teamBName ?? "Dark" : g.teamAName ?? "White";
-      const winnerScore = win === "A" ? g.scoreA : g.scoreB;
-      const loserScore = win === "A" ? g.scoreB : g.scoreA;
-      events.push({
-        gameId: g.id,
-        date: g.gameDate,
-        type: "result",
-        text: `${winnerTeam} beat ${loserTeam} ${winnerScore ?? "?"}–${loserScore ?? "?"}${g.leagueName ? ` · ${g.leagueName}` : ""}`,
-        winner: winnerTeam,
-      });
-    } else {
-      events.push({
-        gameId: g.id,
-        date: g.gameDate,
-        type: "scheduled",
-        text: `${g.teamAName ?? "White"} vs ${g.teamBName ?? "Dark"} scheduled${g.leagueName ? ` · ${g.leagueName}` : ""}`,
-      });
-    }
-  }
-
-  // Group by date
+  // Group by date (events are already sorted desc by gameDate + sub-order).
   const byDate = new Map<string, typeof events>();
   for (const e of events) {
     const arr = byDate.get(e.date) ?? [];
     arr.push(e);
     byDate.set(e.date, arr);
   }
-  const dates = Array.from(byDate.keys()).sort().reverse();
+  const dates = Array.from(byDate.keys());
 
   return (
     <>
-      <TopBar
-        active="/activity"
-      />
+      <TopBar active="/activity" />
       <PageFrame>
         <ContextHeader />
         <SectionHead
@@ -97,18 +56,14 @@ export default async function ActivityPage() {
                 <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden">
                   {byDate.get(date)!.map((e) => (
                     <Link
-                      key={e.gameId + e.type}
-                      href={`/games/${e.gameId}`}
+                      key={e.id}
+                      href={e.href}
                       className="flex items-center justify-between gap-3 px-5 py-3 border-t border-[color:var(--hairline)] first:border-t-0 hover:bg-[color:var(--surface-2)] text-[14px]"
                     >
                       <span className="text-[color:var(--text)]">{e.text}</span>
-                      {e.type === "result" ? (
-                        <Pill tone="win" dot>
-                          Final
-                        </Pill>
-                      ) : (
-                        <Pill tone="neutral">Upcoming</Pill>
-                      )}
+                      <Pill tone={e.pill.tone} dot={e.pill.dot}>
+                        {e.pill.label}
+                      </Pill>
                     </Link>
                   ))}
                 </div>
