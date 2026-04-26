@@ -258,6 +258,46 @@ export async function getPlayerWinPctsForLeague(
 }
 
 /**
+ * Next upcoming game in a league — no player context, no auth gating.
+ * Used by the league detail page (signed-out + signed-in alike) to
+ * surface the next session at a glance.
+ */
+export async function getLeagueNextGame(leagueId: string): Promise<{
+  id: string;
+  date: string | null;
+  time: string | null;
+  venue: string | null;
+  teamAName: string;
+  teamBName: string;
+  rosterA: Pick<Player, "id" | "firstName" | "lastName">[];
+  rosterB: Pick<Player, "id" | "firstName" | "lastName">[];
+} | null> {
+  const today = new Date().toISOString().slice(0, 10);
+  const open = await db
+    .select()
+    .from(games)
+    .where(eq(games.leagueId, leagueId))
+    .orderBy(asc(games.gameDate));
+  const next = open.find(
+    (g) =>
+      !((g.scoreA !== null && g.scoreB !== null) || g.winTeam !== null) &&
+      (g.gameDate ?? "") >= today,
+  );
+  if (!next) return null;
+  const { A, B } = await getGameRosterLite(next.id);
+  return {
+    id: next.id,
+    date: next.gameDate,
+    time: next.gameTime,
+    venue: next.venue,
+    teamAName: next.teamAName ?? "White",
+    teamBName: next.teamBName ?? "Dark",
+    rosterA: A,
+    rosterB: B,
+  };
+}
+
+/**
  * Team-vs-team win probability blending two signals:
  *
  *   Team-color trend (T_x): win rate of each side (A / B) over the
