@@ -280,9 +280,12 @@ export default async function GamesPage({
                     </span>
                   </div>
                   {heroRoster.A.length > 0 && (
-                    <ul className="flex flex-col gap-0.5 pl-12 text-[11.5px] text-[color:var(--text-3)]">
+                    <ul className="flex flex-col gap-1 pl-[68px]">
                       {heroRoster.A.map((p) => (
-                        <li key={p.id} className="truncate">
+                        <li
+                          key={p.id}
+                          className="text-[12.5px] font-medium text-[color:var(--text)] leading-tight truncate"
+                        >
                           {p.firstName} {p.lastName}
                         </li>
                       ))}
@@ -298,9 +301,12 @@ export default async function GamesPage({
                     </span>
                   </div>
                   {heroRoster.B.length > 0 && (
-                    <ul className="flex flex-col gap-0.5 pl-12 text-[11.5px] text-[color:var(--text-3)]">
+                    <ul className="flex flex-col gap-1 pl-[68px]">
                       {heroRoster.B.map((p) => (
-                        <li key={p.id} className="truncate">
+                        <li
+                          key={p.id}
+                          className="text-[12.5px] font-medium text-[color:var(--text)] leading-tight truncate"
+                        >
                           {p.firstName} {p.lastName}
                         </li>
                       ))}

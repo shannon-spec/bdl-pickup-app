@@ -528,9 +528,12 @@ function RosterList({
   players: { id: string; firstName: string; lastName: string }[];
 }) {
   return (
-    <ul className="flex flex-col gap-0.5 pl-12 text-[11.5px] text-[color:var(--text-3)]">
+    <ul className="flex flex-col gap-1 pl-[52px]">
       {players.map((p) => (
-        <li key={p.id} className="truncate">
+        <li
+          key={p.id}
+          className="text-[12.5px] font-medium text-[color:var(--text)] leading-tight truncate"
+        >
           {p.firstName} {p.lastName}
         </li>
       ))}
