@@ -11,6 +11,7 @@ import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
 import { GradePill } from "@/components/bdl/grade-pill";
 import { getLeaguesWithStats } from "@/lib/queries/leagues";
+import { formatLabel } from "@/lib/format";
 import { LeaguesPageClient } from "./leagues-client";
 
 export const dynamic = "force-dynamic";
@@ -81,7 +82,7 @@ export default async function LeaguesPage() {
                       <Pill tone="neutral">
                         {l.completedGames} / {l.totalGames} games
                       </Pill>
-                      <Pill tone="brand">{l.format.replace("v", " V ").toUpperCase()}</Pill>
+                      <Pill tone="brand">{formatLabel(l.format)}</Pill>
                       <GradePill level={l.level} hideUnrated />
                     </div>
                     <ChevronRight

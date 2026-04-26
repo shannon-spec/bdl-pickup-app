@@ -58,6 +58,8 @@ export async function getPlayerLeagues(playerId: string): Promise<League[]> {
       days: leagues.days,
       maxPlayers: leagues.maxPlayers,
       level: leagues.level,
+      seriesGameCount: leagues.seriesGameCount,
+      seriesPointTarget: leagues.seriesPointTarget,
       teamAName: leagues.teamAName,
       teamBName: leagues.teamBName,
       createdAt: leagues.createdAt,

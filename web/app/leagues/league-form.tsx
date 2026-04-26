@@ -5,11 +5,19 @@ import type { League } from "@/lib/db";
 import { createLeague, updateLeague } from "@/lib/actions/leagues";
 
 const FORMATS = [
-  { v: "5v5", l: "5 V 5 — Single" },
-  { v: "5v5-series", l: "5 V 5 — Series" },
-  { v: "3v3", l: "3 V 3 — Single" },
-  { v: "3v3-series", l: "3 V 3 — Series" },
+  { v: "5v5", l: "5 V 5" },
+  { v: "3v3", l: "3 V 3" },
+  { v: "series", l: "Series" },
 ];
+
+// Map any legacy format value to one of the three currently-selectable
+// options so opening an old league in edit mode still shows a chosen
+// format rather than a blank dropdown.
+const normalizeFormat = (f: string | null | undefined): string => {
+  if (f === "5v5-series") return "5v5";
+  if (f === "3v3-series") return "3v3";
+  return f && ["5v5", "3v3", "series"].includes(f) ? f : "5v5";
+};
 const LEVELS = [
   "Not Rated",
   "Novice",
@@ -37,6 +45,8 @@ export function LeagueForm({
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [pending, start] = useTransition();
+  const [format, setFormat] = useState<string>(normalizeFormat(editing?.format));
+  const isSeries = format === "series";
 
   const onSubmit = (formData: FormData) => {
     setError(null);
@@ -77,7 +87,8 @@ export function LeagueForm({
         <Field label="Format">
           <select
             name="format"
-            defaultValue={editing?.format ?? "5v5"}
+            value={format}
+            onChange={(e) => setFormat(e.target.value)}
             className={selectCx}
           >
             {FORMATS.map((f) => (
@@ -88,6 +99,30 @@ export function LeagueForm({
           </select>
         </Field>
       </Row>
+      {isSeries && (
+        <Row>
+          <Field label="Number of Games">
+            <input
+              name="seriesGameCount"
+              type="number"
+              min={1}
+              defaultValue={editing?.seriesGameCount ?? 5}
+              className={inputCx}
+              placeholder="5"
+            />
+          </Field>
+          <Field label="Played to" hint="point total">
+            <input
+              name="seriesPointTarget"
+              type="number"
+              min={1}
+              defaultValue={editing?.seriesPointTarget ?? 11}
+              className={inputCx}
+              placeholder="11"
+            />
+          </Field>
+        </Row>
+      )}
       <Field label="Schedule">
         <input
           name="schedule"

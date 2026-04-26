@@ -13,7 +13,9 @@ import {
 import { readSession } from "@/lib/auth/session";
 import { requireAdminView, requireManageView } from "@/lib/auth/view";
 
-const FORMATS = ["5v5", "5v5-series", "3v3", "3v3-series"] as const;
+// Legacy enum values kept on the column for old rows; only the three
+// values below are selectable in the UI going forward.
+const FORMATS = ["5v5", "3v3", "series"] as const;
 const LEVELS = [
   "Not Rated",
   "Novice",
@@ -22,6 +24,12 @@ const LEVELS = [
   "Game Changer",
   "Pro",
 ] as const;
+
+const intString = z
+  .string()
+  .trim()
+  .optional()
+  .or(z.literal(""));
 
 const leagueSchema = z.object({
   name: z.string().trim().min(1, "Name is required.").max(80),
@@ -33,9 +41,16 @@ const leagueSchema = z.object({
   level: z.enum(LEVELS).default("Not Rated"),
   startTime: z.string().trim().max(8).optional().or(z.literal("")),
   maxPlayers: z.string().trim().optional().or(z.literal("")),
+  seriesGameCount: intString,
+  seriesPointTarget: intString,
   teamAName: z.string().trim().min(1).max(40).default("White"),
   teamBName: z.string().trim().min(1).max(40).default("Dark"),
 });
+
+const toInt = (s?: string | null) => {
+  const n = s ? parseInt(s, 10) : NaN;
+  return Number.isFinite(n) && n > 0 ? n : null;
+};
 
 export type ActionResult<T = unknown> =
   | { ok: true; data?: T }
@@ -74,6 +89,7 @@ export async function createLeague(formData: FormData): Promise<ActionResult<{ i
   }
   const v = parsed.data;
   const max = v.maxPlayers ? parseInt(v.maxPlayers, 10) : null;
+  const isSeries = v.format === "series";
   const [row] = await db
     .insert(leagues)
     .values({
@@ -86,6 +102,8 @@ export async function createLeague(formData: FormData): Promise<ActionResult<{ i
       level: v.level,
       startTime: nullable(v.startTime),
       maxPlayers: Number.isFinite(max) ? max : null,
+      seriesGameCount: isSeries ? toInt(v.seriesGameCount) : null,
+      seriesPointTarget: isSeries ? toInt(v.seriesPointTarget) : null,
       teamAName: v.teamAName || "White",
       teamBName: v.teamBName || "Dark",
     })
@@ -121,6 +139,7 @@ export async function updateLeague(
   }
   const v = parsed.data;
   const max = v.maxPlayers ? parseInt(v.maxPlayers, 10) : null;
+  const isSeries = v.format === "series";
   await db
     .update(leagues)
     .set({
@@ -133,6 +152,8 @@ export async function updateLeague(
       level: v.level,
       startTime: nullable(v.startTime),
       maxPlayers: Number.isFinite(max) ? max : null,
+      seriesGameCount: isSeries ? toInt(v.seriesGameCount) : null,
+      seriesPointTarget: isSeries ? toInt(v.seriesPointTarget) : null,
       teamAName: v.teamAName || "White",
       teamBName: v.teamBName || "Dark",
     })

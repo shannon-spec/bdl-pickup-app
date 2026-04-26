@@ -13,6 +13,7 @@ import { Pill } from "@/components/bdl/pill";
 import { HeroTag, isHeroGame } from "@/components/bdl/hero-tag";
 import { ProbabilityBar } from "@/components/bdl/probability-bar";
 import { PctPill } from "@/components/bdl/pct-pill";
+import { formatLabel } from "@/lib/format";
 import {
   getGameDetail,
   getPlayerWinPctsForLeague,
@@ -123,7 +124,7 @@ export default async function GameDetailPage({
           <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
             <div>
               <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)]">
-                {game.leagueName ?? "—"} · {game.format.replace("v", " V ").toUpperCase()}
+                {game.leagueName ?? "—"} · {formatLabel(game.format)}
               </div>
               <h1 className="text-[22px] font-extrabold tracking-[-0.03em] mt-0.5">
                 {fmtDate(game.gameDate)}

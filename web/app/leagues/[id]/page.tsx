@@ -15,6 +15,7 @@ import { GradePill } from "@/components/bdl/grade-pill";
 import { TeamBadge } from "@/components/bdl/team-badge";
 import { ProbabilityBar } from "@/components/bdl/probability-bar";
 import { getLeagueDetail } from "@/lib/queries/leagues";
+import { formatLabel } from "@/lib/format";
 import { getInvitesForLeague } from "@/lib/queries/invites";
 import { getLeagueNextGame, getMatchupOdds } from "@/lib/queries/games";
 import { LeagueDetailClient, Invites } from "./league-detail-client";
@@ -86,7 +87,15 @@ export default async function LeagueDetailPage({
               {detail.league.location ? ` · ${detail.league.location}` : ""}
             </div>
             <div className="flex items-center gap-1.5 flex-wrap mt-3">
-              <Pill tone="brand">{detail.league.format.replace("v", " V ").toUpperCase()}</Pill>
+              <Pill tone="brand">{formatLabel(detail.league.format)}</Pill>
+              {detail.league.format === "series" &&
+                detail.league.seriesGameCount &&
+                detail.league.seriesPointTarget && (
+                  <Pill tone="neutral">
+                    Best of {detail.league.seriesGameCount} · to{" "}
+                    {detail.league.seriesPointTarget}
+                  </Pill>
+                )}
               <GradePill level={detail.league.level} hideUnrated />
               <Pill tone="neutral">{detail.members.length} players</Pill>
               <Pill tone="neutral">

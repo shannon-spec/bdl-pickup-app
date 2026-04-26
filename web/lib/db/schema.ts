@@ -51,6 +51,7 @@ export const gameFormatEnum = pgEnum("game_format", [
   "5v5-series",
   "3v3",
   "3v3-series",
+  "series",
 ]);
 
 export const winTeamEnum = pgEnum("win_team", ["A", "B", "Tie"]);
@@ -134,6 +135,9 @@ export const leagues = pgTable("leagues", {
   // League grade — borrows the player level enum so a single rating
   // vocabulary covers both individuals and league-wide skill targets.
   level: playerLevelEnum("level").notNull().default("Not Rated"),
+  // Series-format extras. Null for non-series formats.
+  seriesGameCount: integer("series_game_count"),
+  seriesPointTarget: integer("series_point_target"),
   teamAName: text("team_a_name").notNull().default("White"),
   teamBName: text("team_b_name").notNull().default("Dark"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
