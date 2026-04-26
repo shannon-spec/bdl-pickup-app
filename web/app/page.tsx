@@ -684,7 +684,7 @@ function DiscoverCard({
             </span>
           )}
           {level && level !== "Not Rated" && (
-            <GradePill level={level} />
+            <GradePill level={level} context="league" />
           )}
         </div>
         <button

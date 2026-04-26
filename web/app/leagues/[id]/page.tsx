@@ -96,7 +96,7 @@ export default async function LeagueDetailPage({
                     {detail.league.seriesPointTarget}
                   </Pill>
                 )}
-              <GradePill level={detail.league.level} hideUnrated />
+              <GradePill level={detail.league.level} context="league" hideUnrated />
               <Pill tone="neutral">{detail.members.length} players</Pill>
               <Pill tone="neutral">
                 {detail.completedGames} / {detail.totalGames} games

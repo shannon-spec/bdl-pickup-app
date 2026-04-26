@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono, Outfit } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import { RatingKeyProvider } from "@/components/bdl/rating-key/rating-key-provider";
 import { Footer } from "@/components/bdl/footer";
 import "./globals.css";
 
@@ -14,7 +15,14 @@ const inter = Inter({
 const jetbrainsMono = JetBrains_Mono({
   variable: "--mono",
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  weight: ["500", "600", "700", "800"],
+  display: "swap",
+});
+
+const outfit = Outfit({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: ["700", "800", "900"],
   display: "swap",
 });
 
@@ -41,12 +49,14 @@ export default function RootLayout({
       lang="en"
       data-theme="light"
       suppressHydrationWarning
-      className={`${inter.variable} ${jetbrainsMono.variable}`}
+      className={`${inter.variable} ${jetbrainsMono.variable} ${outfit.variable}`}
     >
       <body>
         <ThemeProvider>
-          {children}
-          <Footer />
+          <RatingKeyProvider>
+            {children}
+            <Footer />
+          </RatingKeyProvider>
         </ThemeProvider>
       </body>
     </html>

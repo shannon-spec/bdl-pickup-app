@@ -83,7 +83,7 @@ export default async function LeaguesPage() {
                         {l.completedGames} / {l.totalGames} games
                       </Pill>
                       <Pill tone="brand">{formatLabel(l.format)}</Pill>
-                      <GradePill level={l.level} hideUnrated />
+                      <GradePill level={l.level} context="league" hideUnrated />
                     </div>
                     <ChevronRight
                       size={16}
