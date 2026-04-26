@@ -1,45 +1,59 @@
 /**
- * Route-level auth gate. Next.js 16 renamed `middleware` → `proxy`
+ * Route-level guest gate. Next.js 16 renamed `middleware` → `proxy`
  * (runtime is Node.js, can't be changed to edge).
  *
- * Rule: any request outside the public allowlist without a valid
- * session cookie redirects to /login.
- *
- * The cookie value is only checked for presence here (cheap, no
- * crypto). Real verification happens inside server actions /
- * route handlers / layouts via readSession() — that's where a
- * forged cookie is rejected.
+ * Rule: guests (no session cookie) can browse the public surface —
+ * Discover, the home dashboard, league/game/player detail pages.
+ * Auth-only routes (admin, settings, league/game create+edit, the
+ * roster manager) bounce guests to /discover, where they can still
+ * see the app. Per-page server components do the real authorization
+ * checks via readSession() — this proxy is just a coarse hint.
  */
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE } from "@/lib/auth/session";
 
-const PUBLIC_PATHS = [
-  "/login",
-  "/favicon.ico",
-  "/robots.txt",
-  "/sitemap.xml",
+// Routes that require a session. Anything not matched here is open
+// to guests; the page itself decides what to render based on
+// readSession().
+const AUTH_REQUIRED_PREFIXES = [
+  "/admin",
+  "/settings",
+  "/roster",
+  "/leagues/new",
 ];
-
-const PUBLIC_PREFIXES = ["/invite/"];
+// Specific deeper routes that need auth (edit forms). Kept separate
+// so /leagues/[id] (read) stays public.
+const AUTH_REQUIRED_REGEX = [
+  /^\/leagues\/[^/]+\/edit$/,
+  /^\/players\/[^/]+\/edit$/,
+];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow Next internals, static assets, API routes, public flows
+  // Always pass through Next internals, static assets, API routes,
+  // and the invite flow.
   if (
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/api/") ||
-    PUBLIC_PATHS.includes(pathname) ||
-    PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))
+    pathname.startsWith("/invite/") ||
+    pathname === "/login" ||
+    pathname === "/favicon.ico" ||
+    pathname === "/robots.txt" ||
+    pathname === "/sitemap.xml"
   ) {
     return NextResponse.next();
   }
 
   const token = request.cookies.get(SESSION_COOKIE)?.value;
-  if (!token) {
-    const loginUrl = new URL("/login", request.url);
-    if (pathname !== "/") loginUrl.searchParams.set("next", pathname);
-    return NextResponse.redirect(loginUrl);
+  if (token) return NextResponse.next();
+
+  const needsAuth =
+    AUTH_REQUIRED_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/")) ||
+    AUTH_REQUIRED_REGEX.some((r) => r.test(pathname));
+
+  if (needsAuth) {
+    return NextResponse.redirect(new URL("/discover", request.url));
   }
   return NextResponse.next();
 }
