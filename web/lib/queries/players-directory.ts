@@ -5,6 +5,8 @@ export type DirectoryPlayer = {
   id: string;
   firstName: string;
   lastName: string;
+  email: string | null;
+  city: string | null;
   position: string | null;
   level: string;
   status: string;
@@ -44,6 +46,8 @@ export async function getPlayersDirectory(opts: {
             id: players.id,
             firstName: players.firstName,
             lastName: players.lastName,
+            email: players.email,
+            city: players.city,
             position: players.position,
             level: players.level,
             status: players.status,
@@ -56,6 +60,8 @@ export async function getPlayersDirectory(opts: {
             id: players.id,
             firstName: players.firstName,
             lastName: players.lastName,
+            email: players.email,
+            city: players.city,
             position: players.position,
             level: players.level,
             status: players.status,

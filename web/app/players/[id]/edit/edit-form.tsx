@@ -38,7 +38,7 @@ export function EditPlayerForm({ player }: { player: Player }) {
     startDel(async () => {
       const res = await deletePlayer(player.id);
       if (res.ok) {
-        router.push("/roster");
+        router.push("/players");
         router.refresh();
       }
     });

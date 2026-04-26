@@ -52,16 +52,16 @@ export default async function PlayerProfilePage({
   return (
     <>
       <TopBar
-        active="/roster"
+        active="/players"
         userInitials={session.username.slice(0, 2).toUpperCase()}
       />
       <PageFrame>
         <ContextHeader />
         <Link
-          href="/roster"
+          href="/players"
           className="inline-flex items-center gap-1.5 text-[12px] text-[color:var(--text-3)] hover:text-[color:var(--text)] -mb-2"
         >
-          <ArrowLeft size={13} /> Roster
+          <ArrowLeft size={13} /> Players
         </Link>
 
         <div className="flex items-start gap-4 max-sm:flex-col max-sm:items-start">

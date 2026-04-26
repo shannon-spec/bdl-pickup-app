@@ -36,9 +36,9 @@ export default async function AdminPage() {
 
   const tiles: Tile[] = [
     {
-      href: "/roster",
+      href: "/players",
       icon: <Users size={20} />,
-      label: "Roster",
+      label: "Players",
       desc: "Manage all players. Add, edit, deactivate.",
       stat: `${pCount.n} player${pCount.n === 1 ? "" : "s"}`,
     },
