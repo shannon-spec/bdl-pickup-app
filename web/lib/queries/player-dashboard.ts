@@ -651,6 +651,17 @@ export async function getPlayerById(playerId: string): Promise<Player | null> {
 }
 
 export async function getFirstRosterPlayer(): Promise<Player | null> {
+  // Prefer Craig Bradshaw as the demo dashboard — he has a meaningful
+  // record so the preview shows real stats, not a 0-0 shell. Falls
+  // back to alphabetical first if he's been removed.
+  const [demo] = await db
+    .select()
+    .from(players)
+    .where(
+      and(eq(players.firstName, "Craig"), eq(players.lastName, "Bradshaw")),
+    )
+    .limit(1);
+  if (demo) return demo;
   const [row] = await db
     .select()
     .from(players)
