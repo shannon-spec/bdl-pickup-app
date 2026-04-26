@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { eq } from "drizzle-orm";
 import { Bell, LogOut, Settings } from "lucide-react";
 import { Brand } from "./brand";
 import { ThemeToggle } from "./theme-toggle";
 import { signOut } from "@/lib/auth/actions";
 import { readSession } from "@/lib/auth/session";
 import { getViewCaps, type View } from "@/lib/auth/view";
+import { db, players } from "@/lib/db";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -41,6 +43,24 @@ export async function TopBar({
     (item) => item.views.includes(view) && (isSignedIn || !item.signedInOnly),
   );
   const showSettings = view === "admin";
+
+  // Avatar initials for the signed-in player. Super admins without a
+  // linked player don't get an account avatar (they manage their auth
+  // via ADMIN_SHARED_PASSWORD env, not /account).
+  let initials: string | null = null;
+  if (session?.playerId) {
+    const [me] = await db
+      .select({
+        firstName: players.firstName,
+        lastName: players.lastName,
+      })
+      .from(players)
+      .where(eq(players.id, session.playerId))
+      .limit(1);
+    if (me) {
+      initials = `${me.firstName[0] ?? ""}${me.lastName[0] ?? ""}`.toUpperCase();
+    }
+  }
 
   return (
     <header
@@ -116,6 +136,19 @@ export async function TopBar({
               style={{ boxShadow: "0 0 0 2px var(--badge-dot-border)" }}
             />
           </button>
+          {initials && (
+            <Link
+              href="/account"
+              aria-label="Account"
+              className="relative inline-flex items-center justify-center w-[34px] h-[34px] rounded-full text-white font-extrabold text-[11px] leading-none shadow-[0_1px_0_rgba(0,0,0,0.06)] hover:opacity-90 transition-opacity"
+              style={{
+                background:
+                  "linear-gradient(135deg, var(--brand), var(--brand-2))",
+              }}
+            >
+              {initials}
+            </Link>
+          )}
           {isSignedIn ? (
             <form action={signOut}>
               <button
