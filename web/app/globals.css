@@ -122,25 +122,25 @@
   --gold: #C99A1F;
 }
 
-/* Default theme (SSR-safe) — dark-first. ThemeProvider overrides client-side. */
+/* Default theme (SSR-safe) — light-first. ThemeProvider overrides client-side. */
 :root:not([data-theme]) {
-  color-scheme: dark;
-  --bg: #000000; --surface: #0F0F0F; --surface-2: #151515;
-  --hairline: #1E1E1E; --hairline-2: #262626;
-  --text: #FFFFFF; --text-2: #B8B8B6; --text-3: #7A7A77; --text-4: #4A4A47;
-  --up: #34A853; --up-soft: rgba(52,168,83,.14);
-  --down: #EA4335; --down-soft: rgba(234,67,53,.14);
-  --warn: #FFB020; --warn-soft: rgba(255,176,32,.10);
-  --info: #4A9EFF; --info-soft: rgba(74,158,255,.10);
-  --brand: #0D8BFF; --brand-hover: #0978D9; --brand-soft: rgba(13,139,255,.14); --brand-ink: #5DAEFF; --brand-2: #6E54E0;
-  --topbar-bg: rgba(0,0,0,.72); --overlay: rgba(0,0,0,.72);
-  --mark-inset: rgba(255,255,255,.06);
-  --cta-shadow: 0 4px 14px rgba(13,139,255,.30);
-  --badge-dot-border: #000000;
-  --next-game-tint: rgba(212,175,55,.50);
-  --tb-white-bg: #F5F4EF; --tb-white-fg: #0E0E0C;
+  color-scheme: light;
+  --bg: #F7F7F4; --surface: #FFFFFF; --surface-2: #F2F1EC;
+  --hairline: #E8E6E0; --hairline-2: #D9D7CF;
+  --text: #0E0E0C; --text-2: #4A4A46; --text-3: #8A8A82; --text-4: #B5B3AB;
+  --up: #34A853; --up-soft: rgba(52,168,83,.10);
+  --down: #EA4335; --down-soft: rgba(234,67,53,.10);
+  --warn: #B87400; --warn-soft: rgba(184,116,0,.10);
+  --info: #2563EB; --info-soft: rgba(37,99,235,.08);
+  --brand: #0D8BFF; --brand-hover: #0978D9; --brand-soft: rgba(13,139,255,.10); --brand-ink: #0A6FCC; --brand-2: #6E54E0;
+  --topbar-bg: rgba(255,255,255,.78); --overlay: rgba(17,17,17,.45);
+  --mark-inset: rgba(0,0,0,.08);
+  --cta-shadow: 0 4px 14px rgba(13,139,255,.25), 0 1px 2px rgba(0,0,0,.06);
+  --badge-dot-border: #FFFFFF;
+  --next-game-tint: rgba(170,178,192,.54);
+  --tb-white-bg: #FFFFFF; --tb-white-fg: #0E0E0C;
   --tb-dark-bg: #0E0E0C;  --tb-dark-fg: #F5F4EF;
-  --gold: #E8B838;
+  --gold: #C99A1F;
 }
 
 /* ====================================================================
