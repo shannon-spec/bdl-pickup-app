@@ -118,8 +118,14 @@ export function RosterRow({
         disabled={pending}
         onClick={() =>
           start(async () => {
-            const res = await setGameRosterPlayer(gameId, playerId, null);
-            if (res.ok) router.refresh();
+            try {
+              const res = await setGameRosterPlayer(gameId, playerId, null);
+              if (res.ok) router.refresh();
+            } catch {
+              // Swallow — perm/view rejections shouldn't blow up the
+              // page. The next render of the parent will reflect the
+              // truth either way.
+            }
           })
         }
         aria-label={`Remove ${name}`}
@@ -150,6 +156,7 @@ export function AddRoster({
   const [playerId, setPlayerId] = useState("");
   const [side, setSide] = useState<"A" | "B" | "invited">("A");
   const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   void allLeagues;
   void currentLeagueId;
@@ -163,45 +170,59 @@ export function AddRoster({
   }
 
   return (
-    <div className="flex items-center gap-2 max-sm:flex-col max-sm:items-stretch">
-      <select
-        value={playerId}
-        onChange={(e) => setPlayerId(e.target.value)}
-        className="flex-1 h-10 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-3 text-[14px] outline-none cursor-pointer"
-      >
-        <option value="">Select a league member…</option>
-        {eligible.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.firstName} {p.lastName}
-          </option>
-        ))}
-      </select>
-      <select
-        value={side}
-        onChange={(e) => setSide(e.target.value as typeof side)}
-        className="h-10 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-3 text-[14px] outline-none cursor-pointer"
-      >
-        <option value="A">{teamAName}</option>
-        <option value="B">{teamBName}</option>
-        <option value="invited">Invited</option>
-      </select>
-      <button
-        type="button"
-        disabled={!playerId || pending}
-        onClick={() =>
-          start(async () => {
-            if (!playerId) return;
-            const res = await setGameRosterPlayer(gameId, playerId, side);
-            if (res.ok) {
-              setPlayerId("");
-              router.refresh();
-            }
-          })
-        }
-        className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase disabled:opacity-60"
-      >
-        <Plus size={14} strokeWidth={2.5} /> {pending ? "Adding…" : "Add"}
-      </button>
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2 max-sm:flex-col max-sm:items-stretch">
+        <select
+          value={playerId}
+          onChange={(e) => setPlayerId(e.target.value)}
+          className="flex-1 h-10 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-3 text-[14px] outline-none cursor-pointer"
+        >
+          <option value="">Select a league member…</option>
+          {eligible.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.firstName} {p.lastName}
+            </option>
+          ))}
+        </select>
+        <select
+          value={side}
+          onChange={(e) => setSide(e.target.value as typeof side)}
+          className="h-10 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-3 text-[14px] outline-none cursor-pointer"
+        >
+          <option value="A">{teamAName}</option>
+          <option value="B">{teamBName}</option>
+          <option value="invited">Invited</option>
+        </select>
+        <button
+          type="button"
+          disabled={!playerId || pending}
+          onClick={() =>
+            start(async () => {
+              if (!playerId) return;
+              setError(null);
+              try {
+                const res = await setGameRosterPlayer(gameId, playerId, side);
+                if (res.ok) {
+                  setPlayerId("");
+                  router.refresh();
+                } else {
+                  setError(res.error);
+                }
+              } catch (e) {
+                setError(e instanceof Error ? e.message : "Could not add player.");
+              }
+            })
+          }
+          className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase disabled:opacity-60"
+        >
+          <Plus size={14} strokeWidth={2.5} /> {pending ? "Adding…" : "Add"}
+        </button>
+      </div>
+      {error && (
+        <div className="text-[12px] text-[color:var(--down)] bg-[color:var(--down-soft)] rounded-[var(--r-md)] px-3 py-2">
+          {error}
+        </div>
+      )}
     </div>
   );
 };

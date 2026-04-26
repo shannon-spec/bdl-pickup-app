@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
 import { canManageGame, canViewGame } from "@/lib/auth/perms";
+import { getViewCaps } from "@/lib/auth/view";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame } from "@/components/bdl/page-frame";
@@ -45,7 +46,11 @@ export default async function GameDetailPage({
   const { id } = await params;
   const canView = await canViewGame(session, id);
   if (!canView) redirect("/games");
-  const canEdit = await canManageGame(session, id);
+  // Gate editing on BOTH the underlying perm AND the active view —
+  // an admin in "player" lens shouldn't see Edit / Add controls,
+  // since the action gate (requireManageView) would reject anyway.
+  const caps = await getViewCaps(session);
+  const canEdit = caps.canManage && (await canManageGame(session, id));
 
   const detail = await getGameDetail(id);
   if (!detail) notFound();

@@ -42,6 +42,23 @@ const nullable = (s?: string | null) => {
   return t.length === 0 ? null : t;
 };
 
+/**
+ * Wraps perm + view checks so a failed gate becomes an inline error
+ * (`{ ok: false, error }`) instead of a thrown exception. Throwing
+ * inside a server action surfaces as an unhandled rejection in the
+ * client tree and triggers Next.js's global-error UI — which is
+ * exactly what we don't want for a recoverable "not authorized."
+ */
+async function gateGameManager(gameId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    await requireGameManager(gameId);
+    await requireManageView();
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Not authorized." };
+  }
+}
+
 export async function createGame(formData: FormData): Promise<ActionResult<{ id: string }>> {
   const parsed = gameSchema.safeParse(readForm(formData));
   if (!parsed.success) {
@@ -83,8 +100,8 @@ export async function updateGame(
   id: string,
   formData: FormData,
 ): Promise<ActionResult<{ id: string }>> {
-  await requireGameManager(id);
-  await requireManageView();
+  const gate = await gateGameManager(id);
+  if (!gate.ok) return gate;
   const parsed = gameSchema.safeParse(readForm(formData));
   if (!parsed.success) {
     return {
@@ -115,8 +132,8 @@ export async function updateGame(
 }
 
 export async function deleteGame(id: string): Promise<ActionResult> {
-  await requireGameManager(id);
-  await requireManageView();
+  const gate = await gateGameManager(id);
+  if (!gate.ok) return gate;
   await db.delete(games).where(eq(games.id, id));
   revalidatePath("/games");
   revalidatePath("/");
@@ -127,8 +144,8 @@ export async function setGameScore(
   id: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireGameManager(id);
-  await requireManageView();
+  const gate = await gateGameManager(id);
+  if (!gate.ok) return gate;
   const parsed = scoreSchema.safeParse(readForm(formData));
   if (!parsed.success) {
     return {
@@ -169,8 +186,8 @@ export async function setGameRosterPlayer(
   playerId: string,
   side: "A" | "B" | "invited" | null,
 ): Promise<ActionResult> {
-  await requireGameManager(gameId);
-  await requireManageView();
+  const gate = await gateGameManager(gameId);
+  if (!gate.ok) return gate;
   if (side === null) {
     await db
       .delete(gameRoster)
