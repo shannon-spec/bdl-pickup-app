@@ -55,7 +55,7 @@ export default async function LeaderboardPage({
             valueKey="pct"
             valueLabel="Win %"
             isPercent
-            featured
+            featured="win"
           />
           <Board title="Most Wins" rows={data.topWins} valueKey="wins" valueLabel="W" />
         </div>
@@ -67,6 +67,7 @@ export default async function LeaderboardPage({
             valueKey="gamesPlayed"
             valueLabel="GP"
             playedOf={data.totalCompleted}
+            featured="brand"
           />
           <Board
             title="Game Winner Awards"
@@ -123,8 +124,8 @@ function Board({
   negative?: boolean;
   full?: boolean;
   hero?: boolean;
-  /** Primary "trophy" treatment — green tint, gold-ish accents. */
-  featured?: boolean;
+  /** Tinted "primary" treatment. "win" = green; "brand" = blue. */
+  featured?: "win" | "brand";
   /**
    * When set, the GP slot shows "% played" derived from gamesPlayed /
    * playedOf — used by the Most Games Played board to surface
@@ -133,7 +134,27 @@ function Board({
   playedOf?: number;
 }) {
   // Featured wins out over hero if both are passed.
-  const tinted = featured || hero;
+  const tinted = !!featured || !!hero;
+  // Featured palettes — keep tints light so the lists stay legible.
+  const featuredTints = {
+    win: {
+      border: "rgba(38,166,91,.45)",
+      gradient:
+        "linear-gradient(135deg, rgba(38,166,91,.12), transparent 65%), var(--surface)",
+      shadow: "0 1px 0 0 rgba(38,166,91,.10) inset",
+      hairline: "rgba(38,166,91,.25)",
+      title: "var(--up)",
+    },
+    brand: {
+      border: "rgba(13,139,255,.45)",
+      gradient:
+        "linear-gradient(135deg, rgba(13,139,255,.12), transparent 65%), var(--surface)",
+      shadow: "0 1px 0 0 rgba(13,139,255,.10) inset",
+      hairline: "rgba(13,139,255,.25)",
+      title: "var(--brand-ink)",
+    },
+  } as const;
+  const ft = featured ? featuredTints[featured] : null;
   return (
     <div
       className={`rounded-[16px] border overflow-hidden ${
@@ -144,12 +165,11 @@ function Board({
           : "border-[color:var(--hairline-2)] bg-[color:var(--surface)]"
       }`}
       style={
-        featured
+        ft
           ? {
-              borderColor: "rgba(38,166,91,.45)",
-              background:
-                "linear-gradient(135deg, rgba(38,166,91,.12), transparent 65%), var(--surface)",
-              boxShadow: "0 1px 0 0 rgba(38,166,91,.10) inset",
+              borderColor: ft.border,
+              background: ft.gradient,
+              boxShadow: ft.shadow,
             }
           : hero
           ? {
@@ -163,8 +183,8 @@ function Board({
       <div
         className="px-5 py-3 border-b border-[color:var(--hairline)] flex items-center justify-between"
         style={
-          featured
-            ? { borderColor: "rgba(38,166,91,.25)" }
+          ft
+            ? { borderColor: ft.hairline }
             : hero
             ? { borderColor: "rgba(234,67,53,.25)" }
             : undefined
@@ -172,12 +192,9 @@ function Board({
       >
         <span
           className={`text-[11.5px] font-bold tracking-[0.14em] uppercase ${
-            hero
-              ? "text-[color:var(--down)]"
-              : featured
-              ? "text-[color:var(--up)]"
-              : "text-[color:var(--text-2)]"
+            hero ? "text-[color:var(--down)]" : "text-[color:var(--text-2)]"
           }`}
+          style={ft ? { color: ft.title } : undefined}
         >
           {hero ? "★ " : ""}
           {title}
@@ -212,7 +229,13 @@ function Board({
               <span className="font-[family-name:var(--mono)] num text-[12px] text-[color:var(--text-3)] text-right">
                 {p.wins}-{p.losses}
               </span>
-              <span className="font-[family-name:var(--mono)] num text-[12px] text-[color:var(--text-3)] text-right max-sm:hidden">
+              <span
+                className={`font-[family-name:var(--mono)] num text-right max-sm:hidden ${
+                  playedOf && playedOf > 0
+                    ? "text-[13px] font-extrabold text-[color:var(--brand-ink)]"
+                    : "text-[12px] text-[color:var(--text-3)]"
+                }`}
+              >
                 {playedOf && playedOf > 0
                   ? `${Math.round((p.gamesPlayed / playedOf) * 100)}%`
                   : `${p.gamesPlayed} GP`}
