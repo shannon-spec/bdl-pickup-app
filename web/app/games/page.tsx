@@ -154,6 +154,10 @@ export default async function GamesPage({
     pct: number | null;
     streakType: "W" | "L" | null;
     streakCount: number;
+    bestWinStreak: number;
+    bestLossStreak: number;
+    avgWinMargin: number | null;
+    avgLossMargin: number | null;
   };
   let teamStats: { a: TeamStats; b: TeamStats; totalCompleted: number } | null = null;
   const distinctLeagues = new Set(rows.map((r) => r.leagueId).filter(Boolean));
@@ -164,36 +168,59 @@ export default async function GamesPage({
           (g.scoreA !== null && g.scoreB !== null) || g.winTeam !== null,
       )
       .sort((a, b) => (a.gameDate ?? "").localeCompare(b.gameDate ?? ""));
-    let aW = 0, aL = 0, bW = 0, bL = 0;
-    for (const g of completed) {
-      const w =
-        g.winTeam ??
-        (g.scoreA !== null && g.scoreB !== null
-          ? g.scoreA > g.scoreB ? "A" : g.scoreB > g.scoreA ? "B" : "Tie"
-          : null);
-      if (!w || w === "Tie") continue;
-      if (w === "A") { aW++; bL++; } else { bW++; aL++; }
-    }
-    const streak = (forSide: "A" | "B") => {
-      let type: "W" | "L" | null = null;
-      let count = 0;
-      for (let i = completed.length - 1; i >= 0; i--) {
-        const g = completed[i];
+    // Per-side accumulators for record, streaks (current + best), and
+    // average point margins. Margin uses scoreA/scoreB when present;
+    // games scored only via winTeam contribute to the record but not
+    // the differential.
+    const sideStats = (forSide: "A" | "B") => {
+      let wins = 0;
+      let losses = 0;
+      let curType: "W" | "L" | null = null;
+      let curCount = 0;
+      let bestWin = 0;
+      let bestLoss = 0;
+      let winMarginSum = 0;
+      let winMarginN = 0;
+      let lossMarginSum = 0;
+      let lossMarginN = 0;
+      for (const g of completed) {
         const w =
           g.winTeam ??
           (g.scoreA !== null && g.scoreB !== null
             ? g.scoreA > g.scoreB ? "A" : g.scoreB > g.scoreA ? "B" : "Tie"
             : null);
-        if (!w || w === "Tie") break;
+        if (!w || w === "Tie") continue;
         const won = w === forSide;
-        if (type === null) {
-          type = won ? "W" : "L";
-          count = 1;
-        } else if (type === (won ? "W" : "L")) count++;
-        else break;
+        if (won) wins++; else losses++;
+        if (curType === (won ? "W" : "L")) {
+          curCount++;
+        } else {
+          curType = won ? "W" : "L";
+          curCount = 1;
+        }
+        if (won) bestWin = Math.max(bestWin, curCount);
+        else bestLoss = Math.max(bestLoss, curCount);
+        if (g.scoreA !== null && g.scoreB !== null) {
+          const myScore = forSide === "A" ? g.scoreA : g.scoreB;
+          const oppScore = forSide === "A" ? g.scoreB : g.scoreA;
+          const margin = Math.abs(myScore - oppScore);
+          if (won) { winMarginSum += margin; winMarginN++; }
+          else { lossMarginSum += margin; lossMarginN++; }
+        }
       }
-      return { streakType: type, streakCount: count };
+      return {
+        wins,
+        losses,
+        streakType: curType,
+        streakCount: curCount,
+        bestWinStreak: bestWin,
+        bestLossStreak: bestLoss,
+        avgWinMargin: winMarginN > 0 ? winMarginSum / winMarginN : null,
+        avgLossMargin: lossMarginN > 0 ? lossMarginSum / lossMarginN : null,
+      };
     };
+    const a = sideStats("A");
+    const b = sideStats("B");
     const sample = completed[0] ?? rows[0];
     const aName = sample?.teamAName ?? "White";
     const bName = sample?.teamBName ?? "Dark";
@@ -201,17 +228,13 @@ export default async function GamesPage({
       totalCompleted: completed.length,
       a: {
         name: aName,
-        wins: aW,
-        losses: aL,
-        pct: aW + aL > 0 ? (aW / (aW + aL)) * 100 : null,
-        ...streak("A"),
+        pct: a.wins + a.losses > 0 ? (a.wins / (a.wins + a.losses)) * 100 : null,
+        ...a,
       },
       b: {
         name: bName,
-        wins: bW,
-        losses: bL,
-        pct: bW + bL > 0 ? (bW / (bW + bL)) * 100 : null,
-        ...streak("B"),
+        pct: b.wins + b.losses > 0 ? (b.wins / (b.wins + b.losses)) * 100 : null,
+        ...b,
       },
     };
   }
@@ -469,6 +492,10 @@ function TeamSeasonCard({
     pct: number | null;
     streakType: "W" | "L" | null;
     streakCount: number;
+    bestWinStreak: number;
+    bestLossStreak: number;
+    avgWinMargin: number | null;
+    avgLossMargin: number | null;
   };
   side: "A" | "B";
 }) {
@@ -482,6 +509,8 @@ function TeamSeasonCard({
       : t.streakType === "L"
         ? "text-[color:var(--down)]"
         : "text-[color:var(--text-3)]";
+  const fmtMargin = (m: number | null) =>
+    m === null ? "—" : m.toFixed(1);
   return (
     <section
       className="rounded-[16px] border border-[color:var(--hairline-2)] overflow-hidden"
@@ -535,6 +564,31 @@ function TeamSeasonCard({
               className={`font-[family-name:var(--mono)] num font-extrabold text-[20px] ${streakTone}`}
             >
               {t.streakType ? `${t.streakType}${t.streakCount}` : "—"}
+            </span>
+          </Stat>
+        </div>
+        <div
+          className="grid grid-cols-2 gap-x-3 gap-y-3 pt-3 border-t border-dashed"
+          style={{ borderColor: "var(--hairline)" }}
+        >
+          <Stat label="Win Streak (best)">
+            <span className="font-[family-name:var(--mono)] num font-extrabold text-[18px] text-[color:var(--up)]">
+              {t.bestWinStreak > 0 ? `W${t.bestWinStreak}` : "—"}
+            </span>
+          </Stat>
+          <Stat label="Loss Streak (best)">
+            <span className="font-[family-name:var(--mono)] num font-extrabold text-[18px] text-[color:var(--down)]">
+              {t.bestLossStreak > 0 ? `L${t.bestLossStreak}` : "—"}
+            </span>
+          </Stat>
+          <Stat label="Avg Margin · Wins">
+            <span className="font-[family-name:var(--mono)] num font-extrabold text-[18px] text-[color:var(--up)]">
+              {t.avgWinMargin === null ? "—" : `+${fmtMargin(t.avgWinMargin)}`}
+            </span>
+          </Stat>
+          <Stat label="Avg Margin · Losses">
+            <span className="font-[family-name:var(--mono)] num font-extrabold text-[18px] text-[color:var(--down)]">
+              {t.avgLossMargin === null ? "—" : `−${fmtMargin(t.avgLossMargin)}`}
             </span>
           </Stat>
         </div>
