@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 type NavItem = { label: string; href: string; views: View[] };
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "My League", href: "/", views: ["player", "commissioner", "admin"] },
+  { label: "My League", href: "/", views: ["player", "commissioner"] },
   { label: "Leagues", href: "/leagues", views: ["commissioner", "admin"] },
   { label: "Games", href: "/games", views: ["player", "commissioner", "admin"] },
   { label: "Players", href: "/players", views: ["player", "commissioner", "admin"] },
