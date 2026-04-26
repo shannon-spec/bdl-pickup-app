@@ -29,7 +29,6 @@ export default async function LeaderboardPage({
     <>
       <TopBar
         active="/leaderboard"
-        userInitials={session.username.slice(0, 2).toUpperCase()}
       />
       <PageFrame>
         <ContextHeader />

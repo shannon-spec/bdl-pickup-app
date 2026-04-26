@@ -241,7 +241,7 @@ export default async function GamesPage({
 
   return (
     <>
-      <TopBar active="/games" userInitials={session.username.slice(0, 2).toUpperCase()} />
+      <TopBar active="/games" />
       <PageFrame>
         <ContextHeader />
         {caps.canManage && (

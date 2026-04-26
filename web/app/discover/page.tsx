@@ -37,7 +37,6 @@ export default async function DiscoverPage() {
     <>
       <TopBar
         active="/discover"
-        userInitials={session?.username?.slice(0, 2).toUpperCase() ?? ""}
       />
       <PageFrame>
         <ContextHeader />

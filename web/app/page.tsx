@@ -46,8 +46,6 @@ const fmtTime = (timeStr: string | null) => {
   const hr = Number(h);
   return `${hr % 12 || 12}:${m} ${hr >= 12 ? "PM" : "AM"}`;
 };
-const initialsOf = (firstName: string | undefined, lastName: string | undefined) =>
-  `${(firstName ?? "?")[0] ?? ""}${(lastName ?? "")[0] ?? ""}`.toUpperCase();
 
 export default async function Home() {
   const session = await readSession();
@@ -59,15 +57,10 @@ export default async function Home() {
     (await getFirstRosterPlayer());
   const isPreview = !session?.playerId;
 
-  const userInitials = initialsOf(
-    session?.username?.toUpperCase().slice(0, 1),
-    session?.username?.toUpperCase().slice(1, 2),
-  );
-
   if (!me) {
     return (
       <>
-        <TopBar active="/" userInitials={userInitials} />
+        <TopBar active="/" />
         <PageFrame>
           <EmptyCard
             title="No roster yet"
@@ -87,7 +80,7 @@ export default async function Home() {
   if (!currentLeague) {
     return (
       <>
-        <TopBar active="/" userInitials={userInitials} />
+        <TopBar active="/" />
         <PageFrame>
           <EmptyCard
             title="No league yet"
@@ -126,7 +119,7 @@ export default async function Home() {
 
   return (
     <>
-      <TopBar active="/" userInitials={userInitials} />
+      <TopBar active="/" />
       <PageFrame>
         {isPreview && (
           <div className="text-[12px] rounded-[10px] border border-[color:var(--hairline-2)] bg-[color:var(--surface-2)] px-3.5 py-2.5 text-[color:var(--text-3)]">

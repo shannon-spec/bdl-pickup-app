@@ -32,7 +32,7 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <TopBar active="/settings" userInitials={session.username.slice(0, 2).toUpperCase()} />
+      <TopBar active="/settings" />
       <PageFrame>
         <ContextHeader />
         <SectionHead

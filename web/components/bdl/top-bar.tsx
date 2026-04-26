@@ -23,10 +23,8 @@ const NAV_ITEMS: NavItem[] = [
 
 export async function TopBar({
   active = "/",
-  userInitials = "ST",
 }: {
   active?: string;
-  userInitials?: string;
 }) {
   const session = await readSession();
   const caps = await getViewCaps(session);
@@ -111,40 +109,21 @@ export async function TopBar({
             />
           </button>
           {isSignedIn ? (
-            <>
-              <form action={signOut}>
-                <button
-                  type="submit"
-                  aria-label="Sign out"
-                  className={cn(
-                    "relative inline-flex items-center justify-center",
-                    "w-[34px] h-[34px] rounded-[var(--r-lg)]",
-                    "border border-[color:var(--hairline-2)] bg-[color:var(--surface)]",
-                    "text-[color:var(--text-2)] hover:text-[color:var(--text)]",
-                    "transition-colors",
-                  )}
-                >
-                  <LogOut size={16} />
-                </button>
-              </form>
+            <form action={signOut}>
               <button
-                type="button"
-                aria-label="Account menu"
+                type="submit"
+                aria-label="Sign out"
                 className={cn(
-                  "inline-flex items-center gap-2 rounded-full h-[38px] pr-3 pl-1",
+                  "relative inline-flex items-center justify-center",
+                  "w-[34px] h-[34px] rounded-[var(--r-lg)]",
                   "border border-[color:var(--hairline-2)] bg-[color:var(--surface)]",
-                  "hover:border-[color:var(--text-4)] transition-colors",
+                  "text-[color:var(--text-2)] hover:text-[color:var(--text)]",
+                  "transition-colors",
                 )}
               >
-                <span
-                  aria-hidden
-                  className="inline-flex items-center justify-center w-[28px] h-[28px] rounded-full text-white font-extrabold text-[11px]"
-                  style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-2))" }}
-                >
-                  {userInitials}
-                </span>
+                <LogOut size={16} />
               </button>
-            </>
+            </form>
           ) : (
             <Link
               href="/login"

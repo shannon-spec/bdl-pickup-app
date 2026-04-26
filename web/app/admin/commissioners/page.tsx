@@ -76,7 +76,6 @@ export default async function CommissionersAdminPage() {
     <>
       <TopBar
         active="/admin"
-        userInitials={session.username.slice(0, 2).toUpperCase()}
       />
       <PageFrame>
         <ContextHeader />

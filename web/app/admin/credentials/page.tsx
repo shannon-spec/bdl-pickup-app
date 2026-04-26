@@ -32,7 +32,6 @@ export default async function CredentialsPage() {
     <>
       <TopBar
         active="/admin"
-        userInitials={session.username.slice(0, 2).toUpperCase()}
       />
       <PageFrame>
         <ContextHeader />

@@ -93,7 +93,6 @@ export default async function AdminPage() {
     <>
       <TopBar
         active="/admin"
-        userInitials={session.username.slice(0, 2).toUpperCase()}
       />
       <PageFrame>
         <ContextHeader />

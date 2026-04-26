@@ -37,7 +37,7 @@ export default async function LeagueDetailPage({
 
   return (
     <>
-      <TopBar active="/leagues" userInitials={session.username.slice(0, 2).toUpperCase()} />
+      <TopBar active="/leagues" />
       <PageFrame>
         <ContextHeader />
         <div className="flex items-center gap-4 max-sm:flex-col max-sm:items-start">

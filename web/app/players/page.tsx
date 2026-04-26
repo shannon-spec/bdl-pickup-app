@@ -71,11 +71,9 @@ export default async function PlayersPage({
           .orderBy(asc(leaguesTbl.name))
       : [];
 
-  const userInitials = session.username.slice(0, 2).toUpperCase();
-
   return (
     <>
-      <TopBar active="/players" userInitials={userInitials} />
+      <TopBar active="/players" />
       <PageFrame>
         <ContextHeader />
 

@@ -36,7 +36,7 @@ export default async function LeaguesPage() {
 
   return (
     <>
-      <TopBar active="/leagues" userInitials={session.username.slice(0, 2).toUpperCase()} />
+      <TopBar active="/leagues" />
       <PageFrame>
         <ContextHeader />
         <LeaguesPageClient canCreate={caps.canManage}>

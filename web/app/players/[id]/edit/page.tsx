@@ -32,7 +32,6 @@ export default async function EditPlayerPage({
     <>
       <TopBar
         active="/players"
-        userInitials={session.username.slice(0, 2).toUpperCase()}
       />
       <PageFrame>
         <ContextHeader />

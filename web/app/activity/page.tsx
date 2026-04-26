@@ -76,7 +76,6 @@ export default async function ActivityPage() {
     <>
       <TopBar
         active="/activity"
-        userInitials={session.username.slice(0, 2).toUpperCase()}
       />
       <PageFrame>
         <ContextHeader />

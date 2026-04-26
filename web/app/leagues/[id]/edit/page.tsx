@@ -34,7 +34,6 @@ export default async function EditLeaguePage({
     <>
       <TopBar
         active="/leagues"
-        userInitials={session.username.slice(0, 2).toUpperCase()}
       />
       <PageFrame>
         <ContextHeader />
