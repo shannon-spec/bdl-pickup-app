@@ -91,8 +91,8 @@ export async function TopBar({
           <ThemeToggle />
           {showSettings && (
             <Link
-              href="/settings"
-              aria-label="Settings"
+              href="/admin"
+              aria-label="Admin"
               className="relative inline-flex items-center justify-center w-[34px] h-[34px] rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[color:var(--text-2)] hover:text-[color:var(--text)] transition-colors"
             >
               <Settings size={16} />
