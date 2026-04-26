@@ -2,8 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
-import { canManageGame } from "@/lib/auth/perms";
-import { getViewCaps } from "@/lib/auth/view";
+import { canManageGame, canViewGame } from "@/lib/auth/perms";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
@@ -44,10 +43,9 @@ export default async function GameDetailPage({
   const session = await readSession();
   if (!session) redirect("/login");
   const { id } = await params;
-  const allowed = await canManageGame(session, id);
-  if (!allowed) redirect("/games");
-  const caps = await getViewCaps(session);
-  if (!caps.canManage) redirect("/");
+  const canView = await canViewGame(session, id);
+  if (!canView) redirect("/games");
+  const canEdit = await canManageGame(session, id);
 
   const detail = await getGameDetail(id);
   if (!detail) notFound();
@@ -149,30 +147,34 @@ export default async function GameDetailPage({
             </div>
           )}
 
-          <GameScore detail={detail} />
+          {canEdit && <GameScore detail={detail} />}
         </div>
 
-        <GameMetaEditor detail={detail} />
+        {canEdit && <GameMetaEditor detail={detail} />}
 
         <SectionHead title={`${game.teamAName ?? "White"} (${detail.rosterA.length})`} />
-        <RosterPanel detail={detail} side="A" />
+        <RosterPanel detail={detail} side="A" canEdit={canEdit} />
 
         <SectionHead title={`${game.teamBName ?? "Dark"} (${detail.rosterB.length})`} />
-        <RosterPanel detail={detail} side="B" />
+        <RosterPanel detail={detail} side="B" canEdit={canEdit} />
 
         <SectionHead title={`Invited (${detail.invited.length})`} />
-        <RosterPanel detail={detail} side="invited" />
+        <RosterPanel detail={detail} side="invited" canEdit={canEdit} />
 
-        <AddRoster
-          gameId={game.id}
-          eligible={detail.eligible}
-          allLeagues={detail.allLeagues}
-          currentLeagueId={game.leagueId ?? null}
-          teamAName={game.teamAName ?? "White"}
-          teamBName={game.teamBName ?? "Dark"}
-        />
+        {canEdit && (
+          <>
+            <AddRoster
+              gameId={game.id}
+              eligible={detail.eligible}
+              allLeagues={detail.allLeagues}
+              currentLeagueId={game.leagueId ?? null}
+              teamAName={game.teamAName ?? "White"}
+              teamBName={game.teamBName ?? "Dark"}
+            />
 
-        <DangerZone gameId={game.id} />
+            <DangerZone gameId={game.id} />
+          </>
+        )}
       </PageFrame>
       <MobileBottomBar active="home" />
     </>
@@ -182,9 +184,11 @@ export default async function GameDetailPage({
 function RosterPanel({
   detail,
   side,
+  canEdit,
 }: {
   detail: NonNullable<Awaited<ReturnType<typeof getGameDetail>>>;
   side: "A" | "B" | "invited";
+  canEdit: boolean;
 }) {
   const list =
     side === "A" ? detail.rosterA : side === "B" ? detail.rosterB : detail.invited;
@@ -194,6 +198,15 @@ function RosterPanel({
         <div className="px-5 py-6 text-center text-[color:var(--text-3)] text-[13px]">
           No players.
         </div>
+      ) : !canEdit ? (
+        list.map((p) => (
+          <div
+            key={p.id}
+            className="px-5 py-3 border-t border-[color:var(--hairline)] first:border-t-0 text-[14px] text-[color:var(--text)]"
+          >
+            {p.firstName} {p.lastName}
+          </div>
+        ))
       ) : (
         list.map((p) => (
           <RosterRow

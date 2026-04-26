@@ -80,6 +80,33 @@ export async function canManageGame(
   return isCommissionerOf(s, g.leagueId);
 }
 
+/** True for admin-like OR any member (player/commissioner) of the game's league. */
+export async function canViewGame(
+  s: Session | null,
+  gameId: string,
+): Promise<boolean> {
+  if (isAdminLike(s)) return true;
+  if (!s || !s.playerId) return false;
+  const [g] = await db
+    .select({ leagueId: games.leagueId })
+    .from(games)
+    .where(eq(games.id, gameId))
+    .limit(1);
+  if (!g?.leagueId) return false;
+  if (await isCommissionerOf(s, g.leagueId)) return true;
+  const [member] = await db
+    .select({ playerId: leaguePlayers.playerId })
+    .from(leaguePlayers)
+    .where(
+      and(
+        eq(leaguePlayers.leagueId, g.leagueId),
+        eq(leaguePlayers.playerId, s.playerId),
+      ),
+    )
+    .limit(1);
+  return !!member;
+}
+
 /* ---------- Throwing variants for server actions ---------- */
 
 export async function requireLeagueManager(leagueId: string): Promise<Session> {
