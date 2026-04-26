@@ -48,19 +48,27 @@ export default async function GamesPage({
   }>;
 }) {
   const session = await readSession();
-  if (!session) redirect("/discover");
   const caps = await getViewCaps(session);
   const isAdmin = isAdminLike(session);
-  // Lens-driven scoping: in commissioner view, even a super admin sees
-  // only the leagues they actually commission. Real admin view = all.
-  // In player view, scope to leagues the viewer is a member of.
-  const useAdminScope = caps.view === "admin" && isAdmin;
+  // Lens-driven scoping:
+  //   - admin lens (real admin) → all leagues
+  //   - commissioner lens → leagues they commission
+  //   - player lens → leagues they're a member of
+  //   - guest (no session) → all leagues, read-only
+  const useAdminScope =
+    !session || (caps.view === "admin" && isAdmin);
   const scopedLeagueIds = useAdminScope
     ? null
     : caps.view === "commissioner"
-      ? await getMyCommissionerLeagueIds(session)
-      : await getMyMemberLeagueIds(session);
-  if (!useAdminScope && (!scopedLeagueIds || scopedLeagueIds.length === 0)) {
+      ? await getMyCommissionerLeagueIds(session!)
+      : await getMyMemberLeagueIds(session!);
+  // A signed-in player with no league memberships still has a home,
+  // so kick them there. Guests + admins fall through.
+  if (
+    session &&
+    !useAdminScope &&
+    (!scopedLeagueIds || scopedLeagueIds.length === 0)
+  ) {
     redirect("/");
   }
 

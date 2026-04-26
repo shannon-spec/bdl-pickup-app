@@ -1,7 +1,5 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { desc } from "drizzle-orm";
-import { readSession } from "@/lib/auth/session";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
@@ -21,9 +19,6 @@ const fmtDate = (d: string | null) => {
 };
 
 export default async function ActivityPage() {
-  const session = await readSession();
-  if (!session) redirect("/discover");
-
   const all = await db.select().from(games).orderBy(desc(games.gameDate));
 
   const events: { gameId: string; date: string; type: "result" | "scheduled"; text: string; winner?: string }[] = [];

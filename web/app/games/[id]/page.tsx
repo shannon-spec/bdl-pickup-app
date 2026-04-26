@@ -48,15 +48,22 @@ export default async function GameDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const session = await readSession();
-  if (!session) redirect("/discover");
   const { id } = await params;
-  const canView = await canViewGame(session, id);
-  if (!canView) redirect("/games");
+  // Signed-in users still go through the league-membership gate so a
+  // private league's games stay scoped to its members. Guests get a
+  // read-only view of everything (same surface as /discover).
+  if (session) {
+    const canView = await canViewGame(session, id);
+    if (!canView) redirect("/games");
+  }
   // Gate editing on BOTH the underlying perm AND the active view —
   // an admin in "player" lens shouldn't see Edit / Add controls,
   // since the action gate (requireManageView) would reject anyway.
   const caps = await getViewCaps(session);
-  const canEdit = caps.canManage && (await canManageGame(session, id));
+  const canEdit =
+    !!session &&
+    caps.canManage &&
+    (await canManageGame(session, id));
 
   const detail = await getGameDetail(id);
   if (!detail) notFound();

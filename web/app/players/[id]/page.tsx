@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { ArrowLeft, ChevronUp } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
 import { getViewCaps } from "@/lib/auth/view";
@@ -33,7 +33,6 @@ export default async function PlayerProfilePage({
   params: Promise<{ id: string }>;
 }) {
   const session = await readSession();
-  if (!session) redirect("/discover");
 
   const { id } = await params;
   const profile = await getPlayerProfile(id);
@@ -41,13 +40,16 @@ export default async function PlayerProfilePage({
 
   const { player } = profile;
   const initials = `${player.firstName[0] ?? ""}${player.lastName[0] ?? ""}`.toUpperCase();
-  const isMe = session.playerId === player.id;
+  const isMe = session?.playerId === player.id;
   const caps = await getViewCaps(session);
   const canEdit = caps.view === "admin";
   // Looking at your own profile: always see your own contact info.
+  // Guests get "none" — the contact card hides itself entirely.
   const contactAccess: ContactAccess = isMe
     ? "all"
-    : await getPlayerContactAccess(session, player.id, caps.view);
+    : session
+    ? await getPlayerContactAccess(session, player.id, caps.view)
+    : "none";
 
   return (
     <>

@@ -1,6 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { readSession } from "@/lib/auth/session";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
@@ -16,9 +14,6 @@ export default async function LeaderboardPage({
 }: {
   searchParams: Promise<{ league?: string; year?: string }>;
 }) {
-  const session = await readSession();
-  if (!session) redirect("/discover");
-
   const sp = await searchParams;
   const data = await getLeaderboard({
     leagueId: sp.league || null,

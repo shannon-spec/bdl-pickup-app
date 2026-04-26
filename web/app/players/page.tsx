@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { readSession } from "@/lib/auth/session";
 import {
   getMyMemberLeagueIds,
@@ -29,16 +28,20 @@ export default async function PlayersPage({
   searchParams: Promise<{ scope?: Scope }>;
 }) {
   const session = await readSession();
-  if (!session) redirect("/discover");
   const caps = await getViewCaps(session);
 
   const sp = await searchParams;
-  const scope: Scope = sp.scope === "all" ? "all" : "league";
+  // Guests have no leagues so the league-scoped tab would always be
+  // empty — fall through to the universe scope.
+  const scope: Scope =
+    sp.scope === "all" || !session ? "all" : "league";
 
-  const [memberIds, commishIds] = await Promise.all([
-    getMyMemberLeagueIds(session),
-    getMyCommissionerLeagueIds(session),
-  ]);
+  const [memberIds, commishIds] = session
+    ? await Promise.all([
+        getMyMemberLeagueIds(session),
+        getMyCommissionerLeagueIds(session),
+      ])
+    : [[] as string[], [] as string[]];
   const viewerLeagueIds = Array.from(new Set([...memberIds, ...commishIds]));
 
   // Add Player vs Invite Player split:

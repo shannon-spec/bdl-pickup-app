@@ -7,10 +7,16 @@ import { readSession } from "@/lib/auth/session";
 import { getViewCaps, type View } from "@/lib/auth/view";
 import { cn } from "@/lib/utils";
 
-type NavItem = { label: string; href: string; views: View[] };
+type NavItem = {
+  label: string;
+  href: string;
+  views: View[];
+  /** Hide from guests (no session). Profile-oriented surfaces. */
+  signedInOnly?: boolean;
+};
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "My League", href: "/", views: ["player", "commissioner"] },
+  { label: "My League", href: "/", views: ["player", "commissioner"], signedInOnly: true },
   { label: "Leagues", href: "/leagues", views: ["commissioner", "admin"] },
   { label: "Games", href: "/games", views: ["player", "commissioner", "admin"] },
   { label: "Players", href: "/players", views: ["player", "commissioner", "admin"] },
@@ -30,9 +36,11 @@ export async function TopBar({
   const caps = await getViewCaps(session);
   const view = caps.view;
 
-  const visibleNav = NAV_ITEMS.filter((item) => item.views.includes(view));
-  const showSettings = view === "admin";
   const isSignedIn = !!session;
+  const visibleNav = NAV_ITEMS.filter(
+    (item) => item.views.includes(view) && (isSignedIn || !item.signedInOnly),
+  );
+  const showSettings = view === "admin";
 
   return (
     <header
