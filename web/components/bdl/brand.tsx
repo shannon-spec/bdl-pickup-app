@@ -1,29 +1,57 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
+const LOCKUP_RATIO = 1000 / 340; // aspect ratio of bdl-lockup-*.png
+
 /**
- * The BDL basketball mark + wordmark. Larger than standard on purpose —
- * it's the first point of visual gravity in the top bar.
+ * Full BDL lockup (basketball mark + "BDL · BALL DON'T LIE" wordmark).
+ * Theme-aware: the dark-mode artwork is hidden in light mode and vice
+ * versa via the `dark:` Tailwind variant (mapped to `[data-theme="dark"]`
+ * in globals.css).
  */
-export function Brand({ className, showSub = true }: { className?: string; showSub?: boolean }) {
+export function Brand({
+  className,
+  height = 34,
+}: {
+  className?: string;
+  /** Rendered height in px. Width derives from the lockup aspect ratio. */
+  height?: number;
+}) {
+  const width = Math.round(height * LOCKUP_RATIO);
   return (
-    <div className={cn("flex items-center gap-3 min-w-0", className)}>
-      <BrandMark size={34} />
-      <div className="flex flex-col leading-none min-w-0">
-        <span className="font-extrabold text-[20px] tracking-[-0.03em] text-[color:var(--text)]">
-          B<span style={{ color: "#E87722" }}>D</span>L
-        </span>
-        {showSub && (
-          <span className="mt-1.5 text-[10.5px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)] whitespace-nowrap">
-            Ball Don't Lie
-          </span>
-        )}
-      </div>
+    <div
+      className={cn("flex items-center min-w-0", className)}
+      style={{ height }}
+    >
+      <Image
+        src="/bdl-lockup-light.png"
+        alt="BDL · Ball Don't Lie"
+        width={width}
+        height={height}
+        priority
+        className="block dark:hidden flex-shrink-0"
+        style={{ height, width: "auto" }}
+      />
+      <Image
+        src="/bdl-lockup-dark.png"
+        alt="BDL · Ball Don't Lie"
+        width={width}
+        height={height}
+        priority
+        className="hidden dark:block flex-shrink-0"
+        style={{ height, width: "auto" }}
+      />
     </div>
   );
 }
 
-export function BrandMark({ size = 34, className }: { size?: number; className?: string }) {
+export function BrandMark({
+  size = 34,
+  className,
+}: {
+  size?: number;
+  className?: string;
+}) {
   return (
     <Image
       src="/bdl-mark.svg"
