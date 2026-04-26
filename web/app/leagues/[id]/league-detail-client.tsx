@@ -13,7 +13,6 @@ import {
   removeLeaguePlayer,
 } from "@/lib/actions/leagues";
 import { createInvite, deleteInvite } from "@/lib/actions/invites";
-import { LeagueSheet } from "../league-sheet";
 import { Pill } from "@/components/bdl/pill";
 
 type PlayerLite = { id: string; firstName: string; lastName: string };
@@ -44,7 +43,6 @@ export function LeagueDetailClient({
   isAdmin: boolean;
 }) {
   const router = useRouter();
-  const [editOpen, setEditOpen] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -61,13 +59,12 @@ export function LeagueDetailClient({
   return (
     <>
       <div className="flex items-center justify-end gap-2 -mt-2">
-        <button
-          type="button"
-          onClick={() => setEditOpen(true)}
+        <Link
+          href={`/leagues/${detail.league.id}/edit`}
           className="inline-flex items-center gap-2 h-9 px-3 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[12px] font-medium hover:bg-[color:var(--surface-2)]"
         >
           <Pencil size={14} /> Edit
-        </button>
+        </Link>
         {isAdmin && (
           <button
             type="button"
@@ -78,15 +75,6 @@ export function LeagueDetailClient({
           </button>
         )}
       </div>
-
-      <LeagueSheet
-        mode={editOpen ? { kind: "edit", row: detail.league } : { kind: "closed" }}
-        onClose={() => setEditOpen(false)}
-        onSaved={() => {
-          setEditOpen(false);
-          router.refresh();
-        }}
-      />
 
       {confirmDel && (
         <div
