@@ -6,6 +6,7 @@ import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { readSession } from "@/lib/auth/session";
 import { db, players } from "@/lib/db";
+import { AvatarUploader } from "@/components/bdl/avatar-uploader";
 import { ChangePasswordForm } from "./change-password-form";
 
 export const dynamic = "force-dynamic";
@@ -27,12 +28,15 @@ export default async function AccountPage() {
       username: players.username,
       email: players.email,
       hasPassword: players.passwordHash,
+      avatarUrl: players.avatarUrl,
     })
     .from(players)
     .where(eq(players.id, session.playerId))
     .limit(1);
 
   if (!me) redirect("/");
+
+  const initials = `${me.firstName[0] ?? ""}${me.lastName[0] ?? ""}`.toUpperCase();
 
   return (
     <>
@@ -52,6 +56,15 @@ export default async function AccountPage() {
             {me.username ? `@${me.username}` : "No username set"}
             {me.email ? ` · ${me.email}` : ""}
           </div>
+        </div>
+
+        <SectionHead title="Headshot" />
+        <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6">
+          <AvatarUploader
+            playerId={me.id}
+            currentUrl={me.avatarUrl}
+            initials={initials}
+          />
         </div>
 
         <SectionHead title="Change password" />

@@ -96,6 +96,8 @@ export const players = pgTable(
     cellPrivate: boolean("cell_private").notNull().default(false),
     emailPrivate: boolean("email_private").notNull().default(false),
     addressPrivate: boolean("address_private").notNull().default(false),
+    // Public-blob URL for the player's headshot. Null = render initials.
+    avatarUrl: text("avatar_url"),
     // Optional player-side credentials. Players without these can only
     // be reached via invite link or admin impersonation. Username stored
     // lowercased for case-insensitive lookup.

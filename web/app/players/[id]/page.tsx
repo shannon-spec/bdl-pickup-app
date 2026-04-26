@@ -12,6 +12,7 @@ import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
+import { PlayerAvatar } from "@/components/bdl/player-avatar";
 import { StatBlock, StatRow } from "@/components/bdl/stat-block";
 import { getPlayerProfile } from "@/lib/queries/player-profile";
 import { EditPlayerButton } from "./edit-button";
@@ -66,12 +67,7 @@ export default async function PlayerProfilePage({
         </Link>
 
         <div className="flex items-start gap-4 max-sm:flex-col max-sm:items-start">
-          <span
-            className="inline-flex items-center justify-center w-16 h-16 rounded-full text-white font-extrabold text-[20px] flex-shrink-0"
-            style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-2))" }}
-          >
-            {initials}
-          </span>
+          <PlayerAvatar url={player.avatarUrl} initials={initials} size={64} />
           <div className="flex-1 min-w-0">
             <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)] flex items-center gap-2">
               Player Profile
