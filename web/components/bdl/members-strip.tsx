@@ -20,13 +20,12 @@ import { MembersAdminControls } from "./members-admin-controls";
  */
 export async function MembersStrip({ leagueId }: { leagueId?: string }) {
   const session = await readSession();
-  if (!session) return null;
   const id = leagueId ?? (await getActiveLeagueId());
   if (!id) return null;
   const members = await getLeagueMembers(id, session);
   if (!members) return null;
   const caps = await getViewCaps(session);
-  const hasPerms = await canManageLeague(session, id);
+  const hasPerms = !!session && (await canManageLeague(session, id));
   const showAdminControls = caps.canManage && hasPerms;
   const eligible = showAdminControls ? await getEligibleNonMembers(id) : [];
 

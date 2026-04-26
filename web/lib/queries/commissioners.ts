@@ -1,9 +1,8 @@
-import { and, asc, eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import {
   db,
   players,
   leagueCommissioners,
-  leaguePlayers,
 } from "@/lib/db";
 import type { Session } from "@/lib/auth/session";
 
@@ -18,47 +17,15 @@ export type CommissionerContact = {
 };
 
 /**
- * Returns the commissioners for a league with contact info.
- *
- * Visibility: only league members (players in league_players),
- * commissioners themselves, and admins can see the strip. Anyone else
- * gets `null` so the caller can render nothing.
+ * Returns the commissioner roster for a league with contact info.
+ * Names are public; contact-info visibility is enforced by the caller
+ * via `getLeagueContactAccess` (admin/member/commissioner-only).
  */
 export async function getLeagueCommissionerContacts(
   leagueId: string,
-  viewer: Session | null,
+  _viewer: Session | null,
 ): Promise<CommissionerContact[] | null> {
-  if (!viewer) return null;
-  const isAdmin = viewer.role === "owner" || viewer.role === "super_admin";
-
-  if (!isAdmin) {
-    // viewer must be in the league (member or commissioner)
-    if (!viewer.playerId) return null;
-    const [memberRow] = await db
-      .select({ x: leaguePlayers.playerId })
-      .from(leaguePlayers)
-      .where(
-        and(
-          eq(leaguePlayers.leagueId, leagueId),
-          eq(leaguePlayers.playerId, viewer.playerId),
-        ),
-      )
-      .limit(1);
-    const [commishRow] = memberRow
-      ? [null]
-      : await db
-          .select({ x: leagueCommissioners.playerId })
-          .from(leagueCommissioners)
-          .where(
-            and(
-              eq(leagueCommissioners.leagueId, leagueId),
-              eq(leagueCommissioners.playerId, viewer.playerId),
-            ),
-          )
-          .limit(1);
-    if (!memberRow && !commishRow) return null;
-  }
-
+  void _viewer;
   const rows = await db
     .select({
       id: players.id,

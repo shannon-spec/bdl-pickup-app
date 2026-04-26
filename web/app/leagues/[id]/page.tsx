@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { readSession } from "@/lib/auth/session";
 import { canManageLeague } from "@/lib/auth/perms";
 import { getViewCaps } from "@/lib/auth/view";
@@ -21,19 +21,16 @@ export default async function LeagueDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const session = await readSession();
-  if (!session) redirect("/discover");
-
   const { id } = await params;
-  const canManage = await canManageLeague(session, id);
-  if (!canManage) redirect("/leagues");
-  const caps = await getViewCaps(session);
-  if (!caps.canManage) redirect("/");
-
-  const isAdmin = caps.view === "admin";
   const detail = await getLeagueDetail(id);
   if (!detail) notFound();
-  const pendingInvites = await getInvitesForLeague(id);
+
+  const session = await readSession();
+  const caps = await getViewCaps(session);
+  const canManage =
+    !!session && caps.canManage && (await canManageLeague(session, id));
+  const isAdmin = caps.view === "admin";
+  const pendingInvites = canManage ? await getInvitesForLeague(id) : [];
 
   return (
     <>
@@ -70,24 +67,28 @@ export default async function LeagueDetailPage({
           </div>
         </div>
 
-        <LeagueDetailClient detail={detail} isAdmin={isAdmin} />
+        {canManage && <LeagueDetailClient detail={detail} isAdmin={isAdmin} />}
 
         <CommissionerStrip leagueId={detail.league.id} />
         <MembersStrip leagueId={detail.league.id} />
 
-        <SectionHead title="Invites" count={<span>{pendingInvites.length}</span>} />
-        <Invites
-          leagueId={detail.league.id}
-          invites={pendingInvites.map((i) => ({
-            id: i.id,
-            firstName: i.firstName,
-            lastName: i.lastName,
-            email: i.email,
-            cell: i.cell,
-            status: i.status,
-            createdAt: i.createdAt.toISOString(),
-          }))}
-        />
+        {canManage && (
+          <>
+            <SectionHead title="Invites" count={<span>{pendingInvites.length}</span>} />
+            <Invites
+              leagueId={detail.league.id}
+              invites={pendingInvites.map((i) => ({
+                id: i.id,
+                firstName: i.firstName,
+                lastName: i.lastName,
+                email: i.email,
+                cell: i.cell,
+                status: i.status,
+                createdAt: i.createdAt.toISOString(),
+              }))}
+            />
+          </>
+        )}
       </PageFrame>
       <MobileBottomBar active="home" />
     </>

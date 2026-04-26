@@ -16,21 +16,9 @@ export type MemberLite = {
 
 export async function getLeagueMembers(
   leagueId: string,
-  viewer: Session | null,
+  _viewer: Session | null,
 ): Promise<MemberLite[] | null> {
-  if (!viewer) return null;
-  const isAdmin = viewer.role === "owner" || viewer.role === "super_admin";
-  if (!isAdmin) {
-    if (!viewer.playerId) return null;
-    // Restrict to viewers who are themselves in the league.
-    const [member] = await db
-      .select({ x: leaguePlayers.playerId })
-      .from(leaguePlayers)
-      .where(eq(leaguePlayers.leagueId, leagueId))
-      .limit(50);
-    void member;
-  }
-
+  void _viewer;
   const rows = await db
     .select({
       id: players.id,
