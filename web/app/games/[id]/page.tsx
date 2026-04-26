@@ -16,7 +16,7 @@ import { PctPill } from "@/components/bdl/pct-pill";
 import {
   getGameDetail,
   getPlayerWinPctsForLeague,
-  getLeagueLastFiveOdds,
+  getMatchupOdds,
 } from "@/lib/queries/games";
 import {
   GameScore,
@@ -72,21 +72,23 @@ export default async function GameDetailPage({
   const completed =
     (game.scoreA !== null && game.scoreB !== null) || game.winTeam !== null;
 
-  // Per-player career win % within this league + team odds for the
-  // upcoming-game probability bar. Only fetched when the game has a
-  // league and (for odds) is still upcoming — saves a roundtrip on
-  // completed games where the bar would be redundant with the score.
+  // Per-player career win % within this league + blended matchup odds
+  // for the upcoming-game probability bar. Only fetched when the game
+  // has a league and (for odds) is still upcoming — saves a roundtrip
+  // on completed games where the bar would be redundant with the score.
   const rosterIds = [
     ...detail.rosterA,
     ...detail.rosterB,
     ...detail.invited,
   ].map((p) => p.id);
-  const [winPcts, teamOdds] = await Promise.all([
+  const rosterAIds = detail.rosterA.map((p) => p.id);
+  const rosterBIds = detail.rosterB.map((p) => p.id);
+  const [winPcts, matchupOdds] = await Promise.all([
     game.leagueId && rosterIds.length > 0
       ? getPlayerWinPctsForLeague(game.leagueId, rosterIds)
       : Promise.resolve(new Map<string, { wins: number; losses: number; pct: number | null }>()),
     !completed && game.leagueId
-      ? getLeagueLastFiveOdds(game.leagueId)
+      ? getMatchupOdds(game.leagueId, rosterAIds, rosterBIds)
       : Promise.resolve(null),
   ]);
 
@@ -183,16 +185,20 @@ export default async function GameDetailPage({
             </div>
           )}
 
-          {!completed && teamOdds && (
+          {!completed && matchupOdds && (
             <div className="mt-1 mb-4">
               <ProbabilityBar
                 aLabel={game.teamAName ?? "White"}
                 bLabel={game.teamBName ?? "Dark"}
-                a={teamOdds.probA}
-                b={teamOdds.probB}
+                a={matchupOdds.probA}
+                b={matchupOdds.probB}
               />
               <div className="text-[10.5px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)] mt-1.5 text-center">
-                Last-5 odds · {game.leagueName ?? ""}
+                {matchupOdds.basis === "blend"
+                  ? `Matchup odds · last ${matchupOdds.sample.teamGames} + roster`
+                  : matchupOdds.basis === "roster"
+                    ? "Matchup odds · roster only"
+                    : `Matchup odds · last ${matchupOdds.sample.teamGames} games`}
               </div>
             </div>
           )}

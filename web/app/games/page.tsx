@@ -17,7 +17,11 @@ import { Pill } from "@/components/bdl/pill";
 import { TeamBadge } from "@/components/bdl/team-badge";
 import { ProbabilityBar } from "@/components/bdl/probability-bar";
 import { GamesListClient } from "./games-list-client";
-import { getGamesList, getGameRosterLite } from "@/lib/queries/games";
+import {
+  getGamesList,
+  getGameRosterLite,
+  getMatchupOdds,
+} from "@/lib/queries/games";
 import { getLeaguesWithStats } from "@/lib/queries/leagues";
 import { GamesPageClient } from "./games-client";
 
@@ -124,33 +128,16 @@ export default async function GamesPage({
     ? await getGameRosterLite(heroGame.id)
     : { A: [], B: [] };
 
-  // Last-5 win rate within the hero game's league → simple A/B odds.
-  let heroProb: { probA: number; probB: number } | null = null;
-  if (heroGame) {
-    const completedSameLeague = rows
-      .filter(
-        (g) =>
-          g.leagueId === heroGame.leagueId &&
-          ((g.scoreA !== null && g.scoreB !== null) || g.winTeam !== null),
-      )
-      .sort((a, b) => (a.gameDate ?? "").localeCompare(b.gameDate ?? ""))
-      .slice(-5);
-    let aW = 0, aTot = 0, bW = 0, bTot = 0;
-    for (const g of completedSameLeague) {
-      const w =
-        g.winTeam ??
-        (g.scoreA !== null && g.scoreB !== null
-          ? g.scoreA > g.scoreB ? "A" : g.scoreB > g.scoreA ? "B" : "Tie"
-          : null);
-      if (!w || w === "Tie") continue;
-      if (w === "A") { aW++; aTot++; bTot++; } else { bW++; bTot++; aTot++; }
-    }
-    const aRate = aTot > 0 ? aW / aTot : 0.5;
-    const bRate = bTot > 0 ? bW / bTot : 0.5;
-    const denom = aRate + bRate || 1;
-    const probA = Math.round((aRate / denom) * 100);
-    heroProb = { probA, probB: 100 - probA };
-  }
+  // Blended matchup odds for the hero game (last-8 team trend +
+  // average roster win %). Same algorithm as /games/[id].
+  const heroProb =
+    heroGame && heroGame.leagueId
+      ? await getMatchupOdds(
+          heroGame.leagueId,
+          heroRoster.A.map((p) => p.id),
+          heroRoster.B.map((p) => p.id),
+        )
+      : null;
 
   // Team-vs-team season stats hero. Only meaningful when the listing
   // is scoped to a single league (otherwise White / Dark may differ

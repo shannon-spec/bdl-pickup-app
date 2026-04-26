@@ -258,14 +258,46 @@ export async function getPlayerWinPctsForLeague(
 }
 
 /**
- * Team-vs-team A/B win probability for an upcoming game in `leagueId`.
- * Walks the last 5 completed games in the same league and converts each
- * side's win rate into a normalized 0–100 split, matching the
- * /games hero card. Returns null if there's nothing to base it on.
+ * Team-vs-team win probability blending two signals:
+ *
+ *   Team-color trend (T_x): win rate of each side (A / B) over the
+ *   last `lookback` (default 8) completed league games. Captures any
+ *   streak or color-bias in how the league has been playing recently.
+ *
+ *   Roster strength (P_x): average career win % within this league
+ *   for the players currently rostered on each side (unrated players
+ *   skipped). Captures who's actually on the floor for THIS game.
+ *
+ * Score for each side = teamWeight·T + (1 − teamWeight)·P, then the
+ * two sides are normalized to sum to 100. teamWeight defaults to 0.3
+ * (rosters carry most of the signal because team-color is just a
+ * jersey label that flips game-to-game in pickup).
+ *
+ * Falls back to whichever signal has data when one is missing, and
+ * returns null only when both are empty.
  */
-export async function getLeagueLastFiveOdds(
+export async function getMatchupOdds(
   leagueId: string,
-): Promise<{ probA: number; probB: number } | null> {
+  rosterAIds: string[],
+  rosterBIds: string[],
+  opts: { lookback?: number; teamWeight?: number } = {},
+): Promise<{
+  probA: number;
+  probB: number;
+  basis: "blend" | "team" | "roster";
+  sample: {
+    teamGames: number;
+    ratedA: number;
+    ratedB: number;
+    avgPctA: number | null;
+    avgPctB: number | null;
+  };
+} | null> {
+  const lookback = opts.lookback ?? 8;
+  const wTeam = opts.teamWeight ?? 0.3;
+  const wRoster = 1 - wTeam;
+
+  // 1. Team-color base rate over the last `lookback` completed games.
   const last = await db
     .select({
       scoreA: games.scoreA,
@@ -275,17 +307,16 @@ export async function getLeagueLastFiveOdds(
     .from(games)
     .where(eq(games.leagueId, leagueId))
     .orderBy(desc(games.gameDate))
-    .limit(20);
-  // Filter to completed and take the most recent 5 chronologically.
-  const completed = last
-    .filter(
-      (g) => (g.scoreA !== null && g.scoreB !== null) || g.winTeam !== null,
-    )
-    .slice(0, 5);
-  if (completed.length === 0) return null;
-  let aW = 0, aTot = 0, bW = 0, bTot = 0;
-  for (const g of completed) {
-    const w =
+    .limit(lookback * 4); // overshoot to skip ties / unfinished
+
+  let aW = 0,
+    aTot = 0,
+    bW = 0,
+    bTot = 0,
+    teamGames = 0;
+  for (const g of last) {
+    if (teamGames >= lookback) break;
+    const decided =
       g.winTeam ??
       (g.scoreA !== null && g.scoreB !== null
         ? g.scoreA > g.scoreB
@@ -294,18 +325,81 @@ export async function getLeagueLastFiveOdds(
             ? "B"
             : "Tie"
         : null);
-    if (!w || w === "Tie") continue;
-    if (w === "A") {
-      aW++; aTot++; bTot++;
+    if (!decided) continue;
+    teamGames++;
+    if (decided === "Tie") continue;
+    if (decided === "A") {
+      aW++;
+      aTot++;
+      bTot++;
     } else {
-      bW++; bTot++; aTot++;
+      bW++;
+      bTot++;
+      aTot++;
     }
   }
-  const aRate = aTot > 0 ? aW / aTot : 0.5;
-  const bRate = bTot > 0 ? bW / bTot : 0.5;
-  const denom = aRate + bRate || 1;
-  const probA = Math.round((aRate / denom) * 100);
-  return { probA, probB: 100 - probA };
+  const hasTeamData = aTot > 0 && bTot > 0;
+  const T_A = hasTeamData ? aW / aTot : 0.5;
+  const T_B = hasTeamData ? bW / bTot : 0.5;
+
+  // 2. Roster strength — avg of each side's rated players' win %.
+  const allIds = Array.from(new Set([...rosterAIds, ...rosterBIds]));
+  const pcts =
+    allIds.length > 0
+      ? await getPlayerWinPctsForLeague(leagueId, allIds)
+      : new Map<string, { wins: number; losses: number; pct: number | null }>();
+  const ratedAvg = (ids: string[]): { avg: number; n: number } => {
+    let sum = 0;
+    let n = 0;
+    for (const id of ids) {
+      const s = pcts.get(id);
+      if (s && s.pct !== null) {
+        sum += s.pct / 100;
+        n++;
+      }
+    }
+    return n > 0 ? { avg: sum / n, n } : { avg: 0.5, n: 0 };
+  };
+  const ra = ratedAvg(rosterAIds);
+  const rb = ratedAvg(rosterBIds);
+  const hasRosterData = ra.n > 0 && rb.n > 0;
+
+  // 3. Need at least one signal.
+  if (!hasTeamData && !hasRosterData) return null;
+
+  // 4. Blend (or fall back to the side with data).
+  let aScore: number;
+  let bScore: number;
+  let basis: "blend" | "team" | "roster";
+  if (hasTeamData && hasRosterData) {
+    aScore = wTeam * T_A + wRoster * ra.avg;
+    bScore = wTeam * T_B + wRoster * rb.avg;
+    basis = "blend";
+  } else if (hasTeamData) {
+    aScore = T_A;
+    bScore = T_B;
+    basis = "team";
+  } else {
+    aScore = ra.avg;
+    bScore = rb.avg;
+    basis = "roster";
+  }
+
+  // 5. Normalize and round.
+  const denom = aScore + bScore || 1;
+  const probA = Math.round((aScore / denom) * 100);
+  return {
+    probA,
+    probB: 100 - probA,
+    basis,
+    sample: {
+      teamGames,
+      ratedA: ra.n,
+      ratedB: rb.n,
+      avgPctA: ra.n > 0 ? Math.round(ra.avg * 100) : null,
+      avgPctB: rb.n > 0 ? Math.round(rb.avg * 100) : null,
+    },
+  };
 }
 
 // Suppress unused-import warnings if any
