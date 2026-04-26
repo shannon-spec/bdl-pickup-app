@@ -262,24 +262,6 @@
   padding-bottom: 36px;
 }
 .ftr-mark { display: flex; align-items: center; gap: 12px; }
-.ftr-ball {
-  position: relative;
-  width: 36px; height: 36px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, var(--brand) 0%, var(--brand-ink) 70%);
-  flex-shrink: 0;
-}
-.ftr-ball::before,
-.ftr-ball::after {
-  content: "";
-  position: absolute;
-  left: 0; right: 0; top: 50%;
-  height: 1px;
-  background: rgba(255,255,255,.22);
-  transform-origin: center;
-}
-.ftr-ball::before { transform: translateY(-50%) rotate(18deg); }
-.ftr-ball::after  { transform: translateY(-50%) rotate(-18deg); }
 .ftr-word {
   font: 700 22px/1 var(--font);
   letter-spacing: -0.01em;
