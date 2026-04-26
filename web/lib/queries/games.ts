@@ -1,5 +1,5 @@
 import { alias } from "drizzle-orm/pg-core";
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import {
   db,
   games,
@@ -201,6 +201,111 @@ export async function getGameRosterLite(gameId: string): Promise<{
     .filter((r) => r.side === "B")
     .map((r) => ({ id: r.id, firstName: r.firstName, lastName: r.lastName }));
   return { A, B };
+}
+
+/**
+ * Win/loss totals (and derived win %) for a set of players, scoped to
+ * one league. Used by the upcoming-game roster rows to show each
+ * player's career rate next to their name.
+ */
+export async function getPlayerWinPctsForLeague(
+  leagueId: string,
+  playerIds: string[],
+): Promise<Map<string, { wins: number; losses: number; pct: number | null }>> {
+  const out = new Map<string, { wins: number; losses: number; pct: number | null }>();
+  if (playerIds.length === 0) return out;
+
+  const rows = await db
+    .select({
+      playerId: gameRoster.playerId,
+      side: gameRoster.side,
+      scoreA: games.scoreA,
+      scoreB: games.scoreB,
+      winTeam: games.winTeam,
+    })
+    .from(gameRoster)
+    .innerJoin(games, eq(games.id, gameRoster.gameId))
+    .where(
+      and(
+        inArray(gameRoster.playerId, playerIds),
+        inArray(gameRoster.side, ["A", "B"]),
+        eq(games.leagueId, leagueId),
+      ),
+    );
+
+  for (const r of rows) {
+    const decided =
+      r.winTeam ??
+      (r.scoreA !== null && r.scoreB !== null
+        ? r.scoreA > r.scoreB
+          ? "A"
+          : r.scoreB > r.scoreA
+            ? "B"
+            : "Tie"
+        : null);
+    if (!decided || decided === "Tie") continue;
+    const cur = out.get(r.playerId) ?? { wins: 0, losses: 0, pct: null };
+    if (r.side === decided) cur.wins++;
+    else cur.losses++;
+    out.set(r.playerId, cur);
+  }
+  for (const [id, s] of out) {
+    const total = s.wins + s.losses;
+    s.pct = total > 0 ? (s.wins / total) * 100 : null;
+    out.set(id, s);
+  }
+  return out;
+}
+
+/**
+ * Team-vs-team A/B win probability for an upcoming game in `leagueId`.
+ * Walks the last 5 completed games in the same league and converts each
+ * side's win rate into a normalized 0–100 split, matching the
+ * /games hero card. Returns null if there's nothing to base it on.
+ */
+export async function getLeagueLastFiveOdds(
+  leagueId: string,
+): Promise<{ probA: number; probB: number } | null> {
+  const last = await db
+    .select({
+      scoreA: games.scoreA,
+      scoreB: games.scoreB,
+      winTeam: games.winTeam,
+    })
+    .from(games)
+    .where(eq(games.leagueId, leagueId))
+    .orderBy(desc(games.gameDate))
+    .limit(20);
+  // Filter to completed and take the most recent 5 chronologically.
+  const completed = last
+    .filter(
+      (g) => (g.scoreA !== null && g.scoreB !== null) || g.winTeam !== null,
+    )
+    .slice(0, 5);
+  if (completed.length === 0) return null;
+  let aW = 0, aTot = 0, bW = 0, bTot = 0;
+  for (const g of completed) {
+    const w =
+      g.winTeam ??
+      (g.scoreA !== null && g.scoreB !== null
+        ? g.scoreA > g.scoreB
+          ? "A"
+          : g.scoreB > g.scoreA
+            ? "B"
+            : "Tie"
+        : null);
+    if (!w || w === "Tie") continue;
+    if (w === "A") {
+      aW++; aTot++; bTot++;
+    } else {
+      bW++; bTot++; aTot++;
+    }
+  }
+  const aRate = aTot > 0 ? aW / aTot : 0.5;
+  const bRate = bTot > 0 ? bW / bTot : 0.5;
+  const denom = aRate + bRate || 1;
+  const probA = Math.round((aRate / denom) * 100);
+  return { probA, probB: 100 - probA };
 }
 
 // Suppress unused-import warnings if any

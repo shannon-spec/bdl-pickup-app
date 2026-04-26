@@ -95,6 +95,8 @@ export function RosterRow({
   gameId,
   playerId,
   name,
+  pct,
+  record,
 }: {
   gameId: string;
   playerId: string;
@@ -102,6 +104,8 @@ export function RosterRow({
   currentSide: "A" | "B" | "invited";
   teamAName: string;
   teamBName: string;
+  pct?: number | null;
+  record?: string | null;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -109,30 +113,50 @@ export function RosterRow({
     <div className="flex items-center justify-between gap-3 px-5 py-2.5 border-t border-[color:var(--hairline)] first:border-t-0 hover:bg-[color:var(--surface-2)] text-[14px]">
       <Link
         href={`/players/${playerId}`}
-        className="font-bold hover:text-[color:var(--brand)]"
+        className="font-bold hover:text-[color:var(--brand)] truncate"
       >
         {name}
       </Link>
-      <button
-        type="button"
-        disabled={pending}
-        onClick={() =>
-          start(async () => {
-            try {
-              const res = await setGameRosterPlayer(gameId, playerId, null);
-              if (res.ok) router.refresh();
-            } catch {
-              // Swallow — perm/view rejections shouldn't blow up the
-              // page. The next render of the parent will reflect the
-              // truth either way.
-            }
-          })
-        }
-        aria-label={`Remove ${name}`}
-        className="w-8 h-8 inline-flex items-center justify-center rounded-[var(--r-md)] text-[color:var(--text-3)] hover:text-[color:var(--down)] hover:bg-[color:var(--down-soft)] disabled:opacity-60"
-      >
-        <Trash2 size={14} />
-      </button>
+      <div className="flex items-center gap-3 flex-shrink-0">
+        {pct !== null && pct !== undefined && (
+          <span className="font-[family-name:var(--mono)] num text-[12px]">
+            <span
+              className={
+                pct >= 60
+                  ? "text-[color:var(--up)] font-bold"
+                  : pct < 40
+                  ? "text-[color:var(--down)] font-bold"
+                  : "text-[color:var(--text-2)] font-semibold"
+              }
+            >
+              {pct.toFixed(1)}%
+            </span>
+            {record && (
+              <span className="text-[color:var(--text-4)] ml-1.5">{record}</span>
+            )}
+          </span>
+        )}
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() =>
+            start(async () => {
+              try {
+                const res = await setGameRosterPlayer(gameId, playerId, null);
+                if (res.ok) router.refresh();
+              } catch {
+                // Swallow — perm/view rejections shouldn't blow up the
+                // page. The next render of the parent will reflect the
+                // truth either way.
+              }
+            })
+          }
+          aria-label={`Remove ${name}`}
+          className="w-8 h-8 inline-flex items-center justify-center rounded-[var(--r-md)] text-[color:var(--text-3)] hover:text-[color:var(--down)] hover:bg-[color:var(--down-soft)] disabled:opacity-60"
+        >
+          <Trash2 size={14} />
+        </button>
+      </div>
     </div>
   );
 };

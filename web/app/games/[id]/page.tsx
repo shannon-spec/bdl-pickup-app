@@ -11,7 +11,12 @@ import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { TeamBadge } from "@/components/bdl/team-badge";
 import { Pill } from "@/components/bdl/pill";
 import { HeroTag, isHeroGame } from "@/components/bdl/hero-tag";
-import { getGameDetail } from "@/lib/queries/games";
+import { ProbabilityBar } from "@/components/bdl/probability-bar";
+import {
+  getGameDetail,
+  getPlayerWinPctsForLeague,
+  getLeagueLastFiveOdds,
+} from "@/lib/queries/games";
 import {
   GameScore,
   GameMetaEditor,
@@ -58,6 +63,24 @@ export default async function GameDetailPage({
   const { game } = detail;
   const completed =
     (game.scoreA !== null && game.scoreB !== null) || game.winTeam !== null;
+
+  // Per-player career win % within this league + team odds for the
+  // upcoming-game probability bar. Only fetched when the game has a
+  // league and (for odds) is still upcoming — saves a roundtrip on
+  // completed games where the bar would be redundant with the score.
+  const rosterIds = [
+    ...detail.rosterA,
+    ...detail.rosterB,
+    ...detail.invited,
+  ].map((p) => p.id);
+  const [winPcts, teamOdds] = await Promise.all([
+    game.leagueId && rosterIds.length > 0
+      ? getPlayerWinPctsForLeague(game.leagueId, rosterIds)
+      : Promise.resolve(new Map<string, { wins: number; losses: number; pct: number | null }>()),
+    !completed && game.leagueId
+      ? getLeagueLastFiveOdds(game.leagueId)
+      : Promise.resolve(null),
+  ]);
 
   const heroName = (() => {
     if (
@@ -152,6 +175,20 @@ export default async function GameDetailPage({
             </div>
           )}
 
+          {!completed && teamOdds && (
+            <div className="mt-1 mb-4">
+              <ProbabilityBar
+                aLabel={game.teamAName ?? "White"}
+                bLabel={game.teamBName ?? "Dark"}
+                a={teamOdds.probA}
+                b={teamOdds.probB}
+              />
+              <div className="text-[10.5px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)] mt-1.5 text-center">
+                Last-5 odds · {game.leagueName ?? ""}
+              </div>
+            </div>
+          )}
+
           {canEdit && <GameScore detail={detail} />}
         </div>
 
@@ -162,17 +199,17 @@ export default async function GameDetailPage({
           name={game.teamAName ?? "White"}
           count={detail.rosterA.length}
         />
-        <RosterPanel detail={detail} side="A" canEdit={canEdit} />
+        <RosterPanel detail={detail} side="A" canEdit={canEdit} winPcts={winPcts} />
 
         <TeamSectionHead
           variant="dark"
           name={game.teamBName ?? "Dark"}
           count={detail.rosterB.length}
         />
-        <RosterPanel detail={detail} side="B" canEdit={canEdit} />
+        <RosterPanel detail={detail} side="B" canEdit={canEdit} winPcts={winPcts} />
 
         <TeamSectionHead variant="invited" name="Invited" count={detail.invited.length} />
-        <RosterPanel detail={detail} side="invited" canEdit={canEdit} />
+        <RosterPanel detail={detail} side="invited" canEdit={canEdit} winPcts={winPcts} />
 
         {canEdit && (
           <>
@@ -245,10 +282,12 @@ function RosterPanel({
   detail,
   side,
   canEdit,
+  winPcts,
 }: {
   detail: NonNullable<Awaited<ReturnType<typeof getGameDetail>>>;
   side: "A" | "B" | "invited";
   canEdit: boolean;
+  winPcts: Map<string, { wins: number; losses: number; pct: number | null }>;
 }) {
   const list =
     side === "A" ? detail.rosterA : side === "B" ? detail.rosterB : detail.invited;
@@ -259,26 +298,55 @@ function RosterPanel({
           No players.
         </div>
       ) : !canEdit ? (
-        list.map((p) => (
-          <div
-            key={p.id}
-            className="px-5 py-3 border-t border-[color:var(--hairline)] first:border-t-0 text-[14px] text-[color:var(--text)]"
-          >
-            {p.firstName} {p.lastName}
-          </div>
-        ))
+        list.map((p) => {
+          const s = winPcts.get(p.id);
+          return (
+            <Link
+              key={p.id}
+              href={`/players/${p.id}`}
+              className="flex items-center justify-between gap-3 px-5 py-3 border-t border-[color:var(--hairline)] first:border-t-0 text-[14px] hover:bg-[color:var(--surface-2)]"
+            >
+              <span className="font-bold text-[color:var(--text)] hover:text-[color:var(--brand)] truncate">
+                {p.firstName} {p.lastName}
+              </span>
+              {s && s.pct !== null ? (
+                <span className="font-[family-name:var(--mono)] num text-[12px] text-[color:var(--text-3)] flex-shrink-0">
+                  <span
+                    className={
+                      s.pct >= 60
+                        ? "text-[color:var(--up)] font-bold"
+                        : s.pct < 40
+                        ? "text-[color:var(--down)] font-bold"
+                        : "text-[color:var(--text-2)] font-semibold"
+                    }
+                  >
+                    {s.pct.toFixed(1)}%
+                  </span>
+                  <span className="text-[color:var(--text-4)] ml-1.5">
+                    {s.wins}-{s.losses}
+                  </span>
+                </span>
+              ) : null}
+            </Link>
+          );
+        })
       ) : (
-        list.map((p) => (
-          <RosterRow
-            key={p.id}
-            gameId={detail.game.id}
-            playerId={p.id}
-            name={`${p.firstName} ${p.lastName}`}
-            currentSide={side}
-            teamAName={detail.game.teamAName ?? "White"}
-            teamBName={detail.game.teamBName ?? "Dark"}
-          />
-        ))
+        list.map((p) => {
+          const s = winPcts.get(p.id);
+          return (
+            <RosterRow
+              key={p.id}
+              gameId={detail.game.id}
+              playerId={p.id}
+              name={`${p.firstName} ${p.lastName}`}
+              currentSide={side}
+              teamAName={detail.game.teamAName ?? "White"}
+              teamBName={detail.game.teamBName ?? "Dark"}
+              pct={s?.pct ?? null}
+              record={s ? `${s.wins}-${s.losses}` : null}
+            />
+          );
+        })
       )}
     </div>
   );
