@@ -11,7 +11,7 @@ const LOCKUP_RATIO = 1000 / 340; // aspect ratio of bdl-lockup-*.png
  */
 export function Brand({
   className,
-  height = 34,
+  height = 41,
 }: {
   className?: string;
   /** Rendered height in px. Width derives from the lockup aspect ratio. */

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BrandMark } from "./brand";
+import { Brand } from "./brand";
 
 export function Footer() {
   const year = new Date().getFullYear();
@@ -11,13 +11,7 @@ export function Footer() {
         <div className="ftr-grid">
           <div className="ftr-brand">
             <div className="ftr-mark">
-              <BrandMark size={36} />
-              <div>
-                <div className="ftr-word">
-                  B<span style={{ color: "#E87722" }}>D</span>L
-                </div>
-                <div className="ftr-tag">Ball Don&apos;t Lie · Pickup</div>
-              </div>
+              <Brand height={48} />
             </div>
             <p className="ftr-blurb">
               A pickup basketball tracker for leagues that take their stat lines
