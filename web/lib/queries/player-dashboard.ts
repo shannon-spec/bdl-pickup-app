@@ -21,6 +21,7 @@ import {
   type Game,
   type League,
 } from "@/lib/db";
+import { getMatchupOdds } from "@/lib/queries/games";
 
 /* ---------- Helpers ---------- */
 
@@ -329,8 +330,12 @@ export async function getNextGame(
   const mine = open.find((g) => sides.has(g.id));
   const next = mine ?? open[0];
 
+  // Last-5 team-color record only powers the small "X-Y last 5" label
+  // under each team name. The odds bar uses the new blended model
+  // (last-8 trend + roster win %) so the home card stays in sync with
+  // /games and /games/[id].
   const completed = all.filter(isComplete);
-  const { probA, probB, aW, bW, aTot, bTot } = computeProbFromLast5(completed);
+  const { aW, bW, aTot, bTot } = computeProbFromLast5(completed);
 
   const rosterRows = await db
     .select({
@@ -349,6 +354,14 @@ export async function getNextGame(
   const rosterB = rosterRows
     .filter((r) => r.side === "B")
     .map((r) => ({ id: r.id, firstName: r.firstName, lastName: r.lastName }));
+
+  const odds = await getMatchupOdds(
+    leagueId,
+    rosterA.map((p) => p.id),
+    rosterB.map((p) => p.id),
+  );
+  const probA = odds?.probA ?? 50;
+  const probB = odds?.probB ?? 50;
 
   return {
     id: next.id,
@@ -399,19 +412,63 @@ export async function getUpcomingMarkets(
   if (open.length === 0) return [];
 
   const sides = await getPlayerSidesByGame(playerId, leagueId);
-  const completed = all.filter(isComplete);
-  const { probA, probB } = computeProbFromLast5(completed);
 
-  return open.map((g) => ({
-    id: g.id,
-    date: g.gameDate,
-    time: g.gameTime,
-    teamAName: g.teamAName ?? "White",
-    teamBName: g.teamBName ?? "Dark",
-    mySide: sides.get(g.id) ?? null,
-    probA,
-    probB,
-  }));
+  // Per-game blended odds. Pull rosters for the open games in one shot,
+  // then compute matchup odds per game so each card reflects who's
+  // actually on the floor for that night.
+  const openIds = open.map((g) => g.id);
+  const rosterRows =
+    openIds.length > 0
+      ? await db
+          .select({
+            gameId: gameRoster.gameId,
+            playerId: gameRoster.playerId,
+            side: gameRoster.side,
+          })
+          .from(gameRoster)
+          .where(inArray(gameRoster.gameId, openIds))
+      : [];
+  const aByGame = new Map<string, string[]>();
+  const bByGame = new Map<string, string[]>();
+  for (const r of rosterRows) {
+    if (r.side === "A") {
+      const arr = aByGame.get(r.gameId) ?? [];
+      arr.push(r.playerId);
+      aByGame.set(r.gameId, arr);
+    } else if (r.side === "B") {
+      const arr = bByGame.get(r.gameId) ?? [];
+      arr.push(r.playerId);
+      bByGame.set(r.gameId, arr);
+    }
+  }
+  const oddsByGame = new Map<string, { probA: number; probB: number }>();
+  await Promise.all(
+    open.map(async (g) => {
+      const odds = await getMatchupOdds(
+        leagueId,
+        aByGame.get(g.id) ?? [],
+        bByGame.get(g.id) ?? [],
+      );
+      oddsByGame.set(g.id, {
+        probA: odds?.probA ?? 50,
+        probB: odds?.probB ?? 50,
+      });
+    }),
+  );
+
+  return open.map((g) => {
+    const o = oddsByGame.get(g.id) ?? { probA: 50, probB: 50 };
+    return {
+      id: g.id,
+      date: g.gameDate,
+      time: g.gameTime,
+      teamAName: g.teamAName ?? "White",
+      teamBName: g.teamBName ?? "Dark",
+      mySide: sides.get(g.id) ?? null,
+      probA: o.probA,
+      probB: o.probB,
+    };
+  });
 }
 
 /* ---------- Leaderboard (top 5 with 10% qualification) ---------- */
