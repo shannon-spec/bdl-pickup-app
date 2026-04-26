@@ -172,5 +172,36 @@ export async function getGameDetail(id: string): Promise<GameDetail | null> {
   };
 }
 
+/**
+ * Lightweight roster fetch — just the names per side. Used by next-up
+ * hero cards on /games and the home dashboard so they can show the
+ * matchup if it's been locked in. Returns empty arrays if no roster
+ * is set yet.
+ */
+export async function getGameRosterLite(gameId: string): Promise<{
+  A: Pick<Player, "id" | "firstName" | "lastName">[];
+  B: Pick<Player, "id" | "firstName" | "lastName">[];
+}> {
+  const rows = await db
+    .select({
+      id: players.id,
+      firstName: players.firstName,
+      lastName: players.lastName,
+      side: gameRoster.side,
+    })
+    .from(gameRoster)
+    .innerJoin(players, eq(players.id, gameRoster.playerId))
+    .where(eq(gameRoster.gameId, gameId))
+    .orderBy(asc(players.lastName), asc(players.firstName));
+
+  const A = rows
+    .filter((r) => r.side === "A")
+    .map((r) => ({ id: r.id, firstName: r.firstName, lastName: r.lastName }));
+  const B = rows
+    .filter((r) => r.side === "B")
+    .map((r) => ({ id: r.id, firstName: r.firstName, lastName: r.lastName }));
+  return { A, B };
+}
+
 // Suppress unused-import warnings if any
 export const __gamesQueryMarker = sql`/* games */`;

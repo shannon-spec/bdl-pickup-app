@@ -305,6 +305,8 @@ export type NextGame = {
   probB: number;
   teamARecord: { w: number; l: number };
   teamBRecord: { w: number; l: number };
+  rosterA: Pick<Player, "id" | "firstName" | "lastName">[];
+  rosterB: Pick<Player, "id" | "firstName" | "lastName">[];
 };
 
 export async function getNextGame(
@@ -328,6 +330,24 @@ export async function getNextGame(
   const completed = all.filter(isComplete);
   const { probA, probB, aW, bW, aTot, bTot } = computeProbFromLast5(completed);
 
+  const rosterRows = await db
+    .select({
+      id: players.id,
+      firstName: players.firstName,
+      lastName: players.lastName,
+      side: gameRoster.side,
+    })
+    .from(gameRoster)
+    .innerJoin(players, eq(players.id, gameRoster.playerId))
+    .where(eq(gameRoster.gameId, next.id))
+    .orderBy(asc(players.lastName), asc(players.firstName));
+  const rosterA = rosterRows
+    .filter((r) => r.side === "A")
+    .map((r) => ({ id: r.id, firstName: r.firstName, lastName: r.lastName }));
+  const rosterB = rosterRows
+    .filter((r) => r.side === "B")
+    .map((r) => ({ id: r.id, firstName: r.firstName, lastName: r.lastName }));
+
   return {
     id: next.id,
     date: next.gameDate,
@@ -341,6 +361,8 @@ export async function getNextGame(
     probB,
     teamARecord: { w: aW, l: aTot - aW },
     teamBRecord: { w: bW, l: bTot - bW },
+    rosterA,
+    rosterB,
   };
 }
 

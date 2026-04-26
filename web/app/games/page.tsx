@@ -17,7 +17,7 @@ import { Pill } from "@/components/bdl/pill";
 import { TeamBadge } from "@/components/bdl/team-badge";
 import { ProbabilityBar } from "@/components/bdl/probability-bar";
 import { GamesListClient } from "./games-list-client";
-import { getGamesList } from "@/lib/queries/games";
+import { getGamesList, getGameRosterLite } from "@/lib/queries/games";
 import { getLeaguesWithStats } from "@/lib/queries/leagues";
 import { GamesPageClient } from "./games-client";
 
@@ -41,7 +41,11 @@ const fmtTime = (t: string | null) => {
 export default async function GamesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ league?: string; status?: "all" | "upcoming" | "completed" }>;
+  searchParams: Promise<{
+    league?: string;
+    status?: "all" | "upcoming" | "completed";
+    year?: string;
+  }>;
 }) {
   const session = await readSession();
   if (!session) redirect("/login");
@@ -64,6 +68,7 @@ export default async function GamesPage({
   const filter = {
     leagueId: sp.league || null,
     status: (sp.status ?? "all") as "all" | "upcoming" | "completed",
+    year: sp.year || null,
   };
 
   const [rowsAll, allLeaguesAll] = await Promise.all([
@@ -92,7 +97,24 @@ export default async function GamesPage({
             (a.gameDate ?? "").localeCompare(b.gameDate ?? "") ||
             (a.gameTime ?? "").localeCompare(b.gameTime ?? ""),
           )[0] ?? null;
-  const listRows = heroGame ? rows.filter((g) => g.id !== heroGame.id) : rows;
+  const baseListRows = heroGame ? rows.filter((g) => g.id !== heroGame.id) : rows;
+
+  // Years available across the listing (regardless of selected year).
+  // Default-active year = the most recent year that has at least one
+  // row. If the URL has a year, use that.
+  const availableYears = Array.from(
+    new Set(baseListRows.map((g) => g.gameDate?.slice(0, 4)).filter(Boolean) as string[]),
+  ).sort().reverse();
+  const activeYear = filter.year || availableYears[0] || null;
+  const listRows = activeYear
+    ? baseListRows.filter((g) => g.gameDate?.startsWith(activeYear))
+    : baseListRows;
+
+  // Roster for the next-up hero, if attendance is set. Empty arrays
+  // render no roster block — the hero falls back to just the matchup.
+  const heroRoster = heroGame
+    ? await getGameRosterLite(heroGame.id)
+    : { A: [], B: [] };
 
   // Last-5 win rate within the hero game's league → simple A/B odds.
   let heroProb: { probA: number; probB: number } | null = null;
@@ -249,19 +271,41 @@ export default async function GamesPage({
                   <span className="text-[color:var(--text-3)]">· {heroGame.venue}</span>
                 )}
               </div>
-              <div className="flex items-center gap-3 flex-wrap">
-                <div className="inline-flex items-center gap-2.5">
-                  <TeamBadge team="white" />
-                  <span className="font-extrabold text-[18px] text-[color:var(--text)]">
-                    {heroGame.teamAName}
-                  </span>
+              <div className="flex items-start gap-3 flex-wrap">
+                <div className="flex flex-col gap-1.5 min-w-0">
+                  <div className="inline-flex items-center gap-2.5">
+                    <TeamBadge team="white" />
+                    <span className="font-extrabold text-[18px] text-[color:var(--text)]">
+                      {heroGame.teamAName}
+                    </span>
+                  </div>
+                  {heroRoster.A.length > 0 && (
+                    <ul className="flex flex-col gap-0.5 pl-12 text-[11.5px] text-[color:var(--text-3)]">
+                      {heroRoster.A.map((p) => (
+                        <li key={p.id} className="truncate">
+                          {p.firstName} {p.lastName}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
-                <span className="text-[color:var(--text-4)] text-[12px] font-medium">vs</span>
-                <div className="inline-flex items-center gap-2.5">
-                  <TeamBadge team="dark" />
-                  <span className="font-extrabold text-[18px] text-[color:var(--text)]">
-                    {heroGame.teamBName}
-                  </span>
+                <span className="text-[color:var(--text-4)] text-[12px] font-medium pt-3">vs</span>
+                <div className="flex flex-col gap-1.5 min-w-0">
+                  <div className="inline-flex items-center gap-2.5">
+                    <TeamBadge team="dark" />
+                    <span className="font-extrabold text-[18px] text-[color:var(--text)]">
+                      {heroGame.teamBName}
+                    </span>
+                  </div>
+                  {heroRoster.B.length > 0 && (
+                    <ul className="flex flex-col gap-0.5 pl-12 text-[11.5px] text-[color:var(--text-3)]">
+                      {heroRoster.B.map((p) => (
+                        <li key={p.id} className="truncate">
+                          {p.firstName} {p.lastName}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </div>
               {heroProb && (
@@ -293,7 +337,13 @@ export default async function GamesPage({
           }
         />
 
-        <FilterBar selected={filter.status} leagueId={filter.leagueId} leagues={allLeagues} />
+        <FilterBar
+          selected={filter.status}
+          leagueId={filter.leagueId}
+          leagues={allLeagues}
+          years={availableYears}
+          activeYear={activeYear}
+        />
 
         <GamesListClient rows={listRows} />
       </>
@@ -305,15 +355,28 @@ function FilterBar({
   selected,
   leagueId,
   leagues,
+  years,
+  activeYear,
 }: {
   selected: "all" | "upcoming" | "completed";
   leagueId: string | null;
   leagues: { id: string; name: string }[];
+  years: string[];
+  activeYear: string | null;
 }) {
-  const linkFor = (status: string, lid: string | null) => {
+  const linkFor = ({
+    status = selected,
+    lid = leagueId,
+    year = activeYear,
+  }: {
+    status?: string;
+    lid?: string | null;
+    year?: string | null;
+  } = {}) => {
     const params = new URLSearchParams();
-    if (status !== "all") params.set("status", status);
+    if (status && status !== "all") params.set("status", status);
     if (lid) params.set("league", lid);
+    if (year) params.set("year", year);
     const qs = params.toString();
     return qs ? `/games?${qs}` : "/games";
   };
@@ -339,18 +402,29 @@ function FilterBar({
   );
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <Pillish href={linkFor("all", leagueId)} active={selected === "all"}>
+      <Pillish href={linkFor({ status: "all" })} active={selected === "all"}>
         All
       </Pillish>
-      <Pillish href={linkFor("upcoming", leagueId)} active={selected === "upcoming"}>
+      <Pillish href={linkFor({ status: "upcoming" })} active={selected === "upcoming"}>
         Upcoming
       </Pillish>
-      <Pillish href={linkFor("completed", leagueId)} active={selected === "completed"}>
+      <Pillish href={linkFor({ status: "completed" })} active={selected === "completed"}>
         Completed
       </Pillish>
+      {years.length > 0 && (
+        <>
+          <span className="mx-1 text-[color:var(--text-4)]" aria-hidden>·</span>
+          {years.map((y) => (
+            <Pillish key={y} href={linkFor({ year: y })} active={activeYear === y}>
+              {y}
+            </Pillish>
+          ))}
+        </>
+      )}
       {leagues.length > 1 && (
         <form method="get" action="/games" className="ml-2">
           <input type="hidden" name="status" value={selected === "all" ? "" : selected} />
+          {activeYear && <input type="hidden" name="year" value={activeYear} />}
           <select
             name="league"
             defaultValue={leagueId ?? ""}

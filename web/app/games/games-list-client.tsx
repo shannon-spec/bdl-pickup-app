@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Pill } from "@/components/bdl/pill";
 import { HeroTag, isHeroGame } from "@/components/bdl/hero-tag";
@@ -18,55 +18,21 @@ const fmtDate = (d: string | null) => {
 };
 
 export function GamesListClient({ rows }: { rows: GameListRow[] }) {
-  const years = useMemo(() => {
-    const set = new Set<string>();
-    for (const r of rows) {
-      if (r.gameDate) set.add(r.gameDate.slice(0, 4));
-    }
-    return Array.from(set).sort().reverse();
-  }, [rows]);
-
-  const [year, setYear] = useState<string>(years[0] ?? "");
   const [visible, setVisible] = useState(PAGE_SIZE);
 
-  const filtered = useMemo(() => {
-    if (!year) return rows;
-    return rows.filter((r) => r.gameDate?.startsWith(year));
-  }, [rows, year]);
+  // Reset paging whenever the parent passes a different row set
+  // (e.g. user changes year/status/league). Tying to row identity is
+  // good enough — the array reference changes on each server render.
+  useEffect(() => {
+    setVisible(PAGE_SIZE);
+  }, [rows]);
 
+  const filtered = rows;
   const shown = filtered.slice(0, visible);
   const hasMore = filtered.length > shown.length;
 
-  const onYearChange = (y: string) => {
-    setYear(y);
-    setVisible(PAGE_SIZE);
-  };
-
   return (
     <>
-      {years.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap">
-          {years.map((y) => {
-            const active = y === year;
-            return (
-              <button
-                key={y}
-                type="button"
-                onClick={() => onYearChange(y)}
-                aria-pressed={active}
-                className={`inline-flex items-center h-8 px-3 rounded-full text-[12px] font-semibold tracking-[0.04em] uppercase transition-colors border ${
-                  active
-                    ? "bg-[color:var(--brand)] text-white border-transparent"
-                    : "bg-[color:var(--surface)] border-[color:var(--hairline-2)] text-[color:var(--text-2)] hover:text-[color:var(--text)]"
-                }`}
-              >
-                {y}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
       {filtered.length === 0 ? (
         <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-12 text-center text-[color:var(--text-3)] text-[14px]">
           No games match the current filter.

@@ -192,20 +192,30 @@ export default async function Home() {
                     All games <ChevronRight size={12} />
                   </Link>
                 </div>
-                <div className="flex items-center gap-3 flex-wrap">
-                  <TeamPick
-                    name={nextGame.teamAName}
-                    record={`${nextGame.teamARecord.w}-${nextGame.teamARecord.l} last 5`}
-                    team="white"
-                    me={nextGame.mySide === "A"}
-                  />
-                  <span className="text-[color:var(--text-4)] text-[12px] font-medium">vs</span>
-                  <TeamPick
-                    name={nextGame.teamBName}
-                    record={`${nextGame.teamBRecord.w}-${nextGame.teamBRecord.l} last 5`}
-                    team="dark"
-                    me={nextGame.mySide === "B"}
-                  />
+                <div className="flex items-start gap-3 flex-wrap">
+                  <div className="flex flex-col gap-1.5 min-w-0">
+                    <TeamPick
+                      name={nextGame.teamAName}
+                      record={`${nextGame.teamARecord.w}-${nextGame.teamARecord.l} last 5`}
+                      team="white"
+                      me={nextGame.mySide === "A"}
+                    />
+                    {nextGame.rosterA.length > 0 && (
+                      <RosterList players={nextGame.rosterA} />
+                    )}
+                  </div>
+                  <span className="text-[color:var(--text-4)] text-[12px] font-medium pt-3">vs</span>
+                  <div className="flex flex-col gap-1.5 min-w-0">
+                    <TeamPick
+                      name={nextGame.teamBName}
+                      record={`${nextGame.teamBRecord.w}-${nextGame.teamBRecord.l} last 5`}
+                      team="dark"
+                      me={nextGame.mySide === "B"}
+                    />
+                    {nextGame.rosterB.length > 0 && (
+                      <RosterList players={nextGame.rosterB} />
+                    )}
+                  </div>
                 </div>
                 <ProbabilityBar
                   aLabel={nextGame.teamAName}
@@ -509,6 +519,22 @@ function EmptyCard({
         </Link>
       )}
     </div>
+  );
+}
+
+function RosterList({
+  players,
+}: {
+  players: { id: string; firstName: string; lastName: string }[];
+}) {
+  return (
+    <ul className="flex flex-col gap-0.5 pl-12 text-[11.5px] text-[color:var(--text-3)]">
+      {players.map((p) => (
+        <li key={p.id} className="truncate">
+          {p.firstName} {p.lastName}
+        </li>
+      ))}
+    </ul>
   );
 }
 
