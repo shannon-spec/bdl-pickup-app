@@ -12,6 +12,7 @@ import { TeamBadge } from "@/components/bdl/team-badge";
 import { Pill } from "@/components/bdl/pill";
 import { HeroTag, isHeroGame } from "@/components/bdl/hero-tag";
 import { ProbabilityBar } from "@/components/bdl/probability-bar";
+import { PctPill } from "@/components/bdl/pct-pill";
 import {
   getGameDetail,
   getPlayerWinPctsForLeague,
@@ -194,19 +195,24 @@ export default async function GameDetailPage({
 
         {canEdit && <GameMetaEditor detail={detail} />}
 
-        <TeamSectionHead
-          variant="white"
-          name={game.teamAName ?? "White"}
-          count={detail.rosterA.length}
-        />
-        <RosterPanel detail={detail} side="A" canEdit={canEdit} winPcts={winPcts} />
-
-        <TeamSectionHead
-          variant="dark"
-          name={game.teamBName ?? "Dark"}
-          count={detail.rosterB.length}
-        />
-        <RosterPanel detail={detail} side="B" canEdit={canEdit} winPcts={winPcts} />
+        <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
+          <div className="flex flex-col gap-3">
+            <TeamSectionHead
+              variant="white"
+              name={game.teamAName ?? "White"}
+              count={detail.rosterA.length}
+            />
+            <RosterPanel detail={detail} side="A" canEdit={canEdit} winPcts={winPcts} />
+          </div>
+          <div className="flex flex-col gap-3">
+            <TeamSectionHead
+              variant="dark"
+              name={game.teamBName ?? "Dark"}
+              count={detail.rosterB.length}
+            />
+            <RosterPanel detail={detail} side="B" canEdit={canEdit} winPcts={winPcts} />
+          </div>
+        </div>
 
         <TeamSectionHead variant="invited" name="Invited" count={detail.invited.length} />
         <RosterPanel detail={detail} side="invited" canEdit={canEdit} winPcts={winPcts} />
@@ -310,19 +316,9 @@ function RosterPanel({
                 {p.firstName} {p.lastName}
               </span>
               {s && s.pct !== null ? (
-                <span className="font-[family-name:var(--mono)] num text-[12px] text-[color:var(--text-3)] flex-shrink-0">
-                  <span
-                    className={
-                      s.pct >= 60
-                        ? "text-[color:var(--up)] font-bold"
-                        : s.pct < 40
-                        ? "text-[color:var(--down)] font-bold"
-                        : "text-[color:var(--text-2)] font-semibold"
-                    }
-                  >
-                    {s.pct.toFixed(1)}%
-                  </span>
-                  <span className="text-[color:var(--text-4)] ml-1.5">
+                <span className="flex items-center gap-1.5 flex-shrink-0">
+                  <PctPill pct={s.pct} />
+                  <span className="font-[family-name:var(--mono)] num text-[11.5px] text-[color:var(--text-4)]">
                     {s.wins}-{s.losses}
                   </span>
                 </span>

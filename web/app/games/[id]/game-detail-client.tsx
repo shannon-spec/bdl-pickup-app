@@ -11,6 +11,7 @@ import {
   setGameScore,
   updateGame,
 } from "@/lib/actions/games";
+import { PctPill } from "@/components/bdl/pct-pill";
 
 export function GameScore({ detail }: { detail: GameDetail }) {
   const router = useRouter();
@@ -117,22 +118,14 @@ export function RosterRow({
       >
         {name}
       </Link>
-      <div className="flex items-center gap-3 flex-shrink-0">
+      <div className="flex items-center gap-2.5 flex-shrink-0">
         {pct !== null && pct !== undefined && (
-          <span className="font-[family-name:var(--mono)] num text-[12px]">
-            <span
-              className={
-                pct >= 60
-                  ? "text-[color:var(--up)] font-bold"
-                  : pct < 40
-                  ? "text-[color:var(--down)] font-bold"
-                  : "text-[color:var(--text-2)] font-semibold"
-              }
-            >
-              {pct.toFixed(1)}%
-            </span>
+          <span className="flex items-center gap-1.5">
+            <PctPill pct={pct} />
             {record && (
-              <span className="text-[color:var(--text-4)] ml-1.5">{record}</span>
+              <span className="font-[family-name:var(--mono)] num text-[11.5px] text-[color:var(--text-4)]">
+                {record}
+              </span>
             )}
           </span>
         )}
