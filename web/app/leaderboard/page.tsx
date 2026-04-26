@@ -55,6 +55,7 @@ export default async function LeaderboardPage({
             valueKey="pct"
             valueLabel="Win %"
             isPercent
+            featured
           />
           <Board title="Most Wins" rows={data.topWins} valueKey="wins" valueLabel="W" />
         </div>
@@ -111,6 +112,7 @@ function Board({
   negative,
   full,
   hero,
+  featured,
   playedOf,
 }: {
   title: string;
@@ -121,6 +123,8 @@ function Board({
   negative?: boolean;
   full?: boolean;
   hero?: boolean;
+  /** Primary "trophy" treatment — green tint, gold-ish accents. */
+  featured?: boolean;
   /**
    * When set, the GP slot shows "% played" derived from gamesPlayed /
    * playedOf — used by the Most Games Played board to surface
@@ -128,17 +132,26 @@ function Board({
    */
   playedOf?: number;
 }) {
+  // Featured wins out over hero if both are passed.
+  const tinted = featured || hero;
   return (
     <div
       className={`rounded-[16px] border overflow-hidden ${
         full ? "col-span-full" : ""
       } ${
-        hero
+        tinted
           ? "bg-[color:var(--surface)]"
           : "border-[color:var(--hairline-2)] bg-[color:var(--surface)]"
       }`}
       style={
-        hero
+        featured
+          ? {
+              borderColor: "rgba(38,166,91,.45)",
+              background:
+                "linear-gradient(135deg, rgba(38,166,91,.12), transparent 65%), var(--surface)",
+              boxShadow: "0 1px 0 0 rgba(38,166,91,.10) inset",
+            }
+          : hero
           ? {
               borderColor: "rgba(234,67,53,.45)",
               background:
@@ -149,11 +162,21 @@ function Board({
     >
       <div
         className="px-5 py-3 border-b border-[color:var(--hairline)] flex items-center justify-between"
-        style={hero ? { borderColor: "rgba(234,67,53,.25)" } : undefined}
+        style={
+          featured
+            ? { borderColor: "rgba(38,166,91,.25)" }
+            : hero
+            ? { borderColor: "rgba(234,67,53,.25)" }
+            : undefined
+        }
       >
         <span
           className={`text-[11.5px] font-bold tracking-[0.14em] uppercase ${
-            hero ? "text-[color:var(--down)]" : "text-[color:var(--text-2)]"
+            hero
+              ? "text-[color:var(--down)]"
+              : featured
+              ? "text-[color:var(--up)]"
+              : "text-[color:var(--text-2)]"
           }`}
         >
           {hero ? "★ " : ""}
