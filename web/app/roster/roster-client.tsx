@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Search, X, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import type { RosterRow } from "@/lib/queries/roster";
 import { Pill } from "@/components/bdl/pill";
+import { GradePill } from "@/components/bdl/grade-pill";
 import { PlayerSheet } from "./player-sheet";
 import { ConfirmDelete } from "./confirm-delete";
 
@@ -203,20 +204,6 @@ function StatusPill({ status }: { status: RosterRow["status"] }) {
   }
 }
 
-function GradePill({ level }: { level: RosterRow["level"] }) {
-  if (level === "Pro" || level === "Game Changer") {
-    return <Pill tone="brand">{level}</Pill>;
-  }
-  if (level === "Advanced") {
-    return <Pill tone="win">{level}</Pill>;
-  }
-  if (level === "Not Rated") {
-    return (
-      <span className="text-[color:var(--text-3)] text-[12px]">—</span>
-    );
-  }
-  return <Pill tone="neutral">{level}</Pill>;
-}
 
 function RowAction({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
   const [open, setOpen] = useState(false);

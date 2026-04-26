@@ -131,6 +131,9 @@ export const leagues = pgTable("leagues", {
   // Days of week as int[] (0=Sun..6=Sat). Drizzle maps to Postgres int[].
   days: integer("days").array(),
   maxPlayers: integer("max_players"),
+  // League grade — borrows the player level enum so a single rating
+  // vocabulary covers both individuals and league-wide skill targets.
+  level: playerLevelEnum("level").notNull().default("Not Rated"),
   teamAName: text("team_a_name").notNull().default("White"),
   teamBName: text("team_b_name").notNull().default("Dark"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

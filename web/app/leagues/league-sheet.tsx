@@ -13,6 +13,14 @@ const FORMATS = [
   { v: "3v3", l: "3 V 3 — Single" },
   { v: "3v3-series", l: "3 V 3 — Series" },
 ];
+const LEVELS = [
+  "Not Rated",
+  "Novice",
+  "Intermediate",
+  "Advanced",
+  "Game Changer",
+  "Pro",
+] as const;
 
 export function LeagueSheet({
   mode,
@@ -146,6 +154,19 @@ export function LeagueSheet({
               />
             </Field>
           </Row>
+          <Field label="Grade" hint="skill target">
+            <select
+              name="level"
+              defaultValue={editing?.level ?? "Not Rated"}
+              className={selectCx}
+            >
+              {LEVELS.map((lv) => (
+                <option key={lv} value={lv}>
+                  {lv}
+                </option>
+              ))}
+            </select>
+          </Field>
           <Row>
             <Field label="Team A Name">
               <input

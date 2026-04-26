@@ -3,6 +3,7 @@ import { ArrowUpRight, ChevronRight, ChevronUp, Check, Pencil } from "lucide-rea
 import { readSession } from "@/lib/auth/session";
 import { canManageLeague } from "@/lib/auth/perms";
 import { getViewCaps } from "@/lib/auth/view";
+import { GradePill } from "@/components/bdl/grade-pill";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { CommissionerStrip } from "@/components/bdl/commissioner-strip";
@@ -437,6 +438,7 @@ export default async function Home() {
               name={currentLeague.name}
               schedule={currentLeague.schedule ?? "Your home league"}
               playerCount={leaguePlayerCount}
+              level={currentLeague.level}
             />
             {discover.map((l) => (
               <DiscoverCard
@@ -445,6 +447,7 @@ export default async function Home() {
                 schedule={l.schedule ?? l.description ?? "Open league"}
                 playerCount={l.playerCount}
                 spots={l.spots}
+                level={l.level}
               />
             ))}
           </div>
@@ -586,12 +589,14 @@ function DiscoverCard({
   playerCount,
   spots,
   you,
+  level,
 }: {
   name: string;
   schedule: string;
   playerCount: number;
   spots?: number | null;
   you?: boolean;
+  level?: string;
 }) {
   return (
     <div
@@ -636,6 +641,9 @@ function DiscoverCard({
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-[color:var(--surface-2)] text-[color:var(--text-2)] border border-[color:var(--hairline)]">
               {spots} spot{spots === 1 ? "" : "s"}
             </span>
+          )}
+          {level && level !== "Not Rated" && (
+            <GradePill level={level} />
           )}
         </div>
         <button

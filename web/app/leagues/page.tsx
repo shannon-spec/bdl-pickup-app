@@ -9,6 +9,7 @@ import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
+import { GradePill } from "@/components/bdl/grade-pill";
 import { getLeaguesWithStats } from "@/lib/queries/leagues";
 import { LeaguesPageClient } from "./leagues-client";
 
@@ -81,6 +82,7 @@ export default async function LeaguesPage() {
                         {l.completedGames} / {l.totalGames} games
                       </Pill>
                       <Pill tone="brand">{l.format.replace("v", " V ").toUpperCase()}</Pill>
+                      <GradePill level={l.level} hideUnrated />
                     </div>
                     <ChevronRight
                       size={16}

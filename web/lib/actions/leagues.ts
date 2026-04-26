@@ -9,6 +9,14 @@ import { requireAdminOnly, requireLeagueManager } from "@/lib/auth/perms";
 import { requireAdminView, requireManageView } from "@/lib/auth/view";
 
 const FORMATS = ["5v5", "5v5-series", "3v3", "3v3-series"] as const;
+const LEVELS = [
+  "Not Rated",
+  "Novice",
+  "Intermediate",
+  "Advanced",
+  "Game Changer",
+  "Pro",
+] as const;
 
 const leagueSchema = z.object({
   name: z.string().trim().min(1, "Name is required.").max(80),
@@ -17,6 +25,7 @@ const leagueSchema = z.object({
   location: z.string().trim().max(200).optional().or(z.literal("")),
   description: z.string().trim().max(500).optional().or(z.literal("")),
   format: z.enum(FORMATS).default("5v5"),
+  level: z.enum(LEVELS).default("Not Rated"),
   startTime: z.string().trim().max(8).optional().or(z.literal("")),
   maxPlayers: z.string().trim().optional().or(z.literal("")),
   teamAName: z.string().trim().min(1).max(40).default("White"),
@@ -59,6 +68,7 @@ export async function createLeague(formData: FormData): Promise<ActionResult<{ i
       location: nullable(v.location),
       description: nullable(v.description),
       format: v.format,
+      level: v.level,
       startTime: nullable(v.startTime),
       maxPlayers: Number.isFinite(max) ? max : null,
       teamAName: v.teamAName || "White",
@@ -94,6 +104,7 @@ export async function updateLeague(
       location: nullable(v.location),
       description: nullable(v.description),
       format: v.format,
+      level: v.level,
       startTime: nullable(v.startTime),
       maxPlayers: Number.isFinite(max) ? max : null,
       teamAName: v.teamAName || "White",

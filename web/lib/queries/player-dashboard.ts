@@ -57,6 +57,7 @@ export async function getPlayerLeagues(playerId: string): Promise<League[]> {
       startTimeType: leagues.startTimeType,
       days: leagues.days,
       maxPlayers: leagues.maxPlayers,
+      level: leagues.level,
       teamAName: leagues.teamAName,
       teamBName: leagues.teamBName,
       createdAt: leagues.createdAt,
@@ -496,6 +497,7 @@ export type DiscoverLeague = {
   name: string;
   schedule: string | null;
   description: string | null;
+  level: string;
   playerCount: number;
   maxPlayers: number | null;
   spots: number | null;
@@ -537,6 +539,7 @@ export async function getDiscoverLeagues(
       name: l.name,
       schedule: l.schedule ?? null,
       description: l.description ?? null,
+      level: l.level,
       playerCount,
       maxPlayers: l.maxPlayers ?? null,
       spots,

@@ -9,6 +9,7 @@ import { MembersStrip } from "@/components/bdl/members-strip";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
+import { GradePill } from "@/components/bdl/grade-pill";
 import { getLeagueDetail } from "@/lib/queries/leagues";
 import { getInvitesForLeague } from "@/lib/queries/invites";
 import { LeagueDetailClient, Invites } from "./league-detail-client";
@@ -60,6 +61,7 @@ export default async function LeagueDetailPage({
             </div>
             <div className="flex items-center gap-1.5 flex-wrap mt-3">
               <Pill tone="brand">{detail.league.format.replace("v", " V ").toUpperCase()}</Pill>
+              <GradePill level={detail.league.level} hideUnrated />
               <Pill tone="neutral">{detail.members.length} players</Pill>
               <Pill tone="neutral">
                 {detail.completedGames} / {detail.totalGames} games

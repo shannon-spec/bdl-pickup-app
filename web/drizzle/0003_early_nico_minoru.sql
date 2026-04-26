@@ -1,0 +1,1 @@
+ALTER TABLE "leagues" ADD COLUMN "level" "player_level" DEFAULT 'Not Rated' NOT NULL;
