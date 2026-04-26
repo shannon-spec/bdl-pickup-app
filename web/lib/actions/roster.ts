@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { db, players } from "@/lib/db";
+import { db, players, leaguePlayers } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/session";
 import { requireAdminView } from "@/lib/auth/view";
 
@@ -160,6 +160,44 @@ export async function updatePlayer(
   revalidatePath(`/players/${id}`);
   revalidatePath("/");
   return { ok: true, data: { id } };
+}
+
+/**
+ * Admin-only direct add from the /players directory. Creates a player
+ * and optionally drops them into a league. Pass leagueId='' (or
+ * omit) to leave them in the BDL Universe with no league.
+ */
+export async function createPlayerInDirectory(
+  formData: FormData,
+): Promise<ActionResult<{ id: string }>> {
+  await requireAdmin();
+  await requireAdminView();
+  const parsed = playerSchema.safeParse(readForm(formData));
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "Validation failed.",
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+  const [row] = await db
+    .insert(players)
+    .values(valuesFor(parsed.data))
+    .returning({ id: players.id });
+
+  const leagueId = (readForm(formData).leagueId ?? "").trim();
+  if (leagueId) {
+    await db
+      .insert(leaguePlayers)
+      .values({ leagueId, playerId: row.id })
+      .onConflictDoNothing();
+    revalidatePath(`/leagues/${leagueId}`);
+  }
+
+  revalidatePath("/players");
+  revalidatePath("/roster");
+  revalidatePath("/");
+  return { ok: true, data: { id: row.id } };
 }
 
 export async function deletePlayer(id: string): Promise<ActionResult> {

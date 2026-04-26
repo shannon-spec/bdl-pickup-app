@@ -20,6 +20,7 @@ import {
 import { db, leagues as leaguesTbl } from "@/lib/db";
 import { asc, inArray } from "drizzle-orm";
 import { InviteControls } from "./invite-controls";
+import { AddPlayerControls } from "./add-player-controls";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Players · BDL" };
@@ -49,13 +50,20 @@ export default async function PlayersPage({
     viewerLeagueIds,
   });
 
-  // Invite UI: visible only to commish/admin views with at least one
-  // league they manage. Player view never sees it.
-  const canInvite = caps.canManage;
-  const manageLeagueIds =
-    caps.view === "admin" && isAdminLike(session)
-      ? null // admin: all leagues
-      : commishIds;
+  // Add Player vs Invite Player split:
+  //   - Admin view → direct Add Player (all leagues optional)
+  //   - Commissioner view → Invite Player (their managed leagues only)
+  //   - Player view → no add/invite UI
+  const isAdminView = caps.view === "admin" && isAdminLike(session);
+  const canInvite = caps.canManage && !isAdminView;
+  const manageLeagueIds = isAdminView ? null : commishIds;
+  const showAddPlayer = isAdminView;
+  const adminAllLeagues = isAdminView
+    ? await db
+        .select({ id: leaguesTbl.id, name: leaguesTbl.name })
+        .from(leaguesTbl)
+        .orderBy(asc(leaguesTbl.name))
+    : [];
   const inviteLeagues =
     canInvite && (manageLeagueIds === null || manageLeagueIds.length > 0)
       ? await db
@@ -83,7 +91,9 @@ export default async function PlayersPage({
             </span>
           }
           right={
-            canInvite && inviteLeagues.length > 0 ? (
+            showAddPlayer ? (
+              <AddPlayerControls leagues={adminAllLeagues} />
+            ) : canInvite && inviteLeagues.length > 0 ? (
               <InviteControls leagues={inviteLeagues} />
             ) : null
           }
