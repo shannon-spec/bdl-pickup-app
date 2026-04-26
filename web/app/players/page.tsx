@@ -41,16 +41,17 @@ export default async function PlayersPage({
   ]);
   const viewerLeagueIds = Array.from(new Set([...memberIds, ...commishIds]));
 
-  const players = await getPlayersDirectory({
-    scope,
-    viewerLeagueIds,
-  });
-
   // Add Player vs Invite Player split:
   //   - Admin view → direct Add Player (all leagues optional)
   //   - Commissioner view → Invite Player (their managed leagues only)
   //   - Player view → no add/invite UI
   const isAdminView = caps.view === "admin" && isAdminLike(session);
+
+  const players = await getPlayersDirectory({
+    scope,
+    viewerLeagueIds,
+    viewerIsAdmin: isAdminView,
+  });
   const canInvite = caps.canManage && !isAdminView;
   const manageLeagueIds = isAdminView ? null : commishIds;
   const showAddPlayer = isAdminView;

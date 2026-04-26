@@ -54,6 +54,7 @@ export async function getCredentialPlayers(): Promise<{
       firstName: players.firstName,
       lastName: players.lastName,
       email: players.email,
+      emailPrivate: players.emailPrivate,
       username: players.username,
       passwordHash: players.passwordHash,
     })
@@ -114,17 +115,21 @@ export async function getCredentialPlayers(): Promise<{
   }
   const commishSet = new Set(commishRows.map((c) => c.playerId));
 
+  const isAdmin = isAdminLike(session);
   return {
     rows: filtered.map((p) => ({
       id: p.id,
       firstName: p.firstName,
       lastName: p.lastName,
-      email: p.email,
+      // Private-emails policy: only admins ever see them. Blanking
+      // the value here means the credentials page never renders it
+      // and search can't match against it for non-admins.
+      email: p.emailPrivate && !isAdmin ? null : p.email,
       username: p.username,
       hasPassword: !!p.passwordHash,
       isCommissioner: commishSet.has(p.id),
       leagueNames: memberLeaguesByPlayer.get(p.id) ?? [],
     })),
-    scope: isAdminLike(session) ? "admin" : "commissioner",
+    scope: isAdmin ? "admin" : "commissioner",
   };
 }

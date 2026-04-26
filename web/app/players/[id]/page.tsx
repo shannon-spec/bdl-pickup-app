@@ -347,6 +347,9 @@ function ContactCard({
   access: ContactAccess;
 }) {
   if (!player.cell && !player.email) return null;
+  // Don't reveal that contact info exists at all to viewers who can't
+  // see any of it (no shared league, not admin, not commissioner).
+  if (access === "none") return null;
 
   return (
     <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6">

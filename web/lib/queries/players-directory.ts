@@ -17,6 +17,12 @@ export type DirectoryPlayer = {
 export async function getPlayersDirectory(opts: {
   scope: "league" | "all";
   viewerLeagueIds: string[];
+  /**
+   * Admin viewers see private emails; everyone else gets them
+   * blanked, which also keeps the client-side search from matching
+   * against them.
+   */
+  viewerIsAdmin?: boolean;
 }): Promise<DirectoryPlayer[]> {
   const playerIds: string[] | null =
     opts.scope === "league" && opts.viewerLeagueIds.length > 0
@@ -47,6 +53,7 @@ export async function getPlayersDirectory(opts: {
             firstName: players.firstName,
             lastName: players.lastName,
             email: players.email,
+            emailPrivate: players.emailPrivate,
             city: players.city,
             position: players.position,
             level: players.level,
@@ -61,6 +68,7 @@ export async function getPlayersDirectory(opts: {
             firstName: players.firstName,
             lastName: players.lastName,
             email: players.email,
+            emailPrivate: players.emailPrivate,
             city: players.city,
             position: players.position,
             level: players.level,
@@ -94,9 +102,13 @@ export async function getPlayersDirectory(opts: {
     byPlayer.set(m.playerId, cur);
   }
 
-  return baseRows.map((r) => ({
-    ...r,
-    leagueIds: byPlayer.get(r.id)?.leagueIds ?? [],
-    leagueNames: byPlayer.get(r.id)?.leagueNames ?? [],
-  }));
+  return baseRows.map((r) => {
+    const { emailPrivate, ...rest } = r;
+    return {
+      ...rest,
+      email: emailPrivate && !opts.viewerIsAdmin ? null : r.email,
+      leagueIds: byPlayer.get(r.id)?.leagueIds ?? [],
+      leagueNames: byPlayer.get(r.id)?.leagueNames ?? [],
+    };
+  });
 }
