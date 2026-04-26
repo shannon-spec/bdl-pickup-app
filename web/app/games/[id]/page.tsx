@@ -5,7 +5,7 @@ import { readSession } from "@/lib/auth/session";
 import { canManageGame, canViewGame } from "@/lib/auth/perms";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
-import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
+import { PageFrame } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { TeamBadge } from "@/components/bdl/team-badge";
 import { Pill } from "@/components/bdl/pill";
@@ -152,13 +152,21 @@ export default async function GameDetailPage({
 
         {canEdit && <GameMetaEditor detail={detail} />}
 
-        <SectionHead title={`${game.teamAName ?? "White"} (${detail.rosterA.length})`} />
+        <TeamSectionHead
+          variant="white"
+          name={game.teamAName ?? "White"}
+          count={detail.rosterA.length}
+        />
         <RosterPanel detail={detail} side="A" canEdit={canEdit} />
 
-        <SectionHead title={`${game.teamBName ?? "Dark"} (${detail.rosterB.length})`} />
+        <TeamSectionHead
+          variant="dark"
+          name={game.teamBName ?? "Dark"}
+          count={detail.rosterB.length}
+        />
         <RosterPanel detail={detail} side="B" canEdit={canEdit} />
 
-        <SectionHead title={`Invited (${detail.invited.length})`} />
+        <TeamSectionHead variant="invited" name="Invited" count={detail.invited.length} />
         <RosterPanel detail={detail} side="invited" canEdit={canEdit} />
 
         {canEdit && (
@@ -178,6 +186,53 @@ export default async function GameDetailPage({
       </PageFrame>
       <MobileBottomBar active="home" />
     </>
+  );
+}
+
+/**
+ * Team-tinted section header for the roster panels. Silver for White
+ * (A side), gold for Dark (B side), neutral for Invited — same
+ * vocabulary used elsewhere (winner pills, season hero cards).
+ */
+function TeamSectionHead({
+  variant,
+  name,
+  count,
+}: {
+  variant: "white" | "dark" | "invited";
+  name: string;
+  count: number;
+}) {
+  const tint =
+    variant === "white"
+      ? { bg: "rgba(170,178,192,.18)", border: "rgba(170,178,192,.45)" }
+      : variant === "dark"
+        ? { bg: "rgba(212,175,55,.18)", border: "rgba(212,175,55,.55)" }
+        : { bg: "var(--surface-2)", border: "var(--hairline-2)" };
+  return (
+    <div
+      className="flex items-center gap-3 rounded-[12px] border px-3.5 py-2.5"
+      style={{
+        background: `linear-gradient(135deg, ${tint.bg}, transparent 70%), var(--surface)`,
+        borderColor: tint.border,
+      }}
+    >
+      {variant === "invited" ? (
+        <span className="inline-flex items-center justify-center w-9 h-9 rounded-[10px] bg-[color:var(--surface-2)] text-[color:var(--text-3)] font-extrabold text-[14px] border border-[color:var(--hairline-2)]">
+          ?
+        </span>
+      ) : (
+        <TeamBadge team={variant} size={36} />
+      )}
+      <div className="flex flex-col leading-tight">
+        <span className="font-extrabold text-[16px] text-[color:var(--text)]">
+          {name}
+        </span>
+        <span className="text-[10.5px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
+          {count} {variant === "invited" ? "invited" : count === 1 ? "player" : "players"}
+        </span>
+      </div>
+    </div>
   );
 }
 
