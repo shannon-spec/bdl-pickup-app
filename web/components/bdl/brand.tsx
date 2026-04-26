@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 /**
@@ -24,30 +25,14 @@ export function Brand({ className, showSub = true }: { className?: string; showS
 
 export function BrandMark({ size = 34, className }: { size?: number; className?: string }) {
   return (
-    <span
+    <Image
+      src="/bdl-mark.svg"
+      alt=""
       aria-hidden
-      className={cn("relative inline-block rounded-full flex-shrink-0", className)}
-      style={{
-        width: size,
-        height: size,
-        background:
-          "radial-gradient(circle at 32% 30%, #ff8a5c, #F04E23 55%, #9B2A10)",
-        boxShadow: "inset 0 0 0 1px var(--mark-inset)",
-      }}
-    >
-      <span
-        className="pointer-events-none absolute inset-0 rounded-full"
-        style={{
-          background: [
-            "radial-gradient(circle at 50% 50%, transparent 62%, rgba(0,0,0,.18) 62.5%, transparent 64%)",
-            "radial-gradient(circle at 50% 50%, transparent 45%, rgba(255,255,255,.28) 45.5%, transparent 47%)",
-          ].join(","),
-        }}
-      />
-      <span
-        className="pointer-events-none absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[2px] opacity-35"
-        style={{ background: "#fff" }}
-      />
-    </span>
+      width={size}
+      height={size}
+      priority
+      className={cn("flex-shrink-0", className)}
+    />
   );
 }
