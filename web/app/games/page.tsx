@@ -503,12 +503,6 @@ function TeamSeasonCard({
   const tint = isSilver ? "rgba(170,178,192,.22)" : "rgba(212,175,55,.22)";
   const border = isSilver ? "rgba(170,178,192,.45)" : "rgba(212,175,55,.55)";
   const initial = (t.name[0] ?? "?").toUpperCase();
-  const streakTone =
-    t.streakType === "W"
-      ? "text-[color:var(--up)]"
-      : t.streakType === "L"
-        ? "text-[color:var(--down)]"
-        : "text-[color:var(--text-3)]";
   const fmtMargin = (m: number | null) =>
     m === null ? "—" : m.toFixed(1);
   return (
@@ -519,11 +513,11 @@ function TeamSeasonCard({
         borderColor: border,
       }}
     >
-      <div className="px-5 py-4 flex flex-col gap-3">
+      <div className="px-5 py-3.5 flex flex-col gap-2.5">
         <div className="flex items-center gap-2.5">
           <span
             aria-hidden
-            className={`inline-flex items-center justify-center w-9 h-9 rounded-[10px] font-extrabold text-[14px] ${
+            className={`inline-flex items-center justify-center w-8 h-8 rounded-[10px] font-extrabold text-[13px] ${
               isSilver ? "bg-[var(--tb-white-bg)] text-[var(--tb-white-fg)]" : "bg-[var(--tb-dark-bg)] text-[var(--tb-dark-fg)]"
             }`}
             style={{
@@ -532,61 +526,50 @@ function TeamSeasonCard({
           >
             {initial}
           </span>
-          <div className="flex flex-col leading-tight">
-            <span className="font-extrabold text-[16px] text-[color:var(--text)]">
+          <div className="flex items-baseline gap-2">
+            <span className="font-extrabold text-[16px] text-[color:var(--text)] leading-none">
               {t.name}
             </span>
-            <span className="text-[10.5px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
+            <span className="text-[10px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)] leading-none">
               Season
             </span>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-x-3 gap-y-2.5">
           <Stat label="Record">
-            <span className="font-[family-name:var(--mono)] num font-extrabold text-[20px]">
+            <span className="font-[family-name:var(--mono)] num font-extrabold text-[18px]">
               {t.wins}
               <span className="text-[color:var(--text-4)] font-bold mx-[-2px]">–</span>
               {t.losses}
             </span>
           </Stat>
           <Stat label="Win %">
-            <span className="font-[family-name:var(--mono)] num font-extrabold text-[20px]">
+            <span className="font-[family-name:var(--mono)] num font-extrabold text-[18px]">
               {t.pct === null ? "—" : `${t.pct.toFixed(1)}`}
               {t.pct !== null && (
-                <span className="text-[color:var(--text-3)] text-[12px] font-bold ml-0.5">
+                <span className="text-[color:var(--text-3)] text-[11px] font-bold ml-0.5">
                   %
                 </span>
               )}
             </span>
           </Stat>
-          <Stat label="Streak">
-            <span
-              className={`font-[family-name:var(--mono)] num font-extrabold text-[20px] ${streakTone}`}
-            >
-              {t.streakType ? `${t.streakType}${t.streakCount}` : "—"}
+          <Stat label="Best W / L">
+            <span className="font-[family-name:var(--mono)] num font-extrabold text-[18px]">
+              <span className="text-[color:var(--up)]">
+                {t.bestWinStreak > 0 ? `W${t.bestWinStreak}` : "—"}
+              </span>
+              <span className="text-[color:var(--text-4)] font-bold mx-1">·</span>
+              <span className="text-[color:var(--down)]">
+                {t.bestLossStreak > 0 ? `L${t.bestLossStreak}` : "—"}
+              </span>
             </span>
           </Stat>
-        </div>
-        <div
-          className="grid grid-cols-2 gap-x-3 gap-y-3 pt-3 border-t border-dashed"
-          style={{ borderColor: "var(--hairline)" }}
-        >
-          <Stat label="Win Streak (best)">
-            <span className="font-[family-name:var(--mono)] num font-extrabold text-[18px] text-[color:var(--up)]">
-              {t.bestWinStreak > 0 ? `W${t.bestWinStreak}` : "—"}
-            </span>
-          </Stat>
-          <Stat label="Loss Streak (best)">
-            <span className="font-[family-name:var(--mono)] num font-extrabold text-[18px] text-[color:var(--down)]">
-              {t.bestLossStreak > 0 ? `L${t.bestLossStreak}` : "—"}
-            </span>
-          </Stat>
-          <Stat label="Avg Margin · Wins">
+          <Stat label="Avg +/− · Wins">
             <span className="font-[family-name:var(--mono)] num font-extrabold text-[18px] text-[color:var(--up)]">
               {t.avgWinMargin === null ? "—" : `+${fmtMargin(t.avgWinMargin)}`}
             </span>
           </Stat>
-          <Stat label="Avg Margin · Losses">
+          <Stat label="Avg +/− · Losses">
             <span className="font-[family-name:var(--mono)] num font-extrabold text-[18px] text-[color:var(--down)]">
               {t.avgLossMargin === null ? "—" : `−${fmtMargin(t.avgLossMargin)}`}
             </span>
