@@ -11,7 +11,7 @@ export function Brand({ className, showSub = true }: { className?: string; showS
       <BrandMark size={34} />
       <div className="flex flex-col leading-none min-w-0">
         <span className="font-extrabold text-[20px] tracking-[-0.03em] text-[color:var(--text)]">
-          BDL
+          B<span style={{ color: "#E87722" }}>D</span>L
         </span>
         {showSub && (
           <span className="mt-1.5 text-[10.5px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)] whitespace-nowrap">
