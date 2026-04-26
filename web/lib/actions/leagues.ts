@@ -295,17 +295,28 @@ export async function removeLeaguePlayer(
   return { ok: true };
 }
 
+async function gateLeagueManager(leagueId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    await requireLeagueManager(leagueId);
+    await requireManageView();
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Not authorized." };
+  }
+}
+
 export async function addCommissioner(
   leagueId: string,
   playerId: string,
 ): Promise<ActionResult> {
-  await requireLeagueManager(leagueId);
-  await requireManageView();
+  const gate = await gateLeagueManager(leagueId);
+  if (!gate.ok) return gate;
   await db
     .insert(leagueCommissioners)
     .values({ leagueId, playerId })
     .onConflictDoNothing();
   revalidatePath(`/leagues/${leagueId}`);
+  revalidatePath("/admin/commissioners");
   return { ok: true };
 }
 
@@ -313,8 +324,8 @@ export async function removeCommissioner(
   leagueId: string,
   playerId: string,
 ): Promise<ActionResult> {
-  await requireLeagueManager(leagueId);
-  await requireManageView();
+  const gate = await gateLeagueManager(leagueId);
+  if (!gate.ok) return gate;
   await db
     .delete(leagueCommissioners)
     .where(
@@ -324,5 +335,6 @@ export async function removeCommissioner(
       ),
     );
   revalidatePath(`/leagues/${leagueId}`);
+  revalidatePath("/admin/commissioners");
   return { ok: true };
 }

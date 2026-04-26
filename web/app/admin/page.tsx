@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ChevronRight, Users, Trophy, Globe, Settings, BarChart3, Activity, KeyRound } from "lucide-react";
+import { ChevronRight, Users, Trophy, Globe, Settings, BarChart3, Activity, KeyRound, ShieldCheck } from "lucide-react";
 import { count } from "drizzle-orm";
 import { readSession } from "@/lib/auth/session";
 import { isAdminLike } from "@/lib/auth/perms";
@@ -55,6 +55,12 @@ export default async function AdminPage() {
       label: "Games",
       desc: "Schedule games, score them, lock as final.",
       stat: `${gCount.n} game${gCount.n === 1 ? "" : "s"}`,
+    },
+    {
+      href: "/admin/commissioners",
+      icon: <ShieldCheck size={20} />,
+      label: "Commissioners",
+      desc: "Assign or revoke commissioner roles for any league.",
     },
     {
       href: "/admin/credentials",
