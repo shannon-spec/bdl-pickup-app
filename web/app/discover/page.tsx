@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
 import { TopBar } from "@/components/bdl/top-bar";
@@ -15,14 +14,15 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Discover · BDL" };
 
 export default async function DiscoverPage() {
+  // Discover is the public landing page — visitors without a session
+  // see the same league directory; "Your leagues" simply collapses.
   const session = await readSession();
-  if (!session) redirect("/login");
 
   const allLeagues = await getLeaguesWithStats();
 
   // Which leagues is the signed-in player in?
   const memberSet = new Set<string>();
-  if (session.playerId) {
+  if (session?.playerId) {
     const memberships = await db
       .select({ leagueId: leaguePlayers.leagueId })
       .from(leaguePlayers)
@@ -37,7 +37,7 @@ export default async function DiscoverPage() {
     <>
       <TopBar
         active="/discover"
-        userInitials={session.username.slice(0, 2).toUpperCase()}
+        userInitials={session?.username?.slice(0, 2).toUpperCase() ?? ""}
       />
       <PageFrame>
         <ContextHeader />

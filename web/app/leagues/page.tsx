@@ -18,7 +18,7 @@ export const metadata = { title: "Leagues · BDL" };
 
 export default async function LeaguesPage() {
   const session = await readSession();
-  if (!session) redirect("/login");
+  if (!session) redirect("/discover");
   const caps = await getViewCaps(session);
   if (!caps.canManage) redirect("/");
   const isAdmin = isAdminLike(session);

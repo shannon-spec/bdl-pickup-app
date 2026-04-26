@@ -22,7 +22,7 @@ const fmtDate = (d: string | null) => {
 
 export default async function ActivityPage() {
   const session = await readSession();
-  if (!session) redirect("/login");
+  if (!session) redirect("/discover");
 
   const all = await db.select().from(games).orderBy(desc(games.gameDate));
 

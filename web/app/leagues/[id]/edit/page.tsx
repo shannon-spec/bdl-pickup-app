@@ -20,7 +20,7 @@ export default async function EditLeaguePage({
   params: Promise<{ id: string }>;
 }) {
   const session = await readSession();
-  if (!session) redirect("/login");
+  if (!session) redirect("/discover");
   const { id } = await params;
   const allowed = await canManageLeague(session, id);
   if (!allowed) redirect(`/leagues/${id}`);

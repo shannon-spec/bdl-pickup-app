@@ -33,6 +33,7 @@ export async function TopBar({
 
   const visibleNav = NAV_ITEMS.filter((item) => item.views.includes(view));
   const showSettings = view === "admin";
+  const isSignedIn = !!session;
 
   return (
     <header
@@ -108,38 +109,55 @@ export async function TopBar({
               style={{ boxShadow: "0 0 0 2px var(--badge-dot-border)" }}
             />
           </button>
-          <form action={signOut}>
-            <button
-              type="submit"
-              aria-label="Sign out"
+          {isSignedIn ? (
+            <>
+              <form action={signOut}>
+                <button
+                  type="submit"
+                  aria-label="Sign out"
+                  className={cn(
+                    "relative inline-flex items-center justify-center",
+                    "w-[34px] h-[34px] rounded-[var(--r-lg)]",
+                    "border border-[color:var(--hairline-2)] bg-[color:var(--surface)]",
+                    "text-[color:var(--text-2)] hover:text-[color:var(--text)]",
+                    "transition-colors",
+                  )}
+                >
+                  <LogOut size={16} />
+                </button>
+              </form>
+              <button
+                type="button"
+                aria-label="Account menu"
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-full h-[38px] pr-3 pl-1",
+                  "border border-[color:var(--hairline-2)] bg-[color:var(--surface)]",
+                  "hover:border-[color:var(--text-4)] transition-colors",
+                )}
+              >
+                <span
+                  aria-hidden
+                  className="inline-flex items-center justify-center w-[28px] h-[28px] rounded-full text-white font-extrabold text-[11px]"
+                  style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-2))" }}
+                >
+                  {userInitials}
+                </span>
+              </button>
+            </>
+          ) : (
+            <Link
+              href="/login"
               className={cn(
-                "relative inline-flex items-center justify-center",
-                "w-[34px] h-[34px] rounded-[var(--r-lg)]",
+                "inline-flex items-center justify-center h-[34px] px-3 rounded-[var(--r-lg)]",
                 "border border-[color:var(--hairline-2)] bg-[color:var(--surface)]",
+                "text-[12px] font-bold uppercase tracking-[0.06em]",
                 "text-[color:var(--text-2)] hover:text-[color:var(--text)]",
                 "transition-colors",
               )}
             >
-              <LogOut size={16} />
-            </button>
-          </form>
-          <button
-            type="button"
-            aria-label="Account menu"
-            className={cn(
-              "inline-flex items-center gap-2 rounded-full h-[38px] pr-3 pl-1",
-              "border border-[color:var(--hairline-2)] bg-[color:var(--surface)]",
-              "hover:border-[color:var(--text-4)] transition-colors",
-            )}
-          >
-            <span
-              aria-hidden
-              className="inline-flex items-center justify-center w-[28px] h-[28px] rounded-full text-white font-extrabold text-[11px]"
-              style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-2))" }}
-            >
-              {userInitials}
-            </span>
-          </button>
+              Sign in
+            </Link>
+          )}
         </div>
       </div>
     </header>

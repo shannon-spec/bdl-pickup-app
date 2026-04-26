@@ -48,7 +48,7 @@ export default async function GamesPage({
   }>;
 }) {
   const session = await readSession();
-  if (!session) redirect("/login");
+  if (!session) redirect("/discover");
   const caps = await getViewCaps(session);
   const isAdmin = isAdminLike(session);
   // Lens-driven scoping: in commissioner view, even a super admin sees

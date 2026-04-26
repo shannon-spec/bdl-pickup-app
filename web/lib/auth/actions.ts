@@ -92,5 +92,5 @@ export async function signInAdmin(formData: FormData): Promise<SignInResult> {
 
 export async function signOut() {
   await clearSessionCookie();
-  redirect("/login");
+  redirect("/discover");
 }

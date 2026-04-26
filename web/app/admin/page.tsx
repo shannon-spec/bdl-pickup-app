@@ -24,7 +24,7 @@ type Tile = {
 
 export default async function AdminPage() {
   const session = await readSession();
-  if (!session) redirect("/login");
+  if (!session) redirect("/discover");
   if (!isAdminLike(session)) redirect("/");
   const caps = await getViewCaps(session);
   if (caps.view !== "admin") redirect("/");

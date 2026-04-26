@@ -33,7 +33,7 @@ export default async function PlayerProfilePage({
   params: Promise<{ id: string }>;
 }) {
   const session = await readSession();
-  if (!session) redirect("/login");
+  if (!session) redirect("/discover");
 
   const { id } = await params;
   const profile = await getPlayerProfile(id);

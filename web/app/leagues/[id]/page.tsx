@@ -22,7 +22,7 @@ export default async function LeagueDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const session = await readSession();
-  if (!session) redirect("/login");
+  if (!session) redirect("/discover");
 
   const { id } = await params;
   const canManage = await canManageLeague(session, id);

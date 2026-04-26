@@ -17,7 +17,7 @@ export default async function LeaderboardPage({
   searchParams: Promise<{ league?: string; year?: string }>;
 }) {
   const session = await readSession();
-  if (!session) redirect("/login");
+  if (!session) redirect("/discover");
 
   const sp = await searchParams;
   const data = await getLeaderboard({

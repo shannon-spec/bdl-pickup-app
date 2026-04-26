@@ -14,7 +14,7 @@ export const metadata = { title: "New League · BDL" };
 
 export default async function NewLeaguePage() {
   const session = await readSession();
-  if (!session) redirect("/login");
+  if (!session) redirect("/discover");
   const caps = await getViewCaps(session);
   if (!caps.canManage) redirect("/");
 

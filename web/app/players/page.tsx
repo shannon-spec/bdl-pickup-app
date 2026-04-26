@@ -33,7 +33,7 @@ export default async function PlayersPage({
   searchParams: Promise<{ scope?: Scope }>;
 }) {
   const session = await readSession();
-  if (!session) redirect("/login");
+  if (!session) redirect("/discover");
   const caps = await getViewCaps(session);
 
   const sp = await searchParams;

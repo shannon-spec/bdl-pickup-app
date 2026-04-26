@@ -42,7 +42,7 @@ export default async function GameDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const session = await readSession();
-  if (!session) redirect("/login");
+  if (!session) redirect("/discover");
   const { id } = await params;
   const canView = await canViewGame(session, id);
   if (!canView) redirect("/games");
