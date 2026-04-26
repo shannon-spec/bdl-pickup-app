@@ -199,6 +199,8 @@ export type FormCard = {
   isWin: boolean;
   isTie: boolean;
   opName: string;
+  heroId: string | null;
+  heroName: string | null;
 };
 
 export async function getLastFive(
@@ -215,6 +217,24 @@ export async function getLastFive(
   const sides = await getPlayerSidesByGame(playerId, leagueId);
   const mine = completed.filter((g) => sides.has(g.id)).slice(-5).reverse();
 
+  const heroIds = Array.from(
+    new Set(mine.map((g) => g.gameWinner).filter((x): x is string => !!x)),
+  );
+  const heroNameById = new Map<string, string>();
+  if (heroIds.length > 0) {
+    const rows = await db
+      .select({
+        id: players.id,
+        firstName: players.firstName,
+        lastName: players.lastName,
+      })
+      .from(players)
+      .where(inArray(players.id, heroIds));
+    for (const r of rows) {
+      heroNameById.set(r.id, `${r.firstName} ${r.lastName}`);
+    }
+  }
+
   return mine.map((g) => {
     const side = sides.get(g.id)!;
     const win = gameWinTeam(g);
@@ -224,7 +244,17 @@ export async function getLastFive(
     const opScore = side === "A" ? g.scoreB : g.scoreA;
     const opName =
       side === "A" ? g.teamBName ?? "Dark" : g.teamAName ?? "White";
-    return { id: g.id, date: g.gameDate, myScore, opScore, isWin, isTie, opName };
+    return {
+      id: g.id,
+      date: g.gameDate,
+      myScore,
+      opScore,
+      isWin,
+      isTie,
+      opName,
+      heroId: g.gameWinner ?? null,
+      heroName: g.gameWinner ? heroNameById.get(g.gameWinner) ?? null : null,
+    };
   });
 }
 
@@ -460,6 +490,10 @@ export type ActivityItem = {
   loserName: string;
   winnerScore: number | null;
   loserScore: number | null;
+  heroId: string | null;
+  heroName: string | null;
+  scoreA: number | null;
+  scoreB: number | null;
 };
 
 export async function getRecentActivity(
@@ -472,22 +506,48 @@ export async function getRecentActivity(
     .where(eq(games.leagueId, leagueId))
     .orderBy(desc(games.gameDate));
 
-  const out: ActivityItem[] = [];
+  const taken: Game[] = [];
   for (const g of all) {
     if (!isComplete(g)) continue;
     const w = gameWinTeam(g);
     if (!w || w === "Tie") continue;
-    out.push({
+    taken.push(g);
+    if (taken.length >= limit) break;
+  }
+
+  const heroIds = Array.from(
+    new Set(taken.map((g) => g.gameWinner).filter((x): x is string => !!x)),
+  );
+  const heroNameById = new Map<string, string>();
+  if (heroIds.length > 0) {
+    const rows = await db
+      .select({
+        id: players.id,
+        firstName: players.firstName,
+        lastName: players.lastName,
+      })
+      .from(players)
+      .where(inArray(players.id, heroIds));
+    for (const r of rows) {
+      heroNameById.set(r.id, `${r.firstName} ${r.lastName}`);
+    }
+  }
+
+  return taken.map((g) => {
+    const w = gameWinTeam(g)!;
+    return {
       id: g.id,
       date: g.gameDate,
       winnerName: w === "A" ? g.teamAName ?? "White" : g.teamBName ?? "Dark",
       loserName: w === "A" ? g.teamBName ?? "Dark" : g.teamAName ?? "White",
       winnerScore: w === "A" ? g.scoreA : g.scoreB,
       loserScore: w === "A" ? g.scoreB : g.scoreA,
-    });
-    if (out.length >= limit) break;
-  }
-  return out;
+      heroId: g.gameWinner ?? null,
+      heroName: g.gameWinner ? heroNameById.get(g.gameWinner) ?? null : null,
+      scoreA: g.scoreA,
+      scoreB: g.scoreB,
+    };
+  });
 }
 
 /* ---------- Discover (leagues player isn't in) ---------- */

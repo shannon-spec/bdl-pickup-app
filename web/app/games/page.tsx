@@ -17,6 +17,7 @@ import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
 import { TeamBadge } from "@/components/bdl/team-badge";
 import { ProbabilityBar } from "@/components/bdl/probability-bar";
+import { HeroTag, isHeroGame } from "@/components/bdl/hero-tag";
 import { getGamesList } from "@/lib/queries/games";
 import { getLeaguesWithStats } from "@/lib/queries/leagues";
 import { GamesPageClient } from "./games-client";
@@ -304,6 +305,12 @@ export default async function GamesPage({
             {listRows.map((g) => {
                 const completed =
                   (g.scoreA !== null && g.scoreB !== null) || g.winTeam !== null;
+                const isHero =
+                  isHeroGame({
+                    gameWinner: g.gameWinner,
+                    scoreA: g.scoreA,
+                    scoreB: g.scoreB,
+                  }) && !!g.gameWinnerName;
                 return (
                   <Link
                     key={g.id}
@@ -313,8 +320,8 @@ export default async function GamesPage({
                     <div className="font-bold text-[12.5px]">
                       {fmtDate(g.gameDate)}
                     </div>
-                    <div className="min-w-0 max-sm:col-span-2 max-sm:order-3">
-                      <span className="text-[color:var(--text-3)] text-[12px] mr-2">
+                    <div className="min-w-0 max-sm:col-span-2 max-sm:order-3 flex items-center gap-2 flex-wrap">
+                      <span className="text-[color:var(--text-3)] text-[12px]">
                         {g.leagueName}
                       </span>
                       <TeamLabel
@@ -322,12 +329,13 @@ export default async function GamesPage({
                         winTeam={g.winTeam}
                         name={g.teamAName}
                       />
-                      <span className="text-[color:var(--text-4)] mx-2 font-medium">vs</span>
+                      <span className="text-[color:var(--text-4)] font-medium">vs</span>
                       <TeamLabel
                         side="B"
                         winTeam={g.winTeam}
                         name={g.teamBName}
                       />
+                      {isHero && <HeroTag name={g.gameWinnerName!} size="sm" />}
                     </div>
                     <div className="font-[family-name:var(--mono)] text-[13px] num">
                       {g.scoreA !== null && g.scoreB !== null ? (

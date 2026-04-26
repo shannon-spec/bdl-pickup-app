@@ -10,6 +10,7 @@ import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { TeamBadge } from "@/components/bdl/team-badge";
 import { Pill } from "@/components/bdl/pill";
+import { HeroTag, isHeroGame } from "@/components/bdl/hero-tag";
 import { getGameDetail } from "@/lib/queries/games";
 import {
   GameScore,
@@ -54,6 +55,21 @@ export default async function GameDetailPage({
   const { game } = detail;
   const completed =
     (game.scoreA !== null && game.scoreB !== null) || game.winTeam !== null;
+
+  const heroName = (() => {
+    if (
+      !isHeroGame({
+        gameWinner: game.gameWinner,
+        scoreA: game.scoreA,
+        scoreB: game.scoreB,
+      })
+    ) {
+      return null;
+    }
+    const all = [...detail.rosterA, ...detail.rosterB, ...detail.invited];
+    const p = all.find((x) => x.id === game.gameWinner);
+    return p ? `${p.firstName} ${p.lastName}` : null;
+  })();
 
   return (
     <>
@@ -126,6 +142,12 @@ export default async function GameDetailPage({
               <TeamBadge team="dark" size={56} />
             </div>
           </div>
+
+          {heroName && (
+            <div className="flex items-center justify-center -mt-1 mb-4">
+              <HeroTag name={heroName} />
+            </div>
+          )}
 
           <GameScore detail={detail} />
         </div>

@@ -1,3 +1,4 @@
+import { alias } from "drizzle-orm/pg-core";
 import { asc, desc, eq, sql } from "drizzle-orm";
 import {
   db,
@@ -24,6 +25,8 @@ export type GameListRow = {
   scoreB: number | null;
   winTeam: "A" | "B" | "Tie" | null;
   locked: boolean;
+  gameWinner: string | null;
+  gameWinnerName: string | null;
 };
 
 export type GamesFilter = {
@@ -32,7 +35,8 @@ export type GamesFilter = {
 };
 
 export async function getGamesList(filter: GamesFilter = {}): Promise<GameListRow[]> {
-  const all = await db
+  const heroPlayer = alias(players, "hero_player");
+  const rows = await db
     .select({
       id: games.id,
       leagueId: games.leagueId,
@@ -47,10 +51,32 @@ export async function getGamesList(filter: GamesFilter = {}): Promise<GameListRo
       scoreB: games.scoreB,
       winTeam: games.winTeam,
       locked: games.locked,
+      gameWinner: games.gameWinner,
+      heroFirst: heroPlayer.firstName,
+      heroLast: heroPlayer.lastName,
     })
     .from(games)
+    .leftJoin(heroPlayer, eq(heroPlayer.id, games.gameWinner))
     .where(filter.leagueId ? eq(games.leagueId, filter.leagueId) : undefined)
     .orderBy(desc(games.gameDate));
+  const all: GameListRow[] = rows.map((r) => ({
+    id: r.id,
+    leagueId: r.leagueId,
+    leagueName: r.leagueName,
+    gameDate: r.gameDate,
+    gameTime: r.gameTime,
+    venue: r.venue,
+    format: r.format,
+    teamAName: r.teamAName,
+    teamBName: r.teamBName,
+    scoreA: r.scoreA,
+    scoreB: r.scoreB,
+    winTeam: r.winTeam,
+    locked: r.locked,
+    gameWinner: r.gameWinner,
+    gameWinnerName:
+      r.heroFirst && r.heroLast ? `${r.heroFirst} ${r.heroLast}` : null,
+  }));
 
   const completed = (g: GameListRow) =>
     (g.scoreA !== null && g.scoreB !== null) || g.winTeam !== null;

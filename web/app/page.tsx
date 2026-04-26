@@ -13,6 +13,7 @@ import { StatBlock, StatRow } from "@/components/bdl/stat-block";
 import { TeamBadge } from "@/components/bdl/team-badge";
 import { ProbabilityBar } from "@/components/bdl/probability-bar";
 import { Pill } from "@/components/bdl/pill";
+import { HeroTag, isHeroGame } from "@/components/bdl/hero-tag";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import {
   getPlayerById,
@@ -347,6 +348,12 @@ export default async function Home() {
                       aria-hidden
                     />
                   </div>
+                  {isHeroGame({
+                    gameWinner: g.heroId,
+                    scoreA: g.myScore,
+                    scoreB: g.opScore,
+                  }) &&
+                    g.heroName && <HeroTag name={g.heroName} size="sm" />}
                 </Link>
               ))}
             </div>
@@ -397,23 +404,35 @@ export default async function Home() {
               </div>
             ) : (
               <div className="mt-2 flex flex-col">
-                {activity.map((a) => (
-                  <div
-                    key={a.id}
-                    className="flex items-baseline justify-between gap-3.5 py-2.5 px-1.5 border-t border-[color:var(--hairline)] first:border-t-0 text-[13px]"
-                  >
-                    <span className="text-[color:var(--text)]">
-                      <strong className="font-bold">{a.winnerName}</strong> beat{" "}
-                      <strong className="font-bold">{a.loserName}</strong>{" "}
-                      {a.winnerScore !== null && a.loserScore !== null
-                        ? `${a.winnerScore}–${a.loserScore}`
-                        : ""}
-                    </span>
-                    <span className="font-[family-name:var(--mono)] text-[11.5px] text-[color:var(--text-3)] num shrink-0">
-                      {fmtWD(a.date)}
-                    </span>
-                  </div>
-                ))}
+                {activity.map((a) => {
+                  const showHero =
+                    isHeroGame({
+                      gameWinner: a.heroId,
+                      scoreA: a.scoreA,
+                      scoreB: a.scoreB,
+                    }) && !!a.heroName;
+                  return (
+                    <Link
+                      key={a.id}
+                      href={`/games/${a.id}`}
+                      className="flex items-center justify-between gap-3.5 py-2.5 px-1.5 border-t border-[color:var(--hairline)] first:border-t-0 text-[13px] hover:bg-[color:var(--surface-2)] transition-colors rounded-[6px]"
+                    >
+                      <span className="flex items-center gap-2 flex-wrap text-[color:var(--text)]">
+                        <span>
+                          <strong className="font-bold">{a.winnerName}</strong> beat{" "}
+                          <strong className="font-bold">{a.loserName}</strong>{" "}
+                          {a.winnerScore !== null && a.loserScore !== null
+                            ? `${a.winnerScore}–${a.loserScore}`
+                            : ""}
+                        </span>
+                        {showHero && <HeroTag name={a.heroName!} size="sm" />}
+                      </span>
+                      <span className="font-[family-name:var(--mono)] text-[11.5px] text-[color:var(--text-3)] num shrink-0">
+                        {fmtWD(a.date)}
+                      </span>
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </div>
