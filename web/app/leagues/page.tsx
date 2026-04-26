@@ -39,7 +39,7 @@ export default async function LeaguesPage() {
       <TopBar active="/leagues" userInitials={session.username.slice(0, 2).toUpperCase()} />
       <PageFrame>
         <ContextHeader />
-        <LeaguesPageClient canCreate={caps.view === "admin"}>
+        <LeaguesPageClient canCreate={caps.canManage}>
           <SectionHead
             title="Leagues"
             count={

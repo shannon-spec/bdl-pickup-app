@@ -5,7 +5,12 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { db, leagues, leaguePlayers, leagueCommissioners, players } from "@/lib/db";
-import { requireAdminOnly, requireLeagueManager } from "@/lib/auth/perms";
+import {
+  isAdminLike,
+  requireAdminOnly,
+  requireLeagueManager,
+} from "@/lib/auth/perms";
+import { readSession } from "@/lib/auth/session";
 import { requireAdminView, requireManageView } from "@/lib/auth/view";
 
 const FORMATS = ["5v5", "5v5-series", "3v3", "3v3-series"] as const;
@@ -47,8 +52,18 @@ const nullable = (s?: string | null) => {
 };
 
 export async function createLeague(formData: FormData): Promise<ActionResult<{ id: string }>> {
-  await requireAdminOnly();
   await requireManageView();
+  const session = await readSession();
+  if (!session) {
+    return { ok: false, error: "Not authenticated." };
+  }
+  const isAdmin = isAdminLike(session);
+  if (!isAdmin && !session.playerId) {
+    return {
+      ok: false,
+      error: "Only admins or rostered commissioners can create leagues.",
+    };
+  }
   const parsed = leagueSchema.safeParse(readForm(formData));
   if (!parsed.success) {
     return {
@@ -75,6 +90,17 @@ export async function createLeague(formData: FormData): Promise<ActionResult<{ i
       teamBName: v.teamBName || "Dark",
     })
     .returning({ id: leagues.id });
+
+  // Non-admin creators become a commissioner of their new league so
+  // they can manage it immediately. Admins skip this — they manage
+  // every league globally.
+  if (!isAdmin && session.playerId) {
+    await db
+      .insert(leagueCommissioners)
+      .values({ leagueId: row.id, playerId: session.playerId })
+      .onConflictDoNothing();
+  }
+
   revalidatePath("/leagues");
   return { ok: true, data: { id: row.id } };
 }
