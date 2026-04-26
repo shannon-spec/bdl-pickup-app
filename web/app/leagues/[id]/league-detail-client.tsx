@@ -269,7 +269,7 @@ function PlayerAdder({
         <option value="">Select a player…</option>
         {eligible.map((p) => (
           <option key={p.id} value={p.id}>
-            {p.lastName}, {p.firstName}
+            {p.firstName} {p.lastName}
           </option>
         ))}
       </select>
