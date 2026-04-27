@@ -16,6 +16,7 @@ import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
 import { TeamBadge } from "@/components/bdl/team-badge";
 import { ProbabilityBar } from "@/components/bdl/probability-bar";
+import { Plus } from "lucide-react";
 import { GamesListClient } from "./games-list-client";
 import {
   getGamesList,
@@ -23,7 +24,6 @@ import {
   getMatchupOdds,
 } from "@/lib/queries/games";
 import { getLeaguesWithStats } from "@/lib/queries/leagues";
-import { GamesPageClient } from "./games-client";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Games · BDL" };
@@ -246,13 +246,17 @@ export default async function GamesPage({
             <MembersStrip leagueId={filter.leagueId ?? undefined} />
           </>
         )}
-        {caps.canManage ? (
-          <GamesPageClient leagues={allLeagues}>
-            {renderListing()}
-          </GamesPageClient>
-        ) : (
-          renderListing()
+        {caps.canManage && (
+          <div className="flex items-center justify-end -mt-2">
+            <Link
+              href="/games/new"
+              className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)] transition-colors"
+            >
+              <Plus size={14} strokeWidth={2.5} /> Schedule Game
+            </Link>
+          </div>
         )}
+        {renderListing()}
       </PageFrame>
       <MobileBottomBar active="home" />
     </>
