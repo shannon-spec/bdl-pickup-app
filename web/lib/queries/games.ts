@@ -3,6 +3,7 @@ import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import {
   db,
   games,
+  gameSubgames,
   leagues,
   leaguePlayers,
   players,
@@ -85,14 +86,31 @@ export async function getGamesList(filter: GamesFilter = {}): Promise<GameListRo
   return all;
 }
 
+export type GameSubgameRow = {
+  id: string;
+  gameIndex: number;
+  scoreA: number | null;
+  scoreB: number | null;
+  winTeam: "A" | "B" | "Tie" | null;
+};
+
 export type GameDetail = {
   game: Game & { leagueName: string | null };
-  league: { id: string; name: string; teamAName: string; teamBName: string } | null;
+  league: {
+    id: string;
+    name: string;
+    teamAName: string;
+    teamBName: string;
+    format: string;
+    seriesGameCount: number | null;
+    seriesPointTarget: number | null;
+  } | null;
   rosterA: Pick<Player, "id" | "firstName" | "lastName">[];
   rosterB: Pick<Player, "id" | "firstName" | "lastName">[];
   invited: Pick<Player, "id" | "firstName" | "lastName">[];
   eligible: Pick<Player, "id" | "firstName" | "lastName">[];
   allLeagues: { id: string; name: string }[];
+  subgames: GameSubgameRow[];
 };
 
 export async function getGameDetail(id: string): Promise<GameDetail | null> {
@@ -106,6 +124,9 @@ export async function getGameDetail(id: string): Promise<GameDetail | null> {
           name: leagues.name,
           teamAName: leagues.teamAName,
           teamBName: leagues.teamBName,
+          format: leagues.format,
+          seriesGameCount: leagues.seriesGameCount,
+          seriesPointTarget: leagues.seriesPointTarget,
         })
         .from(leagues)
         .where(eq(leagues.id, g.leagueId))
@@ -161,6 +182,18 @@ export async function getGameDetail(id: string): Promise<GameDetail | null> {
     .from(leagues)
     .orderBy(asc(leagues.name));
 
+  const subgames = await db
+    .select({
+      id: gameSubgames.id,
+      gameIndex: gameSubgames.gameIndex,
+      scoreA: gameSubgames.scoreA,
+      scoreB: gameSubgames.scoreB,
+      winTeam: gameSubgames.winTeam,
+    })
+    .from(gameSubgames)
+    .where(eq(gameSubgames.gameId, id))
+    .orderBy(asc(gameSubgames.gameIndex));
+
   return {
     game: g,
     league: league ?? null,
@@ -169,6 +202,7 @@ export async function getGameDetail(id: string): Promise<GameDetail | null> {
     invited,
     eligible,
     allLeagues,
+    subgames,
   };
 }
 

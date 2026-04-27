@@ -9,11 +9,21 @@ import {
   deleteGame,
   setGameRosterPlayer,
   setGameScore,
+  setSeriesScore,
   updateGame,
 } from "@/lib/actions/games";
 import { PctPill } from "@/components/bdl/pct-pill";
 
+const isSeriesFormat = (f: string | null | undefined) =>
+  f === "series" || f === "5v5-series" || f === "3v3-series";
+
 export function GameScore({ detail }: { detail: GameDetail }) {
+  const isSeries = isSeriesFormat(detail.league?.format);
+  if (isSeries) return <SeriesScore detail={detail} />;
+  return <SingleScore detail={detail} />;
+}
+
+function SingleScore({ detail }: { detail: GameDetail }) {
   const router = useRouter();
   const { game } = detail;
   const [error, setError] = useState<string | null>(null);
@@ -90,7 +100,193 @@ export function GameScore({ detail }: { detail: GameDetail }) {
       )}
     </form>
   );
-};
+}
+
+function SeriesScore({ detail }: { detail: GameDetail }) {
+  const router = useRouter();
+  const { game, league, subgames } = detail;
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+
+  const teamA = game.teamAName ?? league?.teamAName ?? "White";
+  const teamB = game.teamBName ?? league?.teamBName ?? "Dark";
+  const eligible = [...detail.rosterA, ...detail.rosterB].sort((a, b) =>
+    a.lastName.localeCompare(b.lastName),
+  );
+  const targetCount = Math.max(
+    league?.seriesGameCount ?? 5,
+    subgames.length || 0,
+  );
+  const pointTarget = league?.seriesPointTarget ?? null;
+
+  const subByIndex = new Map(subgames.map((s) => [s.gameIndex, s]));
+  const [rows, setRows] = useState<{ a: string; b: string }[]>(() =>
+    Array.from({ length: targetCount }, (_, i) => {
+      const s = subByIndex.get(i);
+      return {
+        a: s?.scoreA != null ? String(s.scoreA) : "",
+        b: s?.scoreB != null ? String(s.scoreB) : "",
+      };
+    }),
+  );
+
+  const winsA = rows.reduce((n, r) => {
+    const a = parseInt(r.a, 10);
+    const b = parseInt(r.b, 10);
+    return Number.isFinite(a) && Number.isFinite(b) && a > b ? n + 1 : n;
+  }, 0);
+  const winsB = rows.reduce((n, r) => {
+    const a = parseInt(r.a, 10);
+    const b = parseInt(r.b, 10);
+    return Number.isFinite(a) && Number.isFinite(b) && b > a ? n + 1 : n;
+  }, 0);
+
+  const updateRow = (idx: number, side: "a" | "b", v: string) => {
+    setRows((prev) =>
+      prev.map((r, i) => (i === idx ? { ...r, [side]: v } : r)),
+    );
+  };
+  const addRow = () => setRows((prev) => [...prev, { a: "", b: "" }]);
+
+  const onSubmit = (formData: FormData) => {
+    setError(null);
+    start(async () => {
+      const res = await setSeriesScore(game.id, formData);
+      if (res.ok) router.refresh();
+      else setError(res.error);
+    });
+  };
+
+  return (
+    <form action={onSubmit} className="flex flex-col gap-4">
+      <div className="flex items-baseline gap-3 flex-wrap">
+        <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)]">
+          Series Score
+        </div>
+        <div className="font-[family-name:var(--mono)] num font-extrabold text-[18px]">
+          <span className={winsA > winsB ? "text-[color:var(--text)]" : "text-[color:var(--text-3)]"}>
+            {teamA} {winsA}
+          </span>
+          <span className="text-[color:var(--text-4)] mx-2">—</span>
+          <span className={winsB > winsA ? "text-[color:var(--text)]" : "text-[color:var(--text-3)]"}>
+            {teamB} {winsB}
+          </span>
+        </div>
+        {pointTarget && (
+          <span className="text-[11.5px] text-[color:var(--text-3)]">
+            Played to {pointTarget}
+          </span>
+        )}
+      </div>
+
+      <div className="rounded-[12px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden">
+        <div className="grid grid-cols-[60px_1fr_1fr_60px] items-center gap-3 px-4 py-2 text-[10px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)] border-b border-[color:var(--hairline)]">
+          <span>Game</span>
+          <span>{teamA}</span>
+          <span>{teamB}</span>
+          <span className="text-right">Won</span>
+        </div>
+        {rows.map((r, i) => {
+          const a = parseInt(r.a, 10);
+          const b = parseInt(r.b, 10);
+          const won =
+            Number.isFinite(a) && Number.isFinite(b)
+              ? a > b
+                ? "A"
+                : b > a
+                  ? "B"
+                  : "Tie"
+              : null;
+          return (
+            <div
+              key={i}
+              className="grid grid-cols-[60px_1fr_1fr_60px] items-center gap-3 px-4 py-2.5 border-t border-[color:var(--hairline)] first:border-t-0"
+            >
+              <span className="font-bold text-[13px] text-[color:var(--text-2)]">
+                {i + 1}
+              </span>
+              <input
+                name={`scoreA_${i}`}
+                type="number"
+                inputMode="numeric"
+                value={r.a}
+                onChange={(e) => updateRow(i, "a", e.target.value)}
+                placeholder="—"
+                className={inputCx + " num font-[family-name:var(--mono)] w-full"}
+              />
+              <input
+                name={`scoreB_${i}`}
+                type="number"
+                inputMode="numeric"
+                value={r.b}
+                onChange={(e) => updateRow(i, "b", e.target.value)}
+                placeholder="—"
+                className={inputCx + " num font-[family-name:var(--mono)] w-full"}
+              />
+              <span
+                className={`text-right font-bold text-[12px] tracking-[0.08em] uppercase ${
+                  won === "A"
+                    ? "text-[color:var(--up)]"
+                    : won === "B"
+                      ? "text-[color:var(--down)]"
+                      : "text-[color:var(--text-4)]"
+                }`}
+              >
+                {won === "A" ? teamA : won === "B" ? teamB : won === "Tie" ? "Tie" : ""}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center gap-3 flex-wrap">
+        <button
+          type="button"
+          onClick={addRow}
+          className="h-9 px-3 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] hover:bg-[color:var(--surface-2)] text-[12px] font-bold tracking-[0.06em] uppercase"
+        >
+          + Add game
+        </button>
+        <Field label="Series MVP">
+          <select
+            name="gameWinnerId"
+            defaultValue={game.gameWinner ?? ""}
+            className={selectCx + " min-w-[180px]"}
+          >
+            <option value="">— None —</option>
+            {eligible.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.firstName} {p.lastName}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <label className="inline-flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            name="locked"
+            defaultChecked={game.locked}
+            className="w-4 h-4 accent-[color:var(--brand)]"
+          />
+          <span className="text-[13px] text-[color:var(--text-2)]">Lock as final</span>
+        </label>
+        <button
+          type="submit"
+          disabled={pending}
+          className="h-10 px-5 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)] disabled:opacity-60 ml-auto"
+        >
+          {pending ? "Saving…" : "Save series"}
+        </button>
+      </div>
+
+      {error && (
+        <div className="text-[12px] text-[color:var(--down)] bg-[color:var(--down-soft)] rounded-[var(--r-md)] px-3 py-2">
+          {error}
+        </div>
+      )}
+    </form>
+  );
+}
 
 export function RosterRow({
   gameId,

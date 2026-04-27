@@ -219,6 +219,28 @@ export const games = pgTable(
   ],
 );
 
+/* ============== GAME SUBGAMES (series format) ============== */
+
+// One row per individual game inside a series night. The parent
+// `games` row stores the series tally (scoreA = side A's win count,
+// scoreB = side B's win count, winTeam = whoever has more).
+export const gameSubgames = pgTable(
+  "game_subgames",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    gameId: uuid("game_id")
+      .notNull()
+      .references(() => games.id, { onDelete: "cascade" }),
+    gameIndex: integer("game_index").notNull(),
+    scoreA: integer("score_a"),
+    scoreB: integer("score_b"),
+    winTeam: winTeamEnum("win_team"),
+  },
+  (t) => [
+    index("game_subgames_game_idx").on(t.gameId, t.gameIndex),
+  ],
+);
+
 /* ============== JUNCTIONS: GAME ROSTER + INVITES ============== */
 
 // Single roster table with a `side` column instead of 3 separate tables.
@@ -379,6 +401,8 @@ export type League = typeof leagues.$inferSelect;
 export type NewLeague = typeof leagues.$inferInsert;
 export type Game = typeof games.$inferSelect;
 export type NewGame = typeof games.$inferInsert;
+export type GameSubgame = typeof gameSubgames.$inferSelect;
+export type NewGameSubgame = typeof gameSubgames.$inferInsert;
 export type SuperAdmin = typeof superAdmins.$inferSelect;
 export type NewSuperAdmin = typeof superAdmins.$inferInsert;
 export type Invite = typeof invites.$inferSelect;

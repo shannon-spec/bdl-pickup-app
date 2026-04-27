@@ -207,6 +207,14 @@ export default async function GameDetailPage({
           {canEdit && <GameScore detail={detail} />}
         </div>
 
+        {detail.subgames.length > 0 && (
+          <SeriesBreakdown
+            teamA={game.teamAName ?? "White"}
+            teamB={game.teamBName ?? "Dark"}
+            subgames={detail.subgames}
+          />
+        )}
+
         {canEdit && <GameMetaEditor detail={detail} />}
 
         <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
@@ -293,6 +301,72 @@ function TeamSectionHead({
         <span className="text-[10.5px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
           {count} {variant === "invited" ? "invited" : count === 1 ? "player" : "players"}
         </span>
+      </div>
+    </div>
+  );
+}
+
+function SeriesBreakdown({
+  teamA,
+  teamB,
+  subgames,
+}: {
+  teamA: string;
+  teamB: string;
+  subgames: NonNullable<Awaited<ReturnType<typeof getGameDetail>>>["subgames"];
+}) {
+  return (
+    <div>
+      <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)] mb-2">
+        Game by Game
+      </div>
+      <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden">
+        <div className="grid grid-cols-[60px_1fr_72px_1fr_72px] items-center gap-3 px-5 py-2.5 text-[10px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)] border-b border-[color:var(--hairline)]">
+          <span>Game</span>
+          <span className="text-right">{teamA}</span>
+          <span></span>
+          <span>{teamB}</span>
+          <span className="text-right">Won</span>
+        </div>
+        {subgames.map((s) => {
+          const won = s.winTeam;
+          return (
+            <div
+              key={s.id}
+              className="grid grid-cols-[60px_1fr_72px_1fr_72px] items-center gap-3 px-5 py-3 border-t border-[color:var(--hairline)] first:border-t-0 text-[14px]"
+            >
+              <span className="font-bold text-[13px] text-[color:var(--text-2)]">
+                Game {s.gameIndex + 1}
+              </span>
+              <span
+                className={`font-[family-name:var(--mono)] num font-extrabold text-right ${
+                  won === "A" ? "text-[color:var(--text)]" : "text-[color:var(--text-3)]"
+                }`}
+              >
+                {s.scoreA ?? "—"}
+              </span>
+              <span className="text-center text-[color:var(--text-4)] font-medium">—</span>
+              <span
+                className={`font-[family-name:var(--mono)] num font-extrabold ${
+                  won === "B" ? "text-[color:var(--text)]" : "text-[color:var(--text-3)]"
+                }`}
+              >
+                {s.scoreB ?? "—"}
+              </span>
+              <span
+                className={`text-right font-bold text-[11.5px] tracking-[0.08em] uppercase ${
+                  won === "A"
+                    ? "text-[color:var(--up)]"
+                    : won === "B"
+                      ? "text-[color:var(--down)]"
+                      : "text-[color:var(--text-4)]"
+                }`}
+              >
+                {won === "A" ? teamA : won === "B" ? teamB : won === "Tie" ? "Tie" : ""}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { db, games, gameRoster, leagues } from "@/lib/db";
+import { db, games, gameRoster, gameSubgames, leagues } from "@/lib/db";
 import { requireGameManager, requireLeagueManager } from "@/lib/auth/perms";
 import { requireManageView } from "@/lib/auth/view";
 
@@ -175,6 +175,83 @@ export async function setGameScore(
       locked: v.locked === "on" || v.locked === "true",
     })
     .where(eq(games.id, id));
+  revalidatePath(`/games/${id}`);
+  revalidatePath("/games");
+  revalidatePath("/");
+  return { ok: true };
+}
+
+/**
+ * Series-format scoring. The form posts pairs `scoreA_<i>` / `scoreB_<i>`
+ * for i in 0..N-1; rows where both fields are blank are ignored. Per-game
+ * winners are derived from the per-game score; the parent `games` row's
+ * scoreA/scoreB store the *series tally* (count of wins per side) so all
+ * downstream queries (W-L, leaderboards) treat the night as one outcome.
+ */
+export async function setSeriesScore(
+  id: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const gate = await gateGameManager(id);
+  if (!gate.ok) return gate;
+  const raw = readForm(formData);
+
+  const subRows: { i: number; sA: number; sB: number; w: "A" | "B" | "Tie" }[] = [];
+  for (let i = 0; i < 32; i++) {
+    const a = (raw[`scoreA_${i}`] ?? "").trim();
+    const b = (raw[`scoreB_${i}`] ?? "").trim();
+    if (a === "" && b === "") continue;
+    if (a === "" || b === "") {
+      return { ok: false, error: `Game ${i + 1} needs both scores.` };
+    }
+    const sA = Number.parseInt(a, 10);
+    const sB = Number.parseInt(b, 10);
+    if (!Number.isFinite(sA) || !Number.isFinite(sB) || sA < 0 || sB < 0) {
+      return { ok: false, error: `Game ${i + 1} has an invalid score.` };
+    }
+    const w: "A" | "B" | "Tie" = sA > sB ? "A" : sB > sA ? "B" : "Tie";
+    subRows.push({ i, sA, sB, w });
+  }
+
+  // Derive parent tally from sub-game wins (ties contribute to neither).
+  const winsA = subRows.filter((r) => r.w === "A").length;
+  const winsB = subRows.filter((r) => r.w === "B").length;
+  const parentScoreA = subRows.length > 0 ? winsA : null;
+  const parentScoreB = subRows.length > 0 ? winsB : null;
+  const parentWin: "A" | "B" | "Tie" | null =
+    subRows.length === 0
+      ? null
+      : winsA > winsB
+        ? "A"
+        : winsB > winsA
+          ? "B"
+          : "Tie";
+
+  await db.delete(gameSubgames).where(eq(gameSubgames.gameId, id));
+  if (subRows.length > 0) {
+    await db.insert(gameSubgames).values(
+      subRows.map((r) => ({
+        gameId: id,
+        gameIndex: r.i,
+        scoreA: r.sA,
+        scoreB: r.sB,
+        winTeam: r.w,
+      })),
+    );
+  }
+
+  await db
+    .update(games)
+    .set({
+      scoreA: parentScoreA,
+      scoreB: parentScoreB,
+      winTeam: parentWin,
+      gameWinner:
+        raw.gameWinnerId && raw.gameWinnerId !== "" ? raw.gameWinnerId : null,
+      locked: raw.locked === "on" || raw.locked === "true",
+    })
+    .where(eq(games.id, id));
+
   revalidatePath(`/games/${id}`);
   revalidatePath("/games");
   revalidatePath("/");
