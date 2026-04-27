@@ -7,7 +7,7 @@
  *     but cannot delete L, manage super admins, or modify other leagues
  *   - everyone else (signed-in players) → read-only
  */
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db, leagueCommissioners, leaguePlayers, games } from "@/lib/db";
 import { readSession, type Session } from "./session";
 
@@ -78,6 +78,40 @@ export async function canManageGame(
     .limit(1);
   if (!g?.leagueId) return false;
   return isCommissionerOf(s, g.leagueId);
+}
+
+/**
+ * True for admin-like, the player themselves, or any commissioner of
+ * a league the target player is rostered in. Used to gate the Edit
+ * Profile surface on /players/[id] and the underlying updatePlayer
+ * action.
+ */
+export async function canEditPlayer(
+  s: Session | null,
+  playerId: string,
+): Promise<boolean> {
+  if (isAdminLike(s)) return true;
+  if (!s || !s.playerId) return false;
+  if (s.playerId === playerId) return true;
+  // Any overlap between the target player's leagues and leagues the
+  // viewer commissions.
+  const targetLeagues = await db
+    .select({ leagueId: leaguePlayers.leagueId })
+    .from(leaguePlayers)
+    .where(eq(leaguePlayers.playerId, playerId));
+  if (targetLeagues.length === 0) return false;
+  const targetIds = targetLeagues.map((r) => r.leagueId);
+  const [overlap] = await db
+    .select({ leagueId: leagueCommissioners.leagueId })
+    .from(leagueCommissioners)
+    .where(
+      and(
+        eq(leagueCommissioners.playerId, s.playerId),
+        inArray(leagueCommissioners.leagueId, targetIds),
+      ),
+    )
+    .limit(1);
+  return !!overlap;
 }
 
 /** True for admin-like OR any member (player/commissioner) of the game's league. */

@@ -4,8 +4,9 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db, players, leaguePlayers } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth/session";
+import { readSession, requireAdmin } from "@/lib/auth/session";
 import { requireAdminView } from "@/lib/auth/view";
+import { canEditPlayer } from "@/lib/auth/perms";
 
 const PLAYER_LEVELS = [
   "Not Rated",
@@ -145,8 +146,13 @@ export async function updatePlayer(
   id: string,
   formData: FormData,
 ): Promise<ActionResult<{ id: string }>> {
-  await requireAdmin();
-  await requireAdminView();
+  const session = await readSession();
+  if (!session) {
+    return { ok: false, error: "Not authenticated." };
+  }
+  if (!(await canEditPlayer(session, id))) {
+    return { ok: false, error: "You can't edit this player." };
+  }
   const parsed = playerSchema.safeParse(readForm(formData));
   if (!parsed.success) {
     return {

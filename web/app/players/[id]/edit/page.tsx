@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
-import { getViewCaps } from "@/lib/auth/view";
+import { canEditPlayer } from "@/lib/auth/perms";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
@@ -20,12 +20,11 @@ export default async function EditPlayerPage({
   params: Promise<{ id: string }>;
 }) {
   const session = await readSession();
-  const isAdmin = session?.role === "owner" || session?.role === "super_admin";
-  if (!isAdmin) redirect("/");
-  const caps = await getViewCaps(session);
-  if (caps.view !== "admin") redirect("/");
-
+  if (!session) redirect("/login");
   const { id } = await params;
+  const allowed = await canEditPlayer(session, id);
+  if (!allowed) redirect(`/players/${id}`);
+
   const player = await getPlayer(id);
   if (!player) notFound();
 
