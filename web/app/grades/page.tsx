@@ -4,14 +4,22 @@ import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import {
-  DOT_COLORS,
   GRADES,
-  PRO_GLOW,
   gradesFor,
   type GradeKey,
   type RatingContext,
 } from "@/components/bdl/rating-key/copy";
 import { ratingKeyStyles } from "@/components/bdl/rating-key/styles";
+import { Pill } from "@/components/bdl/pill";
+
+const TONE: Record<GradeKey, "neutral" | "brand" | "win" | "loss"> = {
+  "Not Rated": "neutral",
+  Novice: "neutral",
+  Intermediate: "neutral",
+  Advanced: "win",
+  "Game Changer": "brand",
+  Pro: "brand",
+};
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Grades · BDL" };
@@ -95,7 +103,6 @@ export default async function GradesPage({
             {GRADES.map((g) => {
               const def = grades[g];
               const active = g === highlight;
-              const isPro = g === "Pro";
               return (
                 <li
                   key={g}
@@ -104,15 +111,7 @@ export default async function GradesPage({
                   aria-current={active ? "true" : undefined}
                 >
                   <div className="rk-label">
-                    <span
-                      className="rk-dot"
-                      aria-hidden
-                      style={{
-                        background: DOT_COLORS[g],
-                        boxShadow: isPro ? PRO_GLOW : undefined,
-                      }}
-                    />
-                    <span className="rk-grade-name">{def.key}</span>
+                    <Pill tone={TONE[g]}>{def.key}</Pill>
                   </div>
                   <p
                     className="rk-desc"

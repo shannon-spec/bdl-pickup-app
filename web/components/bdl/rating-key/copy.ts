@@ -50,9 +50,9 @@ export const PLAYER_GRADES: Record<GradeKey, GradeDef> = {
   Advanced: {
     key: "Advanced",
     body:
-      "Former HS varsity or strong rec regular. Reads plays, creates their own shot, guards up a level, makes the right pass. Holds their own at competitive runs.",
+      "Former HS varsity, former college players past their prime years, or strong rec regulars. Reads plays, creates their own shot, guards up a level, makes the right pass. Holds their own at competitive runs.",
     bodyHtml:
-      "<strong>Former HS varsity or strong rec regular.</strong> Reads plays, creates their own shot, guards up a level, makes the right pass. Holds their own at <strong>competitive runs</strong>.",
+      "<strong>Former HS varsity, former college players past their prime years, or strong rec regulars.</strong> Reads plays, creates their own shot, guards up a level, makes the right pass. Holds their own at <strong>competitive runs</strong>.",
   },
   "Game Changer": {
     key: "Game Changer",
