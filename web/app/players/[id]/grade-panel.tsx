@@ -24,9 +24,14 @@ const VOTABLE: GradeKey[] = [
 export function GradePanel({
   targetId,
   agg,
+  adminLevel,
 }: {
   targetId: string;
   agg: PlayerGradeAggregate;
+  /** Admin-set baseline level, used as a fallback when there are no
+   *  peer/commissioner votes yet. Same fallback the players directory
+   *  uses, so the profile and the list don't disagree. */
+  adminLevel: GradeKey | null;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -54,6 +59,7 @@ export function GradePanel({
   };
 
   const totalVotes = agg.peerCount + agg.commissionerCount;
+  const displayGrade = agg.crowdGrade ?? adminLevel;
 
   return (
     <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6">
@@ -63,8 +69,8 @@ export function GradePanel({
       </div>
 
       <div className="flex items-center gap-5 flex-wrap mb-2 max-sm:gap-3">
-        {agg.crowdGrade ? (
-          <GradePill grade={agg.crowdGrade} size="lg" />
+        {displayGrade ? (
+          <GradePill grade={displayGrade} size="lg" />
         ) : (
           <span className="inline-flex items-center px-5 py-2 rounded-full font-extrabold text-[22px] tracking-[-0.01em] bg-[color:var(--surface-2)] text-[color:var(--text-3)]">
             Not yet rated
@@ -72,9 +78,11 @@ export function GradePanel({
         )}
         <div className="flex flex-col gap-0.5">
           <span className="text-[12px] text-[color:var(--text-2)] font-semibold">
-            {totalVotes === 0
-              ? "No votes yet"
-              : `${agg.peerCount} player ${agg.peerCount === 1 ? "vote" : "votes"} · ${agg.commissionerCount} commissioner ${agg.commissionerCount === 1 ? "vote" : "votes"}`}
+            {totalVotes > 0
+              ? `${agg.peerCount} player ${agg.peerCount === 1 ? "vote" : "votes"} · ${agg.commissionerCount} commissioner ${agg.commissionerCount === 1 ? "vote" : "votes"}`
+              : adminLevel
+                ? "Set by admin · No peer votes yet"
+                : "No votes yet"}
           </span>
           <Link
             href="/grades?context=player"

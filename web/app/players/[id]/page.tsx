@@ -16,7 +16,10 @@ import { Pill } from "@/components/bdl/pill";
 import { PlayerAvatar } from "@/components/bdl/player-avatar";
 import { StatBlock, StatRow } from "@/components/bdl/stat-block";
 import { getPlayerProfile } from "@/lib/queries/player-profile";
-import { getPlayerGradeAggregate } from "@/lib/queries/player-grades";
+import {
+  getPlayerGradeAggregate,
+  type GradeKey,
+} from "@/lib/queries/player-grades";
 import { EditPlayerButton } from "./edit-button";
 import { GradePanel } from "./grade-panel";
 import type { Player as PlayerType } from "@/lib/db";
@@ -192,7 +195,25 @@ export default async function PlayerProfilePage({
           </StatRow>
         </section>
 
-        <GradePanel targetId={player.id} agg={gradeAgg} />
+        <GradePanel
+          targetId={player.id}
+          agg={gradeAgg}
+          adminLevel={
+            (() => {
+              const lv = player.level;
+              const allowed: GradeKey[] = [
+                "Novice",
+                "Intermediate",
+                "Advanced",
+                "Game Changer",
+                "Pro",
+              ];
+              return lv && (allowed as readonly string[]).includes(lv)
+                ? (lv as GradeKey)
+                : null;
+            })()
+          }
+        />
 
         {/* Per-league breakdown */}
         {profile.byLeague.length > 0 && (
