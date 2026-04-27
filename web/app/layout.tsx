@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono, Outfit } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
-import { RatingKeyProvider } from "@/components/bdl/rating-key/rating-key-provider";
 import { Footer } from "@/components/bdl/footer";
 import "./globals.css";
 
@@ -53,10 +52,8 @@ export default function RootLayout({
     >
       <body>
         <ThemeProvider>
-          <RatingKeyProvider>
-            {children}
-            <Footer />
-          </RatingKeyProvider>
+          {children}
+          <Footer />
         </ThemeProvider>
       </body>
     </html>

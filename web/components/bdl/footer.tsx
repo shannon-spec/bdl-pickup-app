@@ -22,6 +22,7 @@ export function Footer() {
           <div className="ftr-col">
             <h4>Product</h4>
             <Link href="/about">About</Link>
+            <Link href="/grades">Grades</Link>
           </div>
 
           <div className="ftr-ai">

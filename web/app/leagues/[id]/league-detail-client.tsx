@@ -61,15 +61,15 @@ export function LeagueDetailClient({
       <div className="flex items-center justify-end gap-2 -mt-2">
         <Link
           href={`/leagues/${detail.league.id}/edit`}
-          className="inline-flex items-center gap-2 h-9 px-3 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[12px] font-medium hover:bg-[color:var(--surface-2)]"
+          className="inline-flex items-center gap-2 h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)] transition-colors"
         >
-          <Pencil size={14} /> Edit
+          <Pencil size={14} strokeWidth={2.5} /> Edit League
         </Link>
         {isAdmin && (
           <button
             type="button"
             onClick={() => setConfirmDel(true)}
-            className="inline-flex items-center gap-2 h-9 px-3 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[12px] font-medium text-[color:var(--down)] hover:bg-[color:var(--down-soft)]"
+            className="inline-flex items-center gap-2 h-10 px-3.5 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[12px] font-bold tracking-[0.06em] uppercase text-[color:var(--down)] hover:bg-[color:var(--down-soft)] transition-colors"
           >
             <Trash2 size={14} /> Delete
           </button>
