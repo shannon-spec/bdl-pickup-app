@@ -219,6 +219,41 @@ export const games = pgTable(
   ],
 );
 
+/* ============== PLAYER GRADES (peer rating) ============== */
+
+// One vote per (target, voter). Voter must share a league with the
+// target — enforced in the server action, not at the DB level. The
+// voter's bucket (peer vs commissioner) is derived at read time from
+// league_commissioners so role changes flow through automatically.
+// "Not Rated" is excluded from voting in the action validator.
+export const playerGrades = pgTable(
+  "player_grades",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    targetPlayerId: uuid("target_player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    voterPlayerId: uuid("voter_player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    grade: playerLevelEnum("grade").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex("player_grades_target_voter_uq").on(
+      t.targetPlayerId,
+      t.voterPlayerId,
+    ),
+    index("player_grades_target_idx").on(t.targetPlayerId),
+  ],
+);
+
 /* ============== GAME SUBGAMES (series format) ============== */
 
 // One row per individual game inside a series night. The parent
@@ -403,6 +438,8 @@ export type Game = typeof games.$inferSelect;
 export type NewGame = typeof games.$inferInsert;
 export type GameSubgame = typeof gameSubgames.$inferSelect;
 export type NewGameSubgame = typeof gameSubgames.$inferInsert;
+export type PlayerGrade = typeof playerGrades.$inferSelect;
+export type NewPlayerGrade = typeof playerGrades.$inferInsert;
 export type SuperAdmin = typeof superAdmins.$inferSelect;
 export type NewSuperAdmin = typeof superAdmins.$inferInsert;
 export type Invite = typeof invites.$inferSelect;

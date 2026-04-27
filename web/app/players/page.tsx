@@ -11,6 +11,21 @@ import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { getPlayersDirectory } from "@/lib/queries/players-directory";
+import {
+  getCrowdGradesForPlayers,
+  type GradeKey,
+} from "@/lib/queries/player-grades";
+
+const ALL_GRADES: GradeKey[] = [
+  "Not Rated",
+  "Novice",
+  "Intermediate",
+  "Advanced",
+  "Game Changer",
+  "Pro",
+];
+const isGradeKey = (s: string): s is GradeKey =>
+  (ALL_GRADES as string[]).includes(s);
 import { db, leagues as leaguesTbl } from "@/lib/db";
 import { asc, inArray } from "drizzle-orm";
 import { InviteControls } from "./invite-controls";
@@ -54,6 +69,15 @@ export default async function PlayersPage({
     scope,
     viewerLeagueIds,
     viewerIsAdmin: isAdminView,
+  });
+  const crowdGrades = await getCrowdGradesForPlayers(players.map((p) => p.id));
+  const playersWithGrade = players.map((p) => {
+    const crowd = crowdGrades.get(p.id) ?? null;
+    const adminLevel: GradeKey | null =
+      p.level && p.level !== "Not Rated" && isGradeKey(p.level)
+        ? p.level
+        : null;
+    return { ...p, displayGrade: crowd ?? adminLevel };
   });
   const canInvite = caps.canManage && !isAdminView;
   const manageLeagueIds = isAdminView ? null : commishIds;
@@ -99,7 +123,7 @@ export default async function PlayersPage({
 
         <ScopeTabs current={scope} />
 
-        <PlayersGrid players={players} />
+        <PlayersGrid players={playersWithGrade} />
       </PageFrame>
       <MobileBottomBar active="home" />
     </>

@@ -16,7 +16,9 @@ import { Pill } from "@/components/bdl/pill";
 import { PlayerAvatar } from "@/components/bdl/player-avatar";
 import { StatBlock, StatRow } from "@/components/bdl/stat-block";
 import { getPlayerProfile } from "@/lib/queries/player-profile";
+import { getPlayerGradeAggregate } from "@/lib/queries/player-grades";
 import { EditPlayerButton } from "./edit-button";
+import { GradePanel } from "./grade-panel";
 import type { Player as PlayerType } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +43,7 @@ export default async function PlayerProfilePage({
   if (!profile) notFound();
 
   const { player } = profile;
+  const gradeAgg = await getPlayerGradeAggregate(id, session);
   const initials = `${player.firstName[0] ?? ""}${player.lastName[0] ?? ""}`.toUpperCase();
   const isMe = session?.playerId === player.id;
   const caps = await getViewCaps(session);
@@ -289,6 +292,8 @@ export default async function PlayerProfilePage({
             </div>
           </div>
         )}
+
+        <GradePanel targetId={player.id} agg={gradeAgg} />
 
         {/* Contact card honors per-league membership: outside viewers see no contact info,
             league members see non-private fields, admins in admin view see everything. */}

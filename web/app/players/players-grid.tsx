@@ -5,8 +5,22 @@ import Link from "next/link";
 import { ChevronRight, Search } from "lucide-react";
 import { Pill } from "@/components/bdl/pill";
 import type { DirectoryPlayer } from "@/lib/queries/players-directory";
+import type { GradeKey } from "@/lib/queries/player-grades";
 
-export function PlayersGrid({ players }: { players: DirectoryPlayer[] }) {
+type DirectoryPlayerWithGrade = DirectoryPlayer & {
+  displayGrade: GradeKey | null;
+};
+
+const GRADE_TONE: Record<GradeKey, "neutral" | "brand" | "win" | "loss"> = {
+  "Not Rated": "neutral",
+  Novice: "neutral",
+  Intermediate: "neutral",
+  Advanced: "win",
+  "Game Changer": "brand",
+  Pro: "brand",
+};
+
+export function PlayersGrid({ players }: { players: DirectoryPlayerWithGrade[] }) {
   const [q, setQ] = useState("");
 
   const filtered = useMemo(() => {
@@ -56,7 +70,7 @@ export function PlayersGrid({ players }: { players: DirectoryPlayer[] }) {
   );
 }
 
-function PlayerCard({ p }: { p: DirectoryPlayer }) {
+function PlayerCard({ p }: { p: DirectoryPlayerWithGrade }) {
   const initials = `${p.firstName[0] ?? ""}${p.lastName[0] ?? ""}`.toUpperCase();
   return (
     <Link
@@ -89,7 +103,10 @@ function PlayerCard({ p }: { p: DirectoryPlayer }) {
           {p.leagueNames.length > 0 ? p.leagueNames.join(", ") : "No league"}
         </span>
       </div>
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        {p.displayGrade && (
+          <Pill tone={GRADE_TONE[p.displayGrade]}>{p.displayGrade}</Pill>
+        )}
         {p.status !== "Active" && (
           <Pill tone={p.status === "IR" ? "loss" : "neutral"}>{p.status}</Pill>
         )}
