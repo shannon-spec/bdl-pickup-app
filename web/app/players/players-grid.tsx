@@ -4,20 +4,12 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, Search } from "lucide-react";
 import { Pill } from "@/components/bdl/pill";
+import { GradePill } from "@/components/bdl/grade-pill-color";
 import type { DirectoryPlayer } from "@/lib/queries/players-directory";
 import type { GradeKey } from "@/lib/queries/player-grades";
 
 type DirectoryPlayerWithGrade = DirectoryPlayer & {
   displayGrade: GradeKey | null;
-};
-
-const GRADE_TONE: Record<GradeKey, "neutral" | "brand" | "win" | "loss"> = {
-  "Not Rated": "neutral",
-  Novice: "neutral",
-  Intermediate: "neutral",
-  Advanced: "win",
-  "Game Changer": "brand",
-  Pro: "brand",
 };
 
 export function PlayersGrid({ players }: { players: DirectoryPlayerWithGrade[] }) {
@@ -104,9 +96,7 @@ function PlayerCard({ p }: { p: DirectoryPlayerWithGrade }) {
         </span>
       </div>
       <div className="flex items-center gap-1.5 flex-shrink-0">
-        {p.displayGrade && (
-          <Pill tone={GRADE_TONE[p.displayGrade]}>{p.displayGrade}</Pill>
-        )}
+        {p.displayGrade && <GradePill grade={p.displayGrade} />}
         {p.status !== "Active" && (
           <Pill tone={p.status === "IR" ? "loss" : "neutral"}>{p.status}</Pill>
         )}

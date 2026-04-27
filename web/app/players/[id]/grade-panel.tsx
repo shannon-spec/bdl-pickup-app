@@ -11,6 +11,7 @@ import type {
   GradeKey,
   PlayerGradeAggregate,
 } from "@/lib/queries/player-grades";
+import { GRADE_PALETTE, GradePill } from "@/components/bdl/grade-pill-color";
 
 const VOTABLE: GradeKey[] = [
   "Novice",
@@ -19,41 +20,6 @@ const VOTABLE: GradeKey[] = [
   "Game Changer",
   "Pro",
 ];
-
-const TONE: Record<GradeKey, "neutral" | "brand" | "win" | "loss"> = {
-  "Not Rated": "neutral",
-  Novice: "neutral",
-  Intermediate: "neutral",
-  Advanced: "win",
-  "Game Changer": "brand",
-  Pro: "brand",
-};
-
-const TONE_STYLE: Record<
-  "neutral" | "brand" | "win" | "loss",
-  { bg: string; text: string; ring: string }
-> = {
-  neutral: {
-    bg: "var(--surface-2)",
-    text: "var(--text)",
-    ring: "var(--hairline-2)",
-  },
-  win: {
-    bg: "var(--up-soft)",
-    text: "var(--up)",
-    ring: "color-mix(in srgb, var(--up) 40%, transparent)",
-  },
-  brand: {
-    bg: "var(--brand-soft)",
-    text: "var(--brand-ink)",
-    ring: "color-mix(in srgb, var(--brand) 50%, transparent)",
-  },
-  loss: {
-    bg: "var(--down-soft)",
-    text: "var(--down)",
-    ring: "color-mix(in srgb, var(--down) 40%, transparent)",
-  },
-};
 
 export function GradePanel({
   targetId,
@@ -98,21 +64,7 @@ export function GradePanel({
 
       <div className="flex items-center gap-5 flex-wrap mb-2 max-sm:gap-3">
         {agg.crowdGrade ? (
-          (() => {
-            const style = TONE_STYLE[TONE[agg.crowdGrade]];
-            return (
-              <span
-                className="inline-flex items-center px-5 py-2 rounded-full font-extrabold text-[26px] tracking-[-0.01em] max-sm:text-[22px] max-sm:px-4 max-sm:py-1.5"
-                style={{
-                  background: style.bg,
-                  color: style.text,
-                  boxShadow: `inset 0 0 0 1px ${style.ring}`,
-                }}
-              >
-                {agg.crowdGrade}
-              </span>
-            );
-          })()
+          <GradePill grade={agg.crowdGrade} size="lg" />
         ) : (
           <span className="inline-flex items-center px-5 py-2 rounded-full font-extrabold text-[22px] tracking-[-0.01em] bg-[color:var(--surface-2)] text-[color:var(--text-3)]">
             Not yet rated
@@ -142,16 +94,26 @@ export function GradePanel({
           <div className="flex flex-wrap gap-2">
             {VOTABLE.map((g) => {
               const active = pick === g;
+              const p = GRADE_PALETTE[g];
               return (
                 <button
                   key={g}
                   type="button"
                   onClick={() => setPick(g)}
-                  className={`h-9 px-3 rounded-full border text-[12px] font-bold tracking-[0.04em] transition-colors ${
+                  className="h-9 px-3 rounded-full text-[12px] font-bold tracking-[0.04em] transition-colors"
+                  style={
                     active
-                      ? "border-[color:var(--brand)] bg-[color:var(--brand)] text-white"
-                      : "border-[color:var(--hairline-2)] bg-[color:var(--surface)] hover:bg-[color:var(--surface-2)]"
-                  }`}
+                      ? {
+                          background: p.text,
+                          color: "white",
+                          boxShadow: `inset 0 0 0 1px ${p.text}`,
+                        }
+                      : {
+                          background: p.bg,
+                          color: p.text,
+                          boxShadow: `inset 0 0 0 1px ${p.ring}`,
+                        }
+                  }
                   aria-pressed={active}
                 >
                   {g}

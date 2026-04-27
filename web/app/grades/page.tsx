@@ -10,16 +10,7 @@ import {
   type RatingContext,
 } from "@/components/bdl/rating-key/copy";
 import { ratingKeyStyles } from "@/components/bdl/rating-key/styles";
-import { Pill } from "@/components/bdl/pill";
-
-const TONE: Record<GradeKey, "neutral" | "brand" | "win" | "loss"> = {
-  "Not Rated": "neutral",
-  Novice: "neutral",
-  Intermediate: "neutral",
-  Advanced: "win",
-  "Game Changer": "brand",
-  Pro: "brand",
-};
+import { GradePill } from "@/components/bdl/grade-pill-color";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Grades · BDL" };
@@ -111,7 +102,7 @@ export default async function GradesPage({
                   aria-current={active ? "true" : undefined}
                 >
                   <div className="rk-label">
-                    <Pill tone={TONE[g]}>{def.key}</Pill>
+                    <GradePill grade={g} />
                   </div>
                   <p
                     className="rk-desc"
