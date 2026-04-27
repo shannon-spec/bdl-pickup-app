@@ -185,6 +185,9 @@ export async function createInvites(
   const channels = channelsCsv.split(",").map((s) => s.trim()).filter(Boolean);
   if (channels.length === 0) channels.push("email");
   const expiryOverride = Number(formData.get("expiryMinutesOverride") ?? 0);
+  const rawAssign = String(formData.get("assignedTeam") ?? "unassigned");
+  const assignedTeam: "A" | "B" | "unassigned" =
+    rawAssign === "A" || rawAssign === "B" ? rawAssign : "unassigned";
   const customMessage = (() => {
     const raw = formData.get("customMessage");
     if (raw == null) return null;
@@ -281,6 +284,7 @@ export async function createInvites(
     sentAt: now,
     deliveredAt: now, // optimistic — Resend doesn't give per-message webhooks here
     expiresAt,
+    assignedTeam,
     claimToken: newToken(),
     createdBy: gate.session.playerId ?? null,
   }));
@@ -288,6 +292,22 @@ export async function createInvites(
     .insert(gameInvites)
     .values(rows)
     .returning();
+
+  // Surface invitees in the game roster's "Invited" slot so the
+  // commissioner can see who's been asked at a glance. Skip any
+  // who are already rostered (side A/B); leave their assignment
+  // alone in that case.
+  const existing = await db
+    .select({ playerId: gameRoster.playerId })
+    .from(gameRoster)
+    .where(eq(gameRoster.gameId, gameId));
+  const onRoster = new Set(existing.map((r) => r.playerId));
+  const rosterRows = playerIds
+    .filter((pid) => !onRoster.has(pid))
+    .map((pid) => ({ gameId, playerId: pid, side: "invited" as const }));
+  if (rosterRows.length > 0) {
+    await db.insert(gameRoster).values(rosterRows).onConflictDoNothing();
+  }
 
   // Log + send email per invite. Email failures are best-effort.
   for (const inv of inserted) {
@@ -488,14 +508,20 @@ export async function acceptInviteByToken(token: string): Promise<ActionResult> 
     .where(eq(gameInvites.id, inv.id));
   await logEvent(inv.id, inv.gameId, "invite.accepted", null);
 
-  // Drop them onto the roster on whichever side has fewer players.
-  const roster = await db
-    .select({ side: gameRoster.side })
-    .from(gameRoster)
-    .where(eq(gameRoster.gameId, inv.gameId));
-  const aCount = roster.filter((r) => r.side === "A").length;
-  const bCount = roster.filter((r) => r.side === "B").length;
-  const side: "A" | "B" = aCount <= bCount ? "A" : "B";
+  // Pre-assigned team on the invite wins; otherwise drop them onto
+  // whichever side has fewer confirmed (A/B) players.
+  let side: "A" | "B";
+  if (inv.assignedTeam === "A" || inv.assignedTeam === "B") {
+    side = inv.assignedTeam;
+  } else {
+    const roster = await db
+      .select({ side: gameRoster.side })
+      .from(gameRoster)
+      .where(eq(gameRoster.gameId, inv.gameId));
+    const aCount = roster.filter((r) => r.side === "A").length;
+    const bCount = roster.filter((r) => r.side === "B").length;
+    side = aCount <= bCount ? "A" : "B";
+  }
   await db
     .insert(gameRoster)
     .values({ gameId: inv.gameId, playerId: inv.playerId, side })

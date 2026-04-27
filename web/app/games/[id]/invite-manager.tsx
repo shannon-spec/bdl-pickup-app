@@ -24,6 +24,8 @@ export type InviteGameContext = {
   leagueName: string;
   dateLabel: string; // pre-formatted: "Mon · Apr 27 · 5:30 AM"
   venue: string | null;
+  teamAName: string;
+  teamBName: string;
 };
 
 const AVAIL_TAG: Record<
@@ -117,6 +119,9 @@ export function InviteManager({
     settings.expiryMinutes,
   );
   const [channels, setChannels] = useState<Set<Channel>>(new Set(["email"]));
+  const [assignedTeam, setAssignedTeam] = useState<"A" | "B" | "unassigned">(
+    "unassigned",
+  );
   const [compose, setCompose] = useState<null | { message: string }>(null);
 
   const togglePick = (id: string, multi: boolean) => {
@@ -203,6 +208,7 @@ export function InviteManager({
       fd.append("mode", mode);
       fd.append("channels", Array.from(channels).join(","));
       fd.append("expiryMinutesOverride", String(expiryOverride));
+      fd.append("assignedTeam", assignedTeam);
       fd.append("customMessage", compose.message);
       if (mode !== "fcfs") {
         fd.append("playerIds", Array.from(picked).join(","));
@@ -393,6 +399,32 @@ export function InviteManager({
                 ? "Pick a hand-picked group. Each gets their own invite."
                 : "Blast every eligible league member. Seats awarded in order players accept."}
           </p>
+
+          <div className="text-[10.5px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)] mt-2">
+            Team
+          </div>
+          <div className="flex gap-2">
+            {(
+              [
+                { v: "A" as const, label: game.teamAName },
+                { v: "unassigned" as const, label: "TBD" },
+                { v: "B" as const, label: game.teamBName },
+              ]
+            ).map((t) => (
+              <button
+                key={t.v}
+                type="button"
+                onClick={() => setAssignedTeam(t.v)}
+                className={`flex-1 h-9 rounded-[var(--r-md)] border text-[11.5px] font-bold tracking-[0.06em] uppercase inline-flex items-center justify-center gap-1.5 transition-colors ${
+                  assignedTeam === t.v
+                    ? "bg-[color:var(--brand-soft)] border-[color:var(--brand)] text-[color:var(--brand)]"
+                    : "border-[color:var(--hairline-2)] text-[color:var(--text-3)] hover:text-[color:var(--text-2)]"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
 
           <div className="text-[10.5px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)] mt-2">
             Channel

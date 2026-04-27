@@ -95,6 +95,8 @@ export default async function GameInvitesPage({
             leagueName: game.leagueName ?? "BDL game",
             dateLabel: `${fmtDate(game.gameDate)}${game.gameTime ? ` · ${fmtTime(game.gameTime)}` : ""}`,
             venue: game.venue,
+            teamAName: game.teamAName ?? "White",
+            teamBName: game.teamBName ?? "Dark",
           }}
         />
       </PageFrame>
