@@ -217,6 +217,39 @@ export default async function Home() {
                   b={nextGame.probB}
                   compact
                 />
+                {nextGame.predictedScore && (() => {
+                  const aScore = nextGame.predictedScore.a;
+                  const bScore = nextGame.predictedScore.b;
+                  const spread = Math.abs(aScore - bScore);
+                  const favorite =
+                    aScore > bScore
+                      ? nextGame.teamAName
+                      : bScore > aScore
+                        ? nextGame.teamBName
+                        : null;
+                  return (
+                    <div className="flex flex-col gap-1 mt-1.5">
+                      <div className="flex items-center justify-center gap-2 text-[11px] font-[family-name:var(--mono)] num font-semibold text-[color:var(--text-2)]">
+                        <span className="text-[10px] tracking-[0.14em] uppercase text-[color:var(--text-3)] font-semibold">
+                          Projected
+                        </span>
+                        <span>
+                          {nextGame.teamAName} {aScore}
+                          <span className="mx-1.5 text-[color:var(--text-3)]">—</span>
+                          {bScore} {nextGame.teamBName}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-center gap-2 text-[11px] font-[family-name:var(--mono)] num font-semibold text-[color:var(--text-2)]">
+                        <span className="text-[10px] tracking-[0.14em] uppercase text-[color:var(--text-3)] font-semibold">
+                          Spread
+                        </span>
+                        <span>
+                          {favorite ? `${favorite} −${spread}` : "Pick"}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </section>
           </div>

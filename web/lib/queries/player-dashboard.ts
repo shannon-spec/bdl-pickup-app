@@ -285,6 +285,7 @@ export type NextGame = {
   mySide: "A" | "B" | null;
   probA: number;
   probB: number;
+  predictedScore: { a: number; b: number } | null;
   teamARecord: { w: number; l: number };
   teamBRecord: { w: number; l: number };
   rosterA: Pick<Player, "id" | "firstName" | "lastName">[];
@@ -338,6 +339,7 @@ export async function getNextGame(
     leagueId,
     rosterA.map((p) => p.id),
     rosterB.map((p) => p.id),
+    { format: next.format },
   );
   const probA = odds?.probA ?? 50;
   const probB = odds?.probB ?? 50;
@@ -353,6 +355,7 @@ export async function getNextGame(
     mySide: sides.get(next.id) ?? null,
     probA,
     probB,
+    predictedScore: odds?.predictedScore ?? null,
     teamARecord: { w: aW, l: aTot - aW },
     teamBRecord: { w: bW, l: bTot - bW },
     rosterA,

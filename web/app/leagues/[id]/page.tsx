@@ -59,6 +59,7 @@ export default async function LeagueDetailPage({
         id,
         nextGame.rosterA.map((p) => p.id),
         nextGame.rosterB.map((p) => p.id),
+        { format: detail.league.format },
       )
     : null;
 
@@ -180,13 +181,48 @@ export default async function LeagueDetailPage({
                 </div>
               </div>
               {odds && (
-                <ProbabilityBar
-                  aLabel={nextGame.teamAName}
-                  bLabel={nextGame.teamBName}
-                  a={odds.probA}
-                  b={odds.probB}
-                  compact
-                />
+                <div className="flex flex-col gap-1.5">
+                  <ProbabilityBar
+                    aLabel={nextGame.teamAName}
+                    bLabel={nextGame.teamBName}
+                    a={odds.probA}
+                    b={odds.probB}
+                    compact
+                  />
+                  {odds.predictedScore && (() => {
+                    const aScore = odds.predictedScore.a;
+                    const bScore = odds.predictedScore.b;
+                    const spread = Math.abs(aScore - bScore);
+                    const favorite =
+                      aScore > bScore
+                        ? nextGame.teamAName
+                        : bScore > aScore
+                          ? nextGame.teamBName
+                          : null;
+                    return (
+                      <>
+                        <div className="flex items-center justify-center gap-2 text-[11px] font-[family-name:var(--mono)] num font-semibold text-[color:var(--text-2)]">
+                          <span className="text-[10px] tracking-[0.14em] uppercase text-[color:var(--text-3)] font-semibold">
+                            Projected
+                          </span>
+                          <span>
+                            {nextGame.teamAName} {aScore}
+                            <span className="mx-1.5 text-[color:var(--text-3)]">—</span>
+                            {bScore} {nextGame.teamBName}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-center gap-2 text-[11px] font-[family-name:var(--mono)] num font-semibold text-[color:var(--text-2)]">
+                          <span className="text-[10px] tracking-[0.14em] uppercase text-[color:var(--text-3)] font-semibold">
+                            Spread
+                          </span>
+                          <span>
+                            {favorite ? `${favorite} −${spread}` : "Pick"}
+                          </span>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
               )}
             </div>
           </section>

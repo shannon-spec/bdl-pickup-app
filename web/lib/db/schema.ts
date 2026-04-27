@@ -167,6 +167,9 @@ export const leagues = pgTable("leagues", {
   // Race-to-N target for non-series pickup games (e.g. 150). Caps the
   // projected winner score in the matchup-odds prediction.
   playToScore: integer("play_to_score"),
+  // League-level kill switch for projected scores + spreads on the
+  // upcoming-game UI. Win-probability bar still renders.
+  showProjections: boolean("show_projections").notNull().default(true),
   teamAName: text("team_a_name").notNull().default("White"),
   teamBName: text("team_b_name").notNull().default("Dark"),
   // Invite Manager defaults inherited by every game in this league.

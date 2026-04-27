@@ -44,6 +44,7 @@ const leagueSchema = z.object({
   seriesGameCount: intString,
   seriesPointTarget: intString,
   playToScore: intString,
+  showProjections: z.string().trim().optional().or(z.literal("")),
   teamAName: z.string().trim().min(1).max(40).default("White"),
   teamBName: z.string().trim().min(1).max(40).default("Dark"),
 });
@@ -106,6 +107,7 @@ export async function createLeague(formData: FormData): Promise<ActionResult<{ i
       seriesGameCount: isSeries ? toInt(v.seriesGameCount) : null,
       seriesPointTarget: isSeries ? toInt(v.seriesPointTarget) : null,
       playToScore: isSeries ? null : toInt(v.playToScore),
+      showProjections: v.showProjections === "off" ? false : true,
       teamAName: v.teamAName || "White",
       teamBName: v.teamBName || "Dark",
     })
@@ -157,6 +159,7 @@ export async function updateLeague(
       seriesGameCount: isSeries ? toInt(v.seriesGameCount) : null,
       seriesPointTarget: isSeries ? toInt(v.seriesPointTarget) : null,
       playToScore: isSeries ? null : toInt(v.playToScore),
+      showProjections: v.showProjections === "off" ? false : true,
       teamAName: v.teamAName || "White",
       teamBName: v.teamBName || "Dark",
     })

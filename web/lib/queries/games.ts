@@ -387,12 +387,16 @@ export async function getMatchupOdds(
       .orderBy(desc(games.gameDate))
       .limit(lookback * 4), // overshoot to skip ties / unfinished
     db
-      .select({ playToScore: leagues.playToScore })
+      .select({
+        playToScore: leagues.playToScore,
+        showProjections: leagues.showProjections,
+      })
       .from(leagues)
       .where(eq(leagues.id, leagueId))
       .limit(1),
   ]);
   const playTo = leagueRow[0]?.playToScore ?? null;
+  const showProjections = leagueRow[0]?.showProjections ?? true;
 
   let aW = 0,
     aTot = 0,
@@ -498,7 +502,7 @@ export async function getMatchupOdds(
   //     to 2·avgMargin. Falls back to 0.20·N when no margin history.
   //   else → average-total: spread capped at ~20% of total.
   let predictedScore: { a: number; b: number } | null = null;
-  if (hasRosterData) {
+  if (hasRosterData && showProjections) {
     const probMargin = Math.abs(probA - 50) / 50; // 0..1
     if (playTo && playTo > 0) {
       const avgMargin =

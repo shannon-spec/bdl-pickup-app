@@ -169,6 +169,20 @@ export function LeagueForm({
           />
         </Field>
       )}
+      <label className="flex items-center gap-2 select-none cursor-pointer">
+        {/* Hidden default sends "off" when checkbox is unchecked. */}
+        <input type="hidden" name="showProjections" value="off" />
+        <input
+          type="checkbox"
+          name="showProjections"
+          value="on"
+          defaultChecked={editing?.showProjections ?? true}
+          className="h-4 w-4 accent-[color:var(--brand)]"
+        />
+        <span className="text-[13px] text-[color:var(--text)]">
+          Show projected scores &amp; spreads on upcoming games
+        </span>
+      </label>
       <Field label="Grade" hint="skill target">
         <select
           name="level"
