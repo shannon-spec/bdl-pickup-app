@@ -118,8 +118,6 @@ export default async function PlayerProfilePage({
           </div>
         </div>
 
-        <GradePanel targetId={player.id} agg={gradeAgg} />
-
         {/* Career stats */}
         <section className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-7 pt-6 pb-5 max-sm:px-5">
           <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)] mb-6">
@@ -193,6 +191,8 @@ export default async function PlayerProfilePage({
             />
           </StatRow>
         </section>
+
+        <GradePanel targetId={player.id} agg={gradeAgg} />
 
         {/* Per-league breakdown */}
         {profile.byLeague.length > 0 && (

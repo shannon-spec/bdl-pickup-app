@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Pill } from "@/components/bdl/pill";
 import {
   castPlayerGrade,
   clearPlayerGrade,
@@ -28,6 +27,32 @@ const TONE: Record<GradeKey, "neutral" | "brand" | "win" | "loss"> = {
   Advanced: "win",
   "Game Changer": "brand",
   Pro: "brand",
+};
+
+const TONE_STYLE: Record<
+  "neutral" | "brand" | "win" | "loss",
+  { bg: string; text: string; ring: string }
+> = {
+  neutral: {
+    bg: "var(--surface-2)",
+    text: "var(--text)",
+    ring: "var(--hairline-2)",
+  },
+  win: {
+    bg: "var(--up-soft)",
+    text: "var(--up)",
+    ring: "color-mix(in srgb, var(--up) 40%, transparent)",
+  },
+  brand: {
+    bg: "var(--brand-soft)",
+    text: "var(--brand-ink)",
+    ring: "color-mix(in srgb, var(--brand) 50%, transparent)",
+  },
+  loss: {
+    bg: "var(--down-soft)",
+    text: "var(--down)",
+    ring: "color-mix(in srgb, var(--down) 40%, transparent)",
+  },
 };
 
 export function GradePanel({
@@ -71,23 +96,41 @@ export function GradePanel({
         BDL Grade
       </div>
 
-      <div className="flex items-baseline gap-3 flex-wrap mb-1">
+      <div className="flex items-center gap-5 flex-wrap mb-2 max-sm:gap-3">
         {agg.crowdGrade ? (
-          <Pill tone={TONE[agg.crowdGrade]}>{agg.crowdGrade}</Pill>
+          (() => {
+            const style = TONE_STYLE[TONE[agg.crowdGrade]];
+            return (
+              <span
+                className="inline-flex items-center px-5 py-2 rounded-full font-extrabold text-[26px] tracking-[-0.01em] max-sm:text-[22px] max-sm:px-4 max-sm:py-1.5"
+                style={{
+                  background: style.bg,
+                  color: style.text,
+                  boxShadow: `inset 0 0 0 1px ${style.ring}`,
+                }}
+              >
+                {agg.crowdGrade}
+              </span>
+            );
+          })()
         ) : (
-          <Pill tone="neutral">Not yet rated</Pill>
+          <span className="inline-flex items-center px-5 py-2 rounded-full font-extrabold text-[22px] tracking-[-0.01em] bg-[color:var(--surface-2)] text-[color:var(--text-3)]">
+            Not yet rated
+          </span>
         )}
-        <span className="text-[12px] text-[color:var(--text-3)]">
-          {totalVotes === 0
-            ? "No votes yet"
-            : `${agg.peerCount} player ${agg.peerCount === 1 ? "vote" : "votes"} · ${agg.commissionerCount} commissioner ${agg.commissionerCount === 1 ? "vote" : "votes"}`}
-        </span>
-        <Link
-          href="/grades?context=player"
-          className="text-[11.5px] text-[color:var(--text-3)] hover:text-[color:var(--brand)] underline-offset-4 hover:underline"
-        >
-          What do these mean?
-        </Link>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[12px] text-[color:var(--text-2)] font-semibold">
+            {totalVotes === 0
+              ? "No votes yet"
+              : `${agg.peerCount} player ${agg.peerCount === 1 ? "vote" : "votes"} · ${agg.commissionerCount} commissioner ${agg.commissionerCount === 1 ? "vote" : "votes"}`}
+          </span>
+          <Link
+            href="/grades?context=player"
+            className="text-[11.5px] text-[color:var(--text-3)] hover:text-[color:var(--brand)] underline-offset-4 hover:underline"
+          >
+            What do these mean?
+          </Link>
+        </div>
       </div>
 
       {agg.canVote ? (
