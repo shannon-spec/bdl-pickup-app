@@ -2,7 +2,7 @@
  * Read-side queries for the Invite Manager. Write-side lives in
  * lib/actions/game-invites.ts.
  */
-import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import {
   db,
   gameInvites,
@@ -14,6 +14,25 @@ import {
   players,
   type GameInvite,
 } from "@/lib/db";
+
+/**
+ * Lazy expiry: flip any past-due pending invites to expired before
+ * returning them. Cron-driven sweep still runs once daily on the
+ * Hobby plan, but we don't want stale pending rows in the UI between
+ * sweeps. Idempotent.
+ */
+async function expirePastDueForGame(gameId: string) {
+  await db
+    .update(gameInvites)
+    .set({ state: "expired" })
+    .where(
+      and(
+        eq(gameInvites.gameId, gameId),
+        eq(gameInvites.state, "pending"),
+        lt(gameInvites.expiresAt, new Date()),
+      ),
+    );
+}
 
 export type InviteRow = GameInvite & {
   player: { id: string; firstName: string; lastName: string; email: string | null };
@@ -114,6 +133,7 @@ export async function getEffectiveInviteSettings(
 
 /** All invites for a game, with player join. */
 export async function getInvitesForGame(gameId: string): Promise<InviteRow[]> {
+  await expirePastDueForGame(gameId);
   const rows = await db
     .select({
       invite: gameInvites,
@@ -150,6 +170,7 @@ export async function getInvitePool(
     cell: string | null;
   }[]
 > {
+  await expirePastDueForGame(gameId);
   const [g] = await db
     .select({ leagueId: games.leagueId })
     .from(games)
