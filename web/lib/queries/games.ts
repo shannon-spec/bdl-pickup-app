@@ -354,7 +354,7 @@ export async function getMatchupOdds(
   leagueId: string,
   rosterAIds: string[],
   rosterBIds: string[],
-  opts: { lookback?: number; teamWeight?: number } = {},
+  opts: { lookback?: number; teamWeight?: number; format?: Game["format"] } = {},
 ): Promise<{
   probA: number;
   probB: number;
@@ -366,6 +366,7 @@ export async function getMatchupOdds(
     avgPctA: number | null;
     avgPctB: number | null;
   };
+  predictedScore: { a: number; b: number } | null;
 } | null> {
   const lookback = opts.lookback ?? 8;
   const wTeam = opts.teamWeight ?? 0.3;
@@ -388,6 +389,10 @@ export async function getMatchupOdds(
     bW = 0,
     bTot = 0,
     teamGames = 0;
+  // Average total points across decided games with both scores —
+  // feeds the predicted-score model below.
+  let totalPointsSum = 0;
+  let totalPointsN = 0;
   for (const g of last) {
     if (teamGames >= lookback) break;
     const decided =
@@ -401,6 +406,10 @@ export async function getMatchupOdds(
         : null);
     if (!decided) continue;
     teamGames++;
+    if (g.scoreA !== null && g.scoreB !== null) {
+      totalPointsSum += g.scoreA + g.scoreB;
+      totalPointsN++;
+    }
     if (decided === "Tie") continue;
     if (decided === "A") {
       aW++;
@@ -462,9 +471,26 @@ export async function getMatchupOdds(
   // 5. Normalize and round.
   const denom = aScore + bScore || 1;
   const probA = Math.round((aScore / denom) * 100);
+  const probB = 100 - probA;
+
+  // 6. Predicted final score. Gated on rosters so we don't imply
+  // precision from team-color noise alone. MAX_FRAC=0.20 caps the
+  // favorite's edge at ~20% of total even at 100/0 odds.
+  let predictedScore: { a: number; b: number } | null = null;
+  if (hasRosterData) {
+    const fallback =
+      opts.format === "3v3" || opts.format === "3v3-series" ? 60 : 80;
+    const total = totalPointsN > 0 ? totalPointsSum / totalPointsN : fallback;
+    const spread = total * (probA / 100 - 0.5) * 2 * 0.2;
+    predictedScore = {
+      a: Math.max(0, Math.round((total + spread) / 2)),
+      b: Math.max(0, Math.round((total - spread) / 2)),
+    };
+  }
+
   return {
     probA,
-    probB: 100 - probA,
+    probB,
     basis,
     sample: {
       teamGames,
@@ -473,6 +499,7 @@ export async function getMatchupOdds(
       avgPctA: ra.n > 0 ? Math.round(ra.avg * 100) : null,
       avgPctB: rb.n > 0 ? Math.round(rb.avg * 100) : null,
     },
+    predictedScore,
   };
 }
 

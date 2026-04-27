@@ -89,7 +89,9 @@ export default async function GameDetailPage({
       ? getPlayerWinPctsForLeague(game.leagueId, rosterIds)
       : Promise.resolve(new Map<string, { wins: number; losses: number; pct: number | null }>()),
     !completed && game.leagueId
-      ? getMatchupOdds(game.leagueId, rosterAIds, rosterBIds)
+      ? getMatchupOdds(game.leagueId, rosterAIds, rosterBIds, {
+          format: game.format,
+        })
       : Promise.resolve(null),
   ]);
 
@@ -201,6 +203,18 @@ export default async function GameDetailPage({
                     ? "Matchup odds · roster only"
                     : `Matchup odds · last ${matchupOdds.sample.teamGames} games`}
               </div>
+              {matchupOdds.predictedScore && (
+                <div className="mt-1.5 flex items-center justify-center gap-2 text-[11.5px] font-[family-name:var(--mono)] num font-semibold text-[color:var(--text-2)]">
+                  <span className="text-[10.5px] tracking-[0.14em] uppercase text-[color:var(--text-3)] font-semibold">
+                    Projected
+                  </span>
+                  <span>
+                    {game.teamAName ?? "White"} {matchupOdds.predictedScore.a}
+                    <span className="mx-1.5 text-[color:var(--text-3)]">—</span>
+                    {matchupOdds.predictedScore.b} {game.teamBName ?? "Dark"}
+                  </span>
+                </div>
+              )}
             </div>
           )}
 

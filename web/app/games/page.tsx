@@ -136,6 +136,7 @@ export default async function GamesPage({
           heroGame.leagueId,
           heroRoster.A.map((p) => p.id),
           heroRoster.B.map((p) => p.id),
+          { format: heroGame.format },
         )
       : null;
 
@@ -333,13 +334,27 @@ export default async function GamesPage({
                 </div>
               </div>
               {heroProb && (
-                <ProbabilityBar
-                  aLabel={heroGame.teamAName}
-                  bLabel={heroGame.teamBName}
-                  a={heroProb.probA}
-                  b={heroProb.probB}
-                  compact
-                />
+                <div className="flex flex-col gap-1.5">
+                  <ProbabilityBar
+                    aLabel={heroGame.teamAName}
+                    bLabel={heroGame.teamBName}
+                    a={heroProb.probA}
+                    b={heroProb.probB}
+                    compact
+                  />
+                  {heroProb.predictedScore && (
+                    <div className="flex items-center justify-center gap-2 text-[11px] font-[family-name:var(--mono)] num font-semibold text-[color:var(--text-2)]">
+                      <span className="text-[10px] tracking-[0.14em] uppercase text-[color:var(--text-3)] font-semibold">
+                        Projected
+                      </span>
+                      <span>
+                        {heroGame.teamAName} {heroProb.predictedScore.a}
+                        <span className="mx-1.5 text-[color:var(--text-3)]">—</span>
+                        {heroProb.predictedScore.b} {heroGame.teamBName}
+                      </span>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </section>
