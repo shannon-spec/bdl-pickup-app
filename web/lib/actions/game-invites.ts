@@ -24,6 +24,7 @@ import {
   sendInviteInitial,
   sendInviteReminder,
   sendSeatsFilledNotice,
+  sendInviteSMS,
   type InviteEmailContext,
 } from "@/lib/email/invite-email";
 
@@ -90,6 +91,7 @@ const fmtRelative = (expiresAt: Date) => {
 
 async function inviteEmailContext(
   invite: typeof gameInvites.$inferSelect,
+  customMessage?: string | null,
 ): Promise<InviteEmailContext | null> {
   const [row] = await db
     .select({
@@ -120,7 +122,44 @@ async function inviteEmailContext(
       : "soon",
     teamAName: row.game.teamAName ?? "White",
     teamBName: row.game.teamBName ?? "Dark",
+    customMessage: customMessage ?? null,
   };
+}
+
+/**
+ * Resolve recipient cell phone for SMS dispatch. Mirrors the
+ * email lookup so SMS stays self-contained from the action.
+ */
+async function inviteSMSContext(
+  invite: typeof gameInvites.$inferSelect,
+  customMessage: string | null,
+): Promise<{ to: string; body: string } | null> {
+  const [row] = await db
+    .select({
+      game: games,
+      league: { name: leagues.name },
+      player: { firstName: players.firstName, cell: players.cell },
+    })
+    .from(gameInvites)
+    .innerJoin(games, eq(games.id, gameInvites.gameId))
+    .leftJoin(leagues, eq(leagues.id, games.leagueId))
+    .innerJoin(players, eq(players.id, gameInvites.playerId))
+    .where(eq(gameInvites.id, invite.id))
+    .limit(1);
+  if (!row?.player.cell) return null;
+  const base = await getBaseUrl();
+  const claimUrl = `${base}/i/${invite.claimToken}`;
+  const filled = (customMessage ?? "")
+    .replace(/\{firstName\}/g, row.player.firstName)
+    .replace(/\{leagueName\}/g, row.league?.name ?? row.game.leagueName ?? "BDL")
+    .replace(/\{gameDate\}/g, fmtGameDate(row.game.gameDate, row.game.gameTime))
+    .replace(/\{venue\}/g, row.game.venue ?? "")
+    .replace(/\{claimUrl\}/g, claimUrl)
+    .replace(/\{expires\}/g, invite.expiresAt ? fmtRelative(invite.expiresAt) : "soon");
+  const body = filled
+    ? `${filled}\n${claimUrl}`
+    : `BDL: ${row.league?.name ?? "Pickup"} — ${fmtGameDate(row.game.gameDate, row.game.gameTime)}. Claim or pass: ${claimUrl}`;
+  return { to: row.player.cell, body };
 }
 
 /**
@@ -146,6 +185,12 @@ export async function createInvites(
   const channels = channelsCsv.split(",").map((s) => s.trim()).filter(Boolean);
   if (channels.length === 0) channels.push("email");
   const expiryOverride = Number(formData.get("expiryMinutesOverride") ?? 0);
+  const customMessage = (() => {
+    const raw = formData.get("customMessage");
+    if (raw == null) return null;
+    const trimmed = String(raw).trim();
+    return trimmed.length > 0 ? trimmed : null;
+  })();
 
   const settings = await getEffectiveInviteSettings(gameId);
   if (!settings) return { ok: false, error: "Game not found." };
@@ -248,11 +293,15 @@ export async function createInvites(
   for (const inv of inserted) {
     await logEvent(inv.id, gameId, "invite.sent", gate.session.playerId ?? null);
     if (channels.includes("email")) {
-      const ctx = await inviteEmailContext(inv);
+      const ctx = await inviteEmailContext(inv, customMessage);
       if (ctx) {
         // Fire-and-forget so a slow Resend response doesn't block the action.
         void sendInviteInitial(ctx);
       }
+    }
+    if (channels.includes("sms")) {
+      const sms = await inviteSMSContext(inv, customMessage);
+      if (sms) void sendInviteSMS(sms);
     }
   }
 

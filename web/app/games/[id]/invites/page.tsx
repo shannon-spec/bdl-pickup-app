@@ -91,6 +91,11 @@ export default async function GameInvitesPage({
           initialPool={pool}
           initialActivity={activity}
           settings={settings}
+          game={{
+            leagueName: game.leagueName ?? "BDL game",
+            dateLabel: `${fmtDate(game.gameDate)}${game.gameTime ? ` · ${fmtTime(game.gameTime)}` : ""}`,
+            venue: game.venue,
+          }}
         />
       </PageFrame>
       <MobileBottomBar active="home" />

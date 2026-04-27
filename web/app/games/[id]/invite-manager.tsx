@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Check, Mail, MessageSquare } from "lucide-react";
 import {
   cancelInvite,
   createInvites,
@@ -22,6 +23,13 @@ type PoolPlayer = {
 };
 
 type Mode = "single" | "group" | "fcfs";
+type Channel = "email" | "sms";
+
+export type InviteGameContext = {
+  leagueName: string;
+  dateLabel: string; // pre-formatted: "Mon · Apr 27 · 5:30 AM"
+  venue: string | null;
+};
 
 const STATE_TONE: Record<string, { label: string; cls: string }> = {
   queued: { label: "Queued", cls: "bg-[color:var(--surface-2)] text-[color:var(--text-3)]" },
@@ -61,18 +69,25 @@ const fmtCountdown = (expiresAt: Date | null) => {
   return `${hr}h left`;
 };
 
+const buildDefaultMessage = (game: InviteGameContext) => {
+  const venueLine = game.venue ? ` at ${game.venue}` : "";
+  return `Hi {firstName},\n\nYou're invited to ${game.leagueName} — ${game.dateLabel}${venueLine}.\n\nTap the link to claim your seat or pass. Invite expires {expires}.\n\n— BDL`;
+};
+
 export function InviteManager({
   gameId,
   initialInvites,
   initialPool,
   initialActivity,
   settings,
+  game,
 }: {
   gameId: string;
   initialInvites: InviteRow[];
   initialPool: PoolPlayer[];
   initialActivity: ActivityRow[];
   settings: InviteSettings;
+  game: InviteGameContext;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -83,6 +98,8 @@ export function InviteManager({
   const [expiryOverride, setExpiryOverride] = useState<number>(
     settings.expiryMinutes,
   );
+  const [channels, setChannels] = useState<Set<Channel>>(new Set(["email"]));
+  const [compose, setCompose] = useState<null | { message: string }>(null);
 
   const togglePick = (id: string, multi: boolean) => {
     setPicked((prev) => {
@@ -92,6 +109,17 @@ export function InviteManager({
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleChannel = (c: Channel) => {
+    setChannels((prev) => {
+      const next = new Set(prev);
+      if (next.has(c)) next.delete(c);
+      else next.add(c);
+      // Don't allow both off — re-add the one that was just toggled.
+      if (next.size === 0) next.add(c);
       return next;
     });
   };
@@ -119,24 +147,47 @@ export function InviteManager({
     (i) => i.state === "confirmed",
   ).length;
 
-  const send = () => {
+  // Warn if SMS is selected but any picked recipient has no cell on file.
+  const smsMissing = useMemo(() => {
+    if (!channels.has("sms")) return [] as PoolPlayer[];
+    if (mode === "fcfs") return [];
+    return Array.from(picked)
+      .map((id) => initialPool.find((p) => p.id === id))
+      .filter((p): p is PoolPlayer => !!p && !p.cell);
+  }, [channels, mode, picked, initialPool]);
+
+  const openCompose = () => {
     setError(null);
     if (mode !== "fcfs" && picked.size === 0) {
       setError("Pick at least one player.");
       return;
     }
+    setCompose({ message: buildDefaultMessage(game) });
+  };
+
+  // Reset compose textarea if the user toggles channels / mode mid-flow.
+  useEffect(() => {
+    if (!compose) return;
+    // No-op: keep the user's edits unless they reset manually.
+  }, [compose]);
+
+  const confirmSend = () => {
+    if (!compose) return;
+    setError(null);
     start(async () => {
       const fd = new FormData();
       fd.append("gameId", gameId);
       fd.append("mode", mode);
-      fd.append("channels", "email");
+      fd.append("channels", Array.from(channels).join(","));
       fd.append("expiryMinutesOverride", String(expiryOverride));
+      fd.append("customMessage", compose.message);
       if (mode !== "fcfs") {
         fd.append("playerIds", Array.from(picked).join(","));
       }
       const res = await createInvites(fd);
       if (res.ok) {
         setPicked(new Set());
+        setCompose(null);
         router.refresh();
       } else setError(res.error);
     });
@@ -207,6 +258,11 @@ export function InviteManager({
           <div className="px-4 py-3 border-b border-[color:var(--hairline)]">
             <div className="text-[10.5px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)] mb-2">
               Available · {filteredPool.length}
+              {picked.size > 0 && (
+                <span className="ml-2 text-[color:var(--up)]">
+                  {picked.size} selected
+                </span>
+              )}
             </div>
             <input
               value={search}
@@ -228,16 +284,28 @@ export function InviteManager({
                     key={p.id}
                     type="button"
                     onClick={(e) => togglePick(p.id, mode === "group" || e.shiftKey || e.metaKey)}
+                    aria-pressed={isPicked}
                     className={`w-full flex items-center justify-between gap-2 px-4 py-2.5 border-t border-[color:var(--hairline)] first:border-t-0 text-left text-[13px] hover:bg-[color:var(--surface-2)] ${
-                      isPicked ? "bg-[color:var(--brand-soft)]" : ""
+                      isPicked ? "bg-[color:var(--up-soft)]" : ""
                     }`}
                   >
-                    <span className="font-bold truncate">
-                      {p.firstName} {p.lastName}
+                    <span className="flex items-center gap-2.5 min-w-0">
+                      <span
+                        className={`inline-flex items-center justify-center w-5 h-5 rounded-full border flex-shrink-0 transition-colors ${
+                          isPicked
+                            ? "bg-[color:var(--up)] border-[color:var(--up)] text-white"
+                            : "border-[color:var(--hairline-2)] text-transparent"
+                        }`}
+                      >
+                        <Check size={12} strokeWidth={3} />
+                      </span>
+                      <span className="font-bold truncate">
+                        {p.firstName} {p.lastName}
+                      </span>
                     </span>
-                    <span className="text-[10px] text-[color:var(--text-4)] uppercase tracking-[0.08em]">
-                      {p.email ? "✉" : ""}
-                      {p.cell ? " ☎" : ""}
+                    <span className="text-[10px] text-[color:var(--text-4)] uppercase tracking-[0.08em] flex items-center gap-1 flex-shrink-0">
+                      {p.email && <Mail size={11} />}
+                      {p.cell && <MessageSquare size={11} />}
                     </span>
                   </button>
                 );
@@ -279,6 +347,47 @@ export function InviteManager({
           </p>
 
           <div className="text-[10.5px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)] mt-2">
+            Channel
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => toggleChannel("email")}
+              className={`flex-1 h-9 rounded-[var(--r-md)] border text-[11.5px] font-bold tracking-[0.06em] uppercase inline-flex items-center justify-center gap-1.5 transition-colors ${
+                channels.has("email")
+                  ? "bg-[color:var(--brand-soft)] border-[color:var(--brand)] text-[color:var(--brand)]"
+                  : "border-[color:var(--hairline-2)] text-[color:var(--text-3)] hover:text-[color:var(--text-2)]"
+              }`}
+            >
+              <Mail size={13} /> Email
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleChannel("sms")}
+              className={`flex-1 h-9 rounded-[var(--r-md)] border text-[11.5px] font-bold tracking-[0.06em] uppercase inline-flex items-center justify-center gap-1.5 transition-colors ${
+                channels.has("sms")
+                  ? "bg-[color:var(--brand-soft)] border-[color:var(--brand)] text-[color:var(--brand)]"
+                  : "border-[color:var(--hairline-2)] text-[color:var(--text-3)] hover:text-[color:var(--text-2)]"
+              }`}
+            >
+              <MessageSquare size={13} /> Text
+            </button>
+          </div>
+          {channels.has("sms") && (
+            <p className="text-[11px] text-[color:var(--text-3)] leading-snug">
+              SMS dispatch is logged but not yet sent over Twilio. Recipients
+              must have a cell on file.
+            </p>
+          )}
+          {smsMissing.length > 0 && (
+            <p className="text-[11px] text-[color:var(--warn)] bg-[color:var(--warn-soft)] rounded-[var(--r-md)] px-2.5 py-1.5">
+              {smsMissing.length} selected player
+              {smsMissing.length === 1 ? "" : "s"} have no cell on file — SMS
+              skipped for them.
+            </p>
+          )}
+
+          <div className="text-[10.5px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)] mt-2">
             Expiry (min)
           </div>
           <input
@@ -298,15 +407,13 @@ export function InviteManager({
 
           <button
             type="button"
-            onClick={send}
+            onClick={openCompose}
             disabled={pending || (mode !== "fcfs" && picked.size === 0)}
             className="h-10 mt-2 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {pending
-              ? "Sending…"
-              : mode === "fcfs"
-                ? "Send FCFS to all"
-                : `Send ${picked.size > 1 ? "group" : "invite"}`}
+            {mode === "fcfs"
+              ? "Compose FCFS blast"
+              : `Compose ${picked.size > 1 ? "group" : "invite"}`}
           </button>
 
           {error && (
@@ -451,6 +558,133 @@ export function InviteManager({
           </div>
         </div>
       )}
+
+      {/* Compose dialog */}
+      {compose && (
+        <ComposeDialog
+          message={compose.message}
+          onMessageChange={(m) => setCompose({ message: m })}
+          recipientCount={
+            mode === "fcfs"
+              ? initialPool.length
+              : picked.size
+          }
+          mode={mode}
+          channels={channels}
+          pending={pending}
+          onCancel={() => setCompose(null)}
+          onConfirm={confirmSend}
+          onReset={() => setCompose({ message: buildDefaultMessage(game) })}
+          error={error}
+        />
+      )}
     </section>
+  );
+}
+
+function ComposeDialog({
+  message,
+  onMessageChange,
+  recipientCount,
+  mode,
+  channels,
+  pending,
+  onCancel,
+  onConfirm,
+  onReset,
+  error,
+}: {
+  message: string;
+  onMessageChange: (m: string) => void;
+  recipientCount: number;
+  mode: Mode;
+  channels: Set<Channel>;
+  pending: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+  onReset: () => void;
+  error: string | null;
+}) {
+  // Esc closes when not pending.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !pending) onCancel();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [pending, onCancel]);
+
+  const channelLabel = Array.from(channels)
+    .map((c) => (c === "email" ? "Email" : "Text"))
+    .join(" + ");
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(0,0,0,0.45)]">
+      <div className="w-full max-w-[560px] rounded-[18px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="px-5 py-4 border-b border-[color:var(--hairline)]">
+          <div className="text-[10.5px] font-bold tracking-[0.16em] uppercase text-[color:var(--text-3)]">
+            Compose Invite
+          </div>
+          <div className="text-[16px] font-extrabold tracking-[-0.01em] mt-0.5">
+            {mode === "fcfs"
+              ? `FCFS blast · ${channelLabel}`
+              : `${recipientCount} recipient${recipientCount === 1 ? "" : "s"} · ${channelLabel}`}
+          </div>
+        </div>
+
+        <div className="px-5 py-4 flex flex-col gap-2 overflow-y-auto">
+          <label className="text-[10.5px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
+            Message
+          </label>
+          <textarea
+            value={message}
+            onChange={(e) => onMessageChange(e.target.value)}
+            rows={9}
+            className="w-full px-3 py-2.5 rounded-[var(--r-md)] border border-[color:var(--hairline-2)] bg-[color:var(--surface-2)] text-[13.5px] leading-[1.55] outline-none focus:border-[color:var(--brand)] resize-y font-[family-name:inherit]"
+          />
+          <div className="text-[10.5px] text-[color:var(--text-3)] leading-snug mt-0.5">
+            Tokens like <code className="bg-[color:var(--surface-2)] px-1 rounded">{"{firstName}"}</code>,{" "}
+            <code className="bg-[color:var(--surface-2)] px-1 rounded">{"{expires}"}</code>, and{" "}
+            <code className="bg-[color:var(--surface-2)] px-1 rounded">{"{claimUrl}"}</code> are filled in per recipient.
+            The claim link is appended automatically if you remove it.
+          </div>
+
+          {error && (
+            <div className="text-[12px] text-[color:var(--down)] bg-[color:var(--down-soft)] rounded-[var(--r-md)] px-3 py-2 mt-1">
+              {error}
+            </div>
+          )}
+        </div>
+
+        <div className="px-5 py-3 border-t border-[color:var(--hairline)] flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={onReset}
+            disabled={pending}
+            className="text-[11px] font-bold tracking-[0.06em] uppercase text-[color:var(--text-3)] hover:text-[color:var(--text-2)] disabled:opacity-50"
+          >
+            Reset to default
+          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={pending}
+              className="h-9 px-4 rounded-[var(--r-md)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] hover:bg-[color:var(--surface-2)] text-[11.5px] font-bold tracking-[0.06em] uppercase text-[color:var(--text-2)] disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={pending}
+              className="h-9 px-4 rounded-[var(--r-md)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white text-[11.5px] font-bold tracking-[0.06em] uppercase shadow-[var(--cta-shadow)] disabled:opacity-50"
+            >
+              {pending ? "Sending…" : "Send"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

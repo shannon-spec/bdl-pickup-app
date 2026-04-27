@@ -24,6 +24,7 @@ export type InviteEmailContext = {
   expiresAtLabel: string; // "in 2h" or absolute time
   teamAName: string;
   teamBName: string;
+  customMessage?: string | null; // commissioner-authored body; {firstName} substituted
 };
 
 async function send({
@@ -63,19 +64,37 @@ const wrapHtml = (inner: string) => `<div style="font-family:-apple-system,Blink
   <p style="color:#666;font-size:12px;margin-top:24px;">— BDL · Ball Don't Lie</p>
 </div>`;
 
+const fillTemplate = (s: string, ctx: InviteEmailContext) =>
+  s
+    .replace(/\{firstName\}/g, ctx.firstName)
+    .replace(/\{leagueName\}/g, ctx.leagueName)
+    .replace(/\{gameDate\}/g, ctx.gameDateLabel)
+    .replace(/\{venue\}/g, ctx.venue ?? "")
+    .replace(/\{claimUrl\}/g, ctx.claimUrl)
+    .replace(/\{expires\}/g, ctx.expiresAtLabel);
+
 export function sendInviteInitial(ctx: InviteEmailContext) {
   const subject = `${ctx.leagueName}: invite for ${ctx.gameDateLabel}`;
+  const customBody = ctx.customMessage ? fillTemplate(ctx.customMessage, ctx) : null;
   const venueLine = ctx.venue ? ` @ ${ctx.venue}` : "";
-  const text =
+  const defaultText =
     `Hi ${ctx.firstName},\n\n` +
     `You're invited to ${ctx.leagueName} — ${ctx.gameDateLabel}${venueLine}.\n\n` +
     `Claim or pass: ${ctx.claimUrl}\n` +
     `Invite expires ${ctx.expiresAtLabel}.\n\n— BDL`;
+  const text = customBody
+    ? `${customBody}\n\nClaim or pass: ${ctx.claimUrl}\nInvite expires ${ctx.expiresAtLabel}.\n\n— BDL`
+    : defaultText;
+  const bodyHtml = customBody
+    ? `<div style="font-size:14px;line-height:1.55;white-space:pre-wrap;margin:0 0 18px;">${escapeHtml(customBody)}</div>`
+    : `
+      <p style="font-size:15px;margin:0 0 4px;">${escapeHtml(ctx.gameDateLabel)}</p>
+      ${ctx.venue ? `<p style="font-size:13px;color:#555;margin:0 0 16px;">${escapeHtml(ctx.venue)}</p>` : ""}
+    `;
   const html = wrapHtml(`
     <h2 style="margin:0 0 6px;font-size:18px;letter-spacing:-0.01em;">You're invited</h2>
     <p style="font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#666;margin:0 0 16px;">${escapeHtml(ctx.leagueName)}</p>
-    <p style="font-size:15px;margin:0 0 4px;">${escapeHtml(ctx.gameDateLabel)}</p>
-    ${ctx.venue ? `<p style="font-size:13px;color:#555;margin:0 0 16px;">${escapeHtml(ctx.venue)}</p>` : ""}
+    ${bodyHtml}
     <p style="margin:20px 0;">
       <a href="${escapeHtml(ctx.claimUrl)}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;font-size:14px;">Claim a seat</a>
     </p>
@@ -83,6 +102,21 @@ export function sendInviteInitial(ctx: InviteEmailContext) {
     <p style="color:#888;font-size:12px;margin-top:14px;">Invite expires ${escapeHtml(ctx.expiresAtLabel)}.</p>
   `);
   return send({ to: ctx.to, subject, text, html });
+}
+
+/**
+ * SMS stub. Real Twilio wiring is deferred; for now we log so the
+ * invite still gets recorded with `sms` in its channels[] and we can
+ * backfill once credentials are configured.
+ */
+export async function sendInviteSMS(opts: {
+  to: string;
+  body: string;
+}) {
+  console.info("[invite-sms] (stub) would send SMS", {
+    to: opts.to,
+    body: opts.body.slice(0, 160),
+  });
 }
 
 export function sendInviteReminder(ctx: InviteEmailContext) {
