@@ -152,24 +152,29 @@ export async function getInvitesForGame(gameId: string): Promise<InviteRow[]> {
 }
 
 /**
- * Eligible invite pool for a game: league members not currently in
- * an active (queued/pending) invite, not already on the roster, not
- * the same as the game-winner. Returns just enough for the UI list.
+ * Full league directory for the Invite Manager. Every active league
+ * member shows up; rows already on the roster or carrying a pending
+ * invite are returned with `availability` set so the UI can render
+ * them disabled with a badge instead of hiding them.
  */
-export async function getInvitePool(
-  gameId: string,
-): Promise<
-  {
-    id: string;
-    firstName: string;
-    lastName: string;
-    avatarUrl: string | null;
-    level: string;
-    status: string;
-    email: string | null;
-    cell: string | null;
-  }[]
-> {
+export type PoolPlayer = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  avatarUrl: string | null;
+  level: string;
+  status: string;
+  email: string | null;
+  cell: string | null;
+  availability:
+    | "available"
+    | "roster_a"
+    | "roster_b"
+    | "roster_invited"
+    | "pending";
+};
+
+export async function getInvitePool(gameId: string): Promise<PoolPlayer[]> {
   await expirePastDueForGame(gameId);
   const [g] = await db
     .select({ leagueId: games.leagueId })
@@ -194,14 +199,20 @@ export async function getInvitePool(
     .where(eq(leaguePlayers.leagueId, g.leagueId))
     .orderBy(asc(players.lastName), asc(players.firstName));
 
-  // Players already on the roster for this game (any side).
+  // Roster sides for this game so we can tag White / Dark / Invited.
   const onRoster = await db
-    .select({ playerId: gameRoster.playerId })
+    .select({ playerId: gameRoster.playerId, side: gameRoster.side })
     .from(gameRoster)
     .where(eq(gameRoster.gameId, gameId));
-  const rosterIds = new Set(onRoster.map((r) => r.playerId));
+  const rosterMap = new Map<string, "A" | "B" | "invited">();
+  for (const r of onRoster) {
+    rosterMap.set(
+      r.playerId,
+      r.side === "A" ? "A" : r.side === "B" ? "B" : "invited",
+    );
+  }
 
-  // Players in active invite state (queued / pending) for this game.
+  // Active (queued / pending) invites for this game.
   const active = await db
     .select({ playerId: gameInvites.playerId })
     .from(gameInvites)
@@ -213,9 +224,15 @@ export async function getInvitePool(
     );
   const activeIds = new Set(active.map((r) => r.playerId));
 
-  return memberRows.filter(
-    (p) => !rosterIds.has(p.id) && !activeIds.has(p.id),
-  );
+  return memberRows.map((p) => {
+    const side = rosterMap.get(p.id);
+    let availability: PoolPlayer["availability"] = "available";
+    if (side === "A") availability = "roster_a";
+    else if (side === "B") availability = "roster_b";
+    else if (side === "invited") availability = "roster_invited";
+    else if (activeIds.has(p.id)) availability = "pending";
+    return { ...p, availability };
+  });
 }
 
 /** Used by the public claim page. */

@@ -10,17 +10,12 @@ import {
   resendInvite,
   bulkCancelGameInvites,
 } from "@/lib/actions/game-invites";
-import type { ActivityRow, InviteRow, InviteSettings } from "@/lib/queries/game-invites";
-
-type PoolPlayer = {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string | null;
-  cell: string | null;
-  level: string;
-  status: string;
-};
+import type {
+  ActivityRow,
+  InviteRow,
+  InviteSettings,
+  PoolPlayer,
+} from "@/lib/queries/game-invites";
 
 type Mode = "single" | "group" | "fcfs";
 type Channel = "email" | "sms";
@@ -29,6 +24,29 @@ export type InviteGameContext = {
   leagueName: string;
   dateLabel: string; // pre-formatted: "Mon · Apr 27 · 5:30 AM"
   venue: string | null;
+};
+
+const AVAIL_TAG: Record<
+  PoolPlayer["availability"],
+  { label: string; cls: string } | null
+> = {
+  available: null,
+  roster_a: {
+    label: "On Team A",
+    cls: "bg-[rgba(170,178,192,.22)] text-[color:var(--text-2)]",
+  },
+  roster_b: {
+    label: "On Team B",
+    cls: "bg-[rgba(212,175,55,.22)] text-[color:var(--text-2)]",
+  },
+  roster_invited: {
+    label: "Invited (roster)",
+    cls: "bg-[color:var(--surface-2)] text-[color:var(--text-3)]",
+  },
+  pending: {
+    label: "Pending invite",
+    cls: "bg-[color:var(--warn-soft)] text-[color:var(--warn)]",
+  },
 };
 
 const STATE_TONE: Record<string, { label: string; cls: string }> = {
@@ -131,6 +149,11 @@ export function InviteManager({
       `${p.firstName} ${p.lastName}`.toLowerCase().includes(q),
     );
   }, [initialPool, search]);
+
+  const availableCount = useMemo(
+    () => initialPool.filter((p) => p.availability === "available").length,
+    [initialPool],
+  );
 
   // Group active vs final
   const activeInvites = initialInvites.filter(
@@ -256,11 +279,13 @@ export function InviteManager({
         {/* Available pool */}
         <div className="rounded-[14px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] flex flex-col min-h-[320px]">
           <div className="px-4 py-3 border-b border-[color:var(--hairline)]">
-            <div className="text-[10.5px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)] mb-2">
-              Available · {filteredPool.length}
+            <div className="text-[10.5px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)] mb-2 flex items-center gap-2 flex-wrap">
+              <span>League · {initialPool.length}</span>
+              <span className="text-[color:var(--text-4)]">·</span>
+              <span>{availableCount} available</span>
               {picked.size > 0 && (
-                <span className="ml-2 text-[color:var(--up)]">
-                  {picked.size} selected
+                <span className="ml-1 text-[color:var(--up)]">
+                  · {picked.size} selected
                 </span>
               )}
             </div>
@@ -274,19 +299,33 @@ export function InviteManager({
           <div className="flex-1 overflow-y-auto max-h-[420px]">
             {filteredPool.length === 0 ? (
               <div className="px-4 py-6 text-center text-[12px] text-[color:var(--text-3)]">
-                Everyone in the league is already on the roster or has an active invite.
+                No league members match.
               </div>
             ) : (
               filteredPool.map((p) => {
                 const isPicked = picked.has(p.id);
+                const disabled = p.availability !== "available";
+                const tag = AVAIL_TAG[p.availability];
                 return (
                   <button
                     key={p.id}
                     type="button"
-                    onClick={(e) => togglePick(p.id, mode === "group" || e.shiftKey || e.metaKey)}
+                    disabled={disabled}
+                    onClick={(e) =>
+                      !disabled &&
+                      togglePick(
+                        p.id,
+                        mode === "group" || e.shiftKey || e.metaKey,
+                      )
+                    }
                     aria-pressed={isPicked}
-                    className={`w-full flex items-center justify-between gap-2 px-4 py-2.5 border-t border-[color:var(--hairline)] first:border-t-0 text-left text-[13px] hover:bg-[color:var(--surface-2)] ${
-                      isPicked ? "bg-[color:var(--up-soft)]" : ""
+                    title={tag ? `Unavailable: ${tag.label}` : undefined}
+                    className={`w-full flex items-center justify-between gap-2 px-4 py-2.5 border-t border-[color:var(--hairline)] first:border-t-0 text-left text-[13px] transition-colors ${
+                      isPicked
+                        ? "bg-[color:var(--up-soft)]"
+                        : disabled
+                          ? "opacity-55 cursor-not-allowed"
+                          : "hover:bg-[color:var(--surface-2)]"
                     }`}
                   >
                     <span className="flex items-center gap-2.5 min-w-0">
@@ -303,9 +342,18 @@ export function InviteManager({
                         {p.firstName} {p.lastName}
                       </span>
                     </span>
-                    <span className="text-[10px] text-[color:var(--text-4)] uppercase tracking-[0.08em] flex items-center gap-1 flex-shrink-0">
-                      {p.email && <Mail size={11} />}
-                      {p.cell && <MessageSquare size={11} />}
+                    <span className="flex items-center gap-1.5 flex-shrink-0">
+                      {tag && (
+                        <span
+                          className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-[0.08em] ${tag.cls}`}
+                        >
+                          {tag.label}
+                        </span>
+                      )}
+                      <span className="text-[10px] text-[color:var(--text-4)] uppercase tracking-[0.08em] flex items-center gap-1">
+                        {p.email && <Mail size={11} />}
+                        {p.cell && <MessageSquare size={11} />}
+                      </span>
                     </span>
                   </button>
                 );
@@ -564,11 +612,7 @@ export function InviteManager({
         <ComposeDialog
           message={compose.message}
           onMessageChange={(m) => setCompose({ message: m })}
-          recipientCount={
-            mode === "fcfs"
-              ? initialPool.length
-              : picked.size
-          }
+          recipientCount={mode === "fcfs" ? availableCount : picked.size}
           mode={mode}
           channels={channels}
           pending={pending}
