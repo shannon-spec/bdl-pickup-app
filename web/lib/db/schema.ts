@@ -164,6 +164,9 @@ export const leagues = pgTable("leagues", {
   // Series-format extras. Null for non-series formats.
   seriesGameCount: integer("series_game_count"),
   seriesPointTarget: integer("series_point_target"),
+  // Race-to-N target for non-series pickup games (e.g. 150). Caps the
+  // projected winner score in the matchup-odds prediction.
+  playToScore: integer("play_to_score"),
   teamAName: text("team_a_name").notNull().default("White"),
   teamBName: text("team_b_name").notNull().default("Dark"),
   // Invite Manager defaults inherited by every game in this league.

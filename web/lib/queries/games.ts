@@ -373,16 +373,26 @@ export async function getMatchupOdds(
   const wRoster = 1 - wTeam;
 
   // 1. Team-color base rate over the last `lookback` completed games.
-  const last = await db
-    .select({
-      scoreA: games.scoreA,
-      scoreB: games.scoreB,
-      winTeam: games.winTeam,
-    })
-    .from(games)
-    .where(eq(games.leagueId, leagueId))
-    .orderBy(desc(games.gameDate))
-    .limit(lookback * 4); // overshoot to skip ties / unfinished
+  // Pull the league's race-to-N target alongside, so the predicted-score
+  // model can cap the winner instead of using an open-ended average.
+  const [last, leagueRow] = await Promise.all([
+    db
+      .select({
+        scoreA: games.scoreA,
+        scoreB: games.scoreB,
+        winTeam: games.winTeam,
+      })
+      .from(games)
+      .where(eq(games.leagueId, leagueId))
+      .orderBy(desc(games.gameDate))
+      .limit(lookback * 4), // overshoot to skip ties / unfinished
+    db
+      .select({ playToScore: leagues.playToScore })
+      .from(leagues)
+      .where(eq(leagues.id, leagueId))
+      .limit(1),
+  ]);
+  const playTo = leagueRow[0]?.playToScore ?? null;
 
   let aW = 0,
     aTot = 0,
@@ -474,18 +484,27 @@ export async function getMatchupOdds(
   const probB = 100 - probA;
 
   // 6. Predicted final score. Gated on rosters so we don't imply
-  // precision from team-color noise alone. MAX_FRAC=0.20 caps the
-  // favorite's edge at ~20% of total even at 100/0 odds.
+  // precision from team-color noise alone. Two models:
+  //   playTo set → race-to-N: winner = N, loser = N · (1 − 0.30·margin).
+  //   else → average-total: spread capped at ~20% of total.
   let predictedScore: { a: number; b: number } | null = null;
   if (hasRosterData) {
-    const fallback =
-      opts.format === "3v3" || opts.format === "3v3-series" ? 60 : 80;
-    const total = totalPointsN > 0 ? totalPointsSum / totalPointsN : fallback;
-    const spread = total * (probA / 100 - 0.5) * 2 * 0.2;
-    predictedScore = {
-      a: Math.max(0, Math.round((total + spread) / 2)),
-      b: Math.max(0, Math.round((total - spread) / 2)),
-    };
+    const margin = Math.abs(probA - 50) / 50; // 0..1
+    if (playTo && playTo > 0) {
+      const winner = playTo;
+      const loser = Math.max(0, Math.round(playTo * (1 - 0.3 * margin)));
+      predictedScore =
+        probA >= probB ? { a: winner, b: loser } : { a: loser, b: winner };
+    } else {
+      const fallback =
+        opts.format === "3v3" || opts.format === "3v3-series" ? 60 : 80;
+      const total = totalPointsN > 0 ? totalPointsSum / totalPointsN : fallback;
+      const spread = total * (probA / 100 - 0.5) * 2 * 0.2;
+      predictedScore = {
+        a: Math.max(0, Math.round((total + spread) / 2)),
+        b: Math.max(0, Math.round((total - spread) / 2)),
+      };
+    }
   }
 
   return {

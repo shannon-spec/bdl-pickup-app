@@ -157,6 +157,18 @@ export function LeagueForm({
           />
         </Field>
       </Row>
+      {!isSeries && (
+        <Field label="Play To" hint="winning score (e.g. 150)">
+          <input
+            name="playToScore"
+            type="number"
+            min={1}
+            defaultValue={editing?.playToScore ?? ""}
+            className={inputCx}
+            placeholder="150"
+          />
+        </Field>
+      )}
       <Field label="Grade" hint="skill target">
         <select
           name="level"
