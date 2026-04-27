@@ -124,7 +124,31 @@ export default async function PlayerProfilePage({
               label="Win %"
               value={profile.totalWinPct !== null ? profile.totalWinPct.toFixed(1) : "—"}
               unit={profile.totalWinPct !== null ? "%" : undefined}
-              sub={{ text: `${profile.totalGames} games played` }}
+              sub={
+                profile.topLeague?.winRank
+                  ? {
+                      text: `#${profile.topLeague.winRank} · ${profile.topLeague.name}`,
+                    }
+                  : { text: `${profile.totalGames} games played` }
+              }
+            />
+            <StatBlock
+              label="Games Played %"
+              value={
+                profile.careerPlayedPct !== null
+                  ? profile.careerPlayedPct.toFixed(1)
+                  : "—"
+              }
+              unit={profile.careerPlayedPct !== null ? "%" : undefined}
+              sub={
+                profile.topLeague?.playedRank
+                  ? {
+                      text: `#${profile.topLeague.playedRank} · ${profile.topLeague.name}`,
+                    }
+                  : {
+                      text: `${profile.totalGames} of ${profile.careerLeagueNights} nights`,
+                    }
+              }
             />
             <StatBlock
               label="Record"
@@ -161,11 +185,6 @@ export default async function PlayerProfilePage({
                   : { text: "No games yet", tone: "muted" }
               }
             />
-            <StatBlock
-              label="Leagues"
-              value={profile.leagueCount}
-              sub={{ text: profile.leagueCount === 1 ? "1 active" : `${profile.leagueCount} active` }}
-            />
           </StatRow>
         </section>
 
@@ -174,21 +193,35 @@ export default async function PlayerProfilePage({
           <div>
             <SectionHead title="By League" count={<span>{profile.byLeague.length}</span>} />
             <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden">
+              <div className="grid grid-cols-[1fr_80px_72px_56px_72px_56px] max-sm:grid-cols-[1fr_70px_60px_56px] gap-3 px-5 py-2.5 text-[10px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)] border-b border-[color:var(--hairline)]">
+                <span>League</span>
+                <span className="text-right">Record</span>
+                <span className="text-right">Win %</span>
+                <span className="text-right max-sm:hidden">Rank</span>
+                <span className="text-right max-sm:hidden">Played %</span>
+                <span className="text-right">Rank</span>
+              </div>
               {profile.byLeague.map((s) => (
                 <Link
                   key={s.leagueId}
                   href={`/leagues/${s.leagueId}`}
-                  className="grid grid-cols-[1fr_80px_60px_60px] max-sm:grid-cols-[1fr_70px_60px] items-center gap-3 px-5 py-3 border-t border-[color:var(--hairline)] first:border-t-0 hover:bg-[color:var(--surface-2)] text-[14px]"
+                  className="grid grid-cols-[1fr_80px_72px_56px_72px_56px] max-sm:grid-cols-[1fr_70px_60px_56px] items-center gap-3 px-5 py-3 border-t border-[color:var(--hairline)] first:border-t-0 hover:bg-[color:var(--surface-2)] text-[14px]"
                 >
                   <span className="font-bold truncate">{s.leagueName}</span>
                   <span className="font-[family-name:var(--mono)] num text-[12px] text-[color:var(--text-3)] text-right">
                     {s.wins}-{s.losses}
                   </span>
-                  <span className="font-extrabold num text-right max-sm:hidden">
+                  <span className="font-extrabold num text-right">
                     {s.pct !== null ? `${s.pct.toFixed(1)}%` : "—"}
                   </span>
-                  <span className="font-[family-name:var(--mono)] num text-[12px] text-[color:var(--text-3)] text-right">
+                  <span className="font-[family-name:var(--mono)] num text-[12px] text-[color:var(--text-3)] text-right max-sm:hidden">
                     {s.rank !== null ? `#${s.rank}` : "—"}
+                  </span>
+                  <span className="font-extrabold num text-right max-sm:hidden">
+                    {s.playedPct !== null ? `${s.playedPct.toFixed(1)}%` : "—"}
+                  </span>
+                  <span className="font-[family-name:var(--mono)] num text-[12px] text-[color:var(--text-3)] text-right">
+                    {s.playedRank !== null ? `#${s.playedRank}` : "—"}
                   </span>
                 </Link>
               ))}

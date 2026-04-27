@@ -16,6 +16,13 @@ export type PlayerLeagueStat = {
   losses: number;
   pct: number | null;
   rank: number | null; // 1-indexed within the league among rate-eligible players
+  // Attendance metric — same denominator as the home dashboard's
+  // Games Played stat: how many of this league's completed nights the
+  // player suited up for.
+  played: number;
+  leagueNights: number;
+  playedPct: number | null;
+  playedRank: number | null;
 };
 
 export type PlayerLastN = {
@@ -37,6 +44,18 @@ export type PlayerProfile = {
   streakType: "W" | "L" | null;
   streakCount: number;
   leagueCount: number;
+  // Career attendance — sum across all the player's leagues.
+  careerLeagueNights: number;
+  careerPlayedPct: number | null;
+  // The league where the player is most active. Used by the hero to
+  // surface a single rank for Win % + Games Played %. Null when the
+  // player has no completed games anywhere.
+  topLeague: {
+    id: string;
+    name: string;
+    winRank: number | null;
+    playedRank: number | null;
+  } | null;
   byLeague: PlayerLeagueStat[];
   lastN: PlayerLastN[];
 };
@@ -83,6 +102,9 @@ export async function getPlayerProfile(playerId: string): Promise<PlayerProfile 
       streakType: null,
       streakCount: 0,
       leagueCount: myLeagues.length,
+      careerLeagueNights: 0,
+      careerPlayedPct: null,
+      topLeague: null,
       byLeague: myLeagues.map((l) => ({
         leagueId: l.id,
         leagueName: l.name,
@@ -90,6 +112,10 @@ export async function getPlayerProfile(playerId: string): Promise<PlayerProfile 
         losses: 0,
         pct: null,
         rank: null,
+        played: 0,
+        leagueNights: 0,
+        playedPct: null,
+        playedRank: null,
       })),
       lastN: [],
     };
@@ -170,42 +196,50 @@ export async function getPlayerProfile(playerId: string): Promise<PlayerProfile 
     const total = w + ll;
     const pct = total > 0 ? (w / total) * 100 : null;
 
-    // Compute rank within league
-    let rank: number | null = null;
-    if (pct !== null) {
-      const allRosterRows = await db
-        .select({
-          gameId: gameRoster.gameId,
-          playerId: gameRoster.playerId,
-          side: gameRoster.side,
-        })
-        .from(gameRoster)
-        .innerJoin(games, eq(games.id, gameRoster.gameId))
-        .where(
-          and(
-            eq(games.leagueId, l.id),
-            inArray(gameRoster.side, ["A", "B"]),
-          ),
-        );
-      const allLeagueGames = await db
-        .select()
-        .from(games)
-        .where(eq(games.leagueId, l.id));
-      const completedGames = allLeagueGames.filter(isComplete);
-      const totalCompleted = completedGames.length;
-      const minGames = Math.max(1, Math.ceil(totalCompleted * 0.1));
-      const completedById = new Map(completedGames.map((g) => [g.id, g]));
-      const stats = new Map<string, { w: number; l: number }>();
-      for (const r of allRosterRows) {
-        const g = completedById.get(r.gameId);
-        if (!g) continue;
-        const win = winOf(g);
-        if (!win || win === "Tie") continue;
-        const cur = stats.get(r.playerId) ?? { w: 0, l: 0 };
+    // Pull league rosters once and derive both ranks (Win %, Played %)
+    // from the same dataset.
+    const allRosterRows = await db
+      .select({
+        gameId: gameRoster.gameId,
+        playerId: gameRoster.playerId,
+        side: gameRoster.side,
+      })
+      .from(gameRoster)
+      .innerJoin(games, eq(games.id, gameRoster.gameId))
+      .where(
+        and(
+          eq(games.leagueId, l.id),
+          inArray(gameRoster.side, ["A", "B"]),
+        ),
+      );
+    const allLeagueGames = await db
+      .select()
+      .from(games)
+      .where(eq(games.leagueId, l.id));
+    const completedGames = allLeagueGames.filter(isComplete);
+    const leagueNights = completedGames.length;
+    const completedById = new Map(completedGames.map((g) => [g.id, g]));
+
+    // Per-player W/L (decisions) AND played games (any completed game
+    // they were rostered for, even ties).
+    const stats = new Map<string, { w: number; l: number; played: number }>();
+    for (const r of allRosterRows) {
+      const g = completedById.get(r.gameId);
+      if (!g) continue;
+      const cur = stats.get(r.playerId) ?? { w: 0, l: 0, played: 0 };
+      cur.played++;
+      const win = winOf(g);
+      if (win && win !== "Tie") {
         if (r.side === win) cur.w++;
         else cur.l++;
-        stats.set(r.playerId, cur);
       }
+      stats.set(r.playerId, cur);
+    }
+
+    // Rank by Win % — only players with ≥10% league games qualify.
+    let rank: number | null = null;
+    if (pct !== null) {
+      const minGames = Math.max(1, Math.ceil(leagueNights * 0.1));
       const ranked = Array.from(stats.entries())
         .filter(([, s]) => s.w + s.l >= minGames)
         .map(([id, s]) => ({
@@ -218,6 +252,23 @@ export async function getPlayerProfile(playerId: string): Promise<PlayerProfile 
       if (idx >= 0) rank = idx + 1;
     }
 
+    // Rank by Games Played % — straight ordinal across everyone in
+    // the league. Ties broken by raw played count.
+    let playedRank: number | null = null;
+    const myPlayed = stats.get(playerId)?.played ?? 0;
+    const playedPct =
+      leagueNights > 0 ? (myPlayed / leagueNights) * 100 : null;
+    if (playedPct !== null && myPlayed > 0) {
+      const ranked = Array.from(stats.entries())
+        .map(([id, s]) => ({
+          id,
+          played: s.played,
+        }))
+        .sort((a, b) => b.played - a.played);
+      const idx = ranked.findIndex((r) => r.id === playerId);
+      if (idx >= 0) playedRank = idx + 1;
+    }
+
     byLeague.push({
       leagueId: l.id,
       leagueName: l.name,
@@ -225,8 +276,40 @@ export async function getPlayerProfile(playerId: string): Promise<PlayerProfile 
       losses: ll,
       pct,
       rank,
+      played: myPlayed,
+      leagueNights,
+      playedPct,
+      playedRank,
     });
   }
+
+  // Career attendance = sum of league nights across all the player's
+  // leagues; played count is the sum of per-league played values.
+  const careerLeagueNights = byLeague.reduce(
+    (n, s) => n + s.leagueNights,
+    0,
+  );
+  const careerPlayed = byLeague.reduce((n, s) => n + s.played, 0);
+  const careerPlayedPct =
+    careerLeagueNights > 0
+      ? (careerPlayed / careerLeagueNights) * 100
+      : null;
+
+  // Pick the league the player is most active in for the hero's rank
+  // surfacing — most games played wins, ties broken by name.
+  const topLeagueRow = [...byLeague].sort(
+    (a, b) =>
+      b.played - a.played || a.leagueName.localeCompare(b.leagueName),
+  )[0];
+  const topLeague =
+    topLeagueRow && topLeagueRow.played > 0
+      ? {
+          id: topLeagueRow.leagueId,
+          name: topLeagueRow.leagueName,
+          winRank: topLeagueRow.rank,
+          playedRank: topLeagueRow.playedRank,
+        }
+      : null;
 
   // Last 10
   const lastN: PlayerLastN[] = completed
@@ -260,6 +343,9 @@ export async function getPlayerProfile(playerId: string): Promise<PlayerProfile 
     streakType,
     streakCount,
     leagueCount: myLeagues.length,
+    careerLeagueNights,
+    careerPlayedPct,
+    topLeague,
     byLeague,
     lastN,
   };
