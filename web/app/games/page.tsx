@@ -342,18 +342,39 @@ export default async function GamesPage({
                     b={heroProb.probB}
                     compact
                   />
-                  {heroProb.predictedScore && (
-                    <div className="flex items-center justify-center gap-2 text-[11px] font-[family-name:var(--mono)] num font-semibold text-[color:var(--text-2)]">
-                      <span className="text-[10px] tracking-[0.14em] uppercase text-[color:var(--text-3)] font-semibold">
-                        Projected
-                      </span>
-                      <span>
-                        {heroGame.teamAName} {heroProb.predictedScore.a}
-                        <span className="mx-1.5 text-[color:var(--text-3)]">—</span>
-                        {heroProb.predictedScore.b} {heroGame.teamBName}
-                      </span>
-                    </div>
-                  )}
+                  {heroProb.predictedScore && (() => {
+                    const aScore = heroProb.predictedScore.a;
+                    const bScore = heroProb.predictedScore.b;
+                    const spread = Math.abs(aScore - bScore);
+                    const favorite =
+                      aScore > bScore
+                        ? heroGame.teamAName
+                        : bScore > aScore
+                          ? heroGame.teamBName
+                          : null;
+                    return (
+                      <>
+                        <div className="flex items-center justify-center gap-2 text-[11px] font-[family-name:var(--mono)] num font-semibold text-[color:var(--text-2)]">
+                          <span className="text-[10px] tracking-[0.14em] uppercase text-[color:var(--text-3)] font-semibold">
+                            Projected
+                          </span>
+                          <span>
+                            {heroGame.teamAName} {aScore}
+                            <span className="mx-1.5 text-[color:var(--text-3)]">—</span>
+                            {bScore} {heroGame.teamBName}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-center gap-2 text-[11px] font-[family-name:var(--mono)] num font-semibold text-[color:var(--text-2)]">
+                          <span className="text-[10px] tracking-[0.14em] uppercase text-[color:var(--text-3)] font-semibold">
+                            Spread
+                          </span>
+                          <span>
+                            {favorite ? `${favorite} −${spread}` : "Pick"}
+                          </span>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               )}
             </div>

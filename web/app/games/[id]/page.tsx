@@ -203,18 +203,39 @@ export default async function GameDetailPage({
                     ? "Matchup odds · roster only"
                     : `Matchup odds · last ${matchupOdds.sample.teamGames} games`}
               </div>
-              {matchupOdds.predictedScore && (
-                <div className="mt-1.5 flex items-center justify-center gap-2 text-[11.5px] font-[family-name:var(--mono)] num font-semibold text-[color:var(--text-2)]">
-                  <span className="text-[10.5px] tracking-[0.14em] uppercase text-[color:var(--text-3)] font-semibold">
-                    Projected
-                  </span>
-                  <span>
-                    {game.teamAName ?? "White"} {matchupOdds.predictedScore.a}
-                    <span className="mx-1.5 text-[color:var(--text-3)]">—</span>
-                    {matchupOdds.predictedScore.b} {game.teamBName ?? "Dark"}
-                  </span>
-                </div>
-              )}
+              {matchupOdds.predictedScore && (() => {
+                const aScore = matchupOdds.predictedScore.a;
+                const bScore = matchupOdds.predictedScore.b;
+                const spread = Math.abs(aScore - bScore);
+                const favorite =
+                  aScore > bScore
+                    ? game.teamAName ?? "White"
+                    : bScore > aScore
+                      ? game.teamBName ?? "Dark"
+                      : null;
+                return (
+                  <>
+                    <div className="mt-1.5 flex items-center justify-center gap-2 text-[11.5px] font-[family-name:var(--mono)] num font-semibold text-[color:var(--text-2)]">
+                      <span className="text-[10.5px] tracking-[0.14em] uppercase text-[color:var(--text-3)] font-semibold">
+                        Projected
+                      </span>
+                      <span>
+                        {game.teamAName ?? "White"} {aScore}
+                        <span className="mx-1.5 text-[color:var(--text-3)]">—</span>
+                        {bScore} {game.teamBName ?? "Dark"}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex items-center justify-center gap-2 text-[11.5px] font-[family-name:var(--mono)] num font-semibold text-[color:var(--text-2)]">
+                      <span className="text-[10.5px] tracking-[0.14em] uppercase text-[color:var(--text-3)] font-semibold">
+                        Spread
+                      </span>
+                      <span>
+                        {favorite ? `${favorite} −${spread}` : "Pick"}
+                      </span>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           )}
 
