@@ -10,6 +10,7 @@ export type DirectoryPlayer = {
   position: string | null;
   level: string;
   status: string;
+  avatarUrl: string | null;
   leagueIds: string[];
   leagueNames: string[];
 };
@@ -58,6 +59,7 @@ export async function getPlayersDirectory(opts: {
             position: players.position,
             level: players.level,
             status: players.status,
+            avatarUrl: players.avatarUrl,
           })
           .from(players)
           .where(inArray(players.id, playerIds))
@@ -73,6 +75,7 @@ export async function getPlayersDirectory(opts: {
             position: players.position,
             level: players.level,
             status: players.status,
+            avatarUrl: players.avatarUrl,
           })
           .from(players)
           .orderBy(asc(players.lastName), asc(players.firstName));

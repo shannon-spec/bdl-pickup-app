@@ -63,13 +63,23 @@ function PlayerCard({ p }: { p: DirectoryPlayer }) {
       href={`/players/${p.id}`}
       className="group flex items-center gap-3 rounded-[14px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] hover:bg-[color:var(--surface-2)] transition-colors px-4 py-3"
     >
-      <span
-        aria-hidden
-        className="inline-flex items-center justify-center w-10 h-10 rounded-full text-white font-extrabold text-[13px] flex-shrink-0"
-        style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-2))" }}
-      >
-        {initials}
-      </span>
+      {p.avatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={p.avatarUrl}
+          alt=""
+          aria-hidden
+          className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+        />
+      ) : (
+        <span
+          aria-hidden
+          className="inline-flex items-center justify-center w-10 h-10 rounded-full text-white font-extrabold text-[13px] flex-shrink-0"
+          style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-2))" }}
+        >
+          {initials}
+        </span>
+      )}
       <div className="flex flex-col min-w-0 flex-1">
         <span className="font-bold text-[14px] truncate group-hover:text-[color:var(--brand)]">
           {p.firstName} {p.lastName}
