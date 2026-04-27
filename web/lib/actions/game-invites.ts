@@ -21,6 +21,7 @@ import {
   getConfirmedCounts,
 } from "@/lib/queries/game-invites";
 import {
+  isInviteEmailConfigured,
   sendInviteInitial,
   sendInviteReminder,
   sendSeatsFilledNotice,
@@ -188,6 +189,17 @@ export async function createInvites(
   const rawAssign = String(formData.get("assignedTeam") ?? "unassigned");
   const assignedTeam: "A" | "B" | "unassigned" =
     rawAssign === "A" || rawAssign === "B" ? rawAssign : "unassigned";
+
+  // Preflight: refuse to "send" email invites when Resend isn't
+  // configured. Otherwise the row would record sent + delivered
+  // optimistically while no message ever leaves the building.
+  if (channels.includes("email") && !isInviteEmailConfigured()) {
+    return {
+      ok: false,
+      error:
+        "Email isn't configured for this project — set RESEND_API_KEY and ADMIN_FROM_EMAIL in Vercel, or send via Text only.",
+    };
+  }
   const customMessage = (() => {
     const raw = formData.get("customMessage");
     if (raw == null) return null;
@@ -309,14 +321,29 @@ export async function createInvites(
     await db.insert(gameRoster).values(rosterRows).onConflictDoNothing();
   }
 
-  // Log + send email per invite. Email failures are best-effort.
+  // Log + send email per invite. Send is fire-and-forget so a slow
+  // Resend response doesn't block the action, but on failure we
+  // clear the optimistic deliveredAt and log a send_failed event so
+  // the activity log doesn't claim a delivery that never happened.
   for (const inv of inserted) {
     await logEvent(inv.id, gameId, "invite.sent", gate.session.playerId ?? null);
     if (channels.includes("email")) {
       const ctx = await inviteEmailContext(inv, customMessage);
       if (ctx) {
-        // Fire-and-forget so a slow Resend response doesn't block the action.
-        void sendInviteInitial(ctx);
+        void sendInviteInitial(ctx).then(async (r) => {
+          if (!r || r.ok) return;
+          await db
+            .update(gameInvites)
+            .set({ deliveredAt: null })
+            .where(eq(gameInvites.id, inv.id));
+          await logEvent(
+            inv.id,
+            gameId,
+            "invite.send_failed",
+            null,
+            r.error,
+          );
+        });
       }
     }
     if (channels.includes("sms")) {
@@ -391,7 +418,16 @@ export async function resendInvite(id: string): Promise<ActionResult<{ id: strin
 
   if (fresh.channels.includes("email")) {
     const ctx = await inviteEmailContext(fresh);
-    if (ctx) void sendInviteInitial(ctx);
+    if (ctx) {
+      void sendInviteInitial(ctx).then(async (r) => {
+        if (!r || r.ok) return;
+        await db
+          .update(gameInvites)
+          .set({ deliveredAt: null })
+          .where(eq(gameInvites.id, fresh.id));
+        await logEvent(fresh.id, inv.gameId, "invite.send_failed", null, r.error);
+      });
+    }
   }
   revalidatePath(`/games/${inv.gameId}`);
   return { ok: true, data: { id: fresh.id } };
@@ -669,7 +705,16 @@ async function triggerBackfill(gameId: string) {
     .returning();
   await logEvent(fresh.id, gameId, "invite.sent", null, "auto-backfill");
   const ctx = await inviteEmailContext(fresh);
-  if (ctx) void sendInviteInitial(ctx);
+  if (ctx) {
+    void sendInviteInitial(ctx).then(async (r) => {
+      if (!r || r.ok) return;
+      await db
+        .update(gameInvites)
+        .set({ deliveredAt: null })
+        .where(eq(gameInvites.id, fresh.id));
+      await logEvent(fresh.id, gameId, "invite.send_failed", null, r.error);
+    });
+  }
 }
 
 /* ---------- Cron: sweep expirations & reminders ---------- */

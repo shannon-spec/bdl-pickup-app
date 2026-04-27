@@ -27,6 +27,13 @@ export type InviteEmailContext = {
   customMessage?: string | null; // commissioner-authored body; {firstName} substituted
 };
 
+/** Returns true when both Resend secrets are present in the env. */
+export function isInviteEmailConfigured(): boolean {
+  return Boolean(
+    process.env.RESEND_API_KEY && process.env.ADMIN_FROM_EMAIL,
+  );
+}
+
 async function send({
   to,
   subject,
@@ -37,7 +44,7 @@ async function send({
   subject: string;
   text: string;
   html: string;
-}) {
+}): Promise<{ ok: true } | { ok: false; error: string }> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.ADMIN_FROM_EMAIL;
   if (!apiKey || !from) {
@@ -45,18 +52,27 @@ async function send({
       "[invite-email] RESEND_API_KEY or ADMIN_FROM_EMAIL missing; skipping",
       { to, subject },
     );
-    return;
+    return { ok: false, error: "email_not_configured" };
   }
-  await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ from, to: [to], subject, text, html }),
-  }).catch((err) => {
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ from, to: [to], subject, text, html }),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      console.error("[invite-email] resend rejected", res.status, body);
+      return { ok: false, error: `resend_${res.status}` };
+    }
+    return { ok: true };
+  } catch (err) {
     console.error("[invite-email] send failed", err);
-  });
+    return { ok: false, error: "network" };
+  }
 }
 
 const wrapHtml = (inner: string) => `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;color:#0a0a0a;">

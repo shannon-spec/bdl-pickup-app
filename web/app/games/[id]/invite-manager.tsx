@@ -100,6 +100,7 @@ export function InviteManager({
   initialPool,
   initialActivity,
   settings,
+  emailConfigured,
   game,
 }: {
   gameId: string;
@@ -107,6 +108,7 @@ export function InviteManager({
   initialPool: PoolPlayer[];
   initialActivity: ActivityRow[];
   settings: InviteSettings;
+  emailConfigured: boolean;
   game: InviteGameContext;
 }) {
   const router = useRouter();
@@ -280,6 +282,21 @@ export function InviteManager({
           </button>
         )}
       </div>
+
+      {!emailConfigured && (
+        <div className="rounded-[12px] border border-[color:var(--warn)] bg-[color:var(--warn-soft)] px-4 py-3 text-[12.5px] text-[color:var(--warn)] leading-snug">
+          <span className="font-bold">Email is not configured.</span>{" "}
+          Invites composed with the Email channel will be rejected. Set
+          <code className="mx-1 px-1 py-0.5 rounded bg-[color:var(--surface)] text-[color:var(--text-2)] font-[family-name:var(--mono)] text-[11.5px]">
+            RESEND_API_KEY
+          </code>
+          and
+          <code className="mx-1 px-1 py-0.5 rounded bg-[color:var(--surface)] text-[color:var(--text-2)] font-[family-name:var(--mono)] text-[11.5px]">
+            ADMIN_FROM_EMAIL
+          </code>
+          in Vercel and redeploy.
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
         {/* Available pool */}

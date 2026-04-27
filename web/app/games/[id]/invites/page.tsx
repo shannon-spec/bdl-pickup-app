@@ -16,6 +16,7 @@ import {
   getInviteActivity,
   getEffectiveInviteSettings,
 } from "@/lib/queries/game-invites";
+import { isInviteEmailConfigured } from "@/lib/email/invite-email";
 import { InviteManager } from "../invite-manager";
 
 export const dynamic = "force-dynamic";
@@ -91,6 +92,7 @@ export default async function GameInvitesPage({
           initialPool={pool}
           initialActivity={activity}
           settings={settings}
+          emailConfigured={isInviteEmailConfigured()}
           game={{
             leagueName: game.leagueName ?? "BDL game",
             dateLabel: `${fmtDate(game.gameDate)}${game.gameTime ? ` · ${fmtTime(game.gameTime)}` : ""}`,
