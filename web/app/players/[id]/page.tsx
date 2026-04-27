@@ -105,7 +105,7 @@ export default async function PlayerProfilePage({
             {isMe && (
               <Link
                 href="/account"
-                className="inline-flex items-center gap-2 h-9 px-3 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[12px] font-medium hover:bg-[color:var(--surface-2)] transition-colors"
+                className="inline-flex items-center gap-2 h-10 px-3.5 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[12px] font-bold tracking-[0.06em] uppercase hover:bg-[color:var(--surface-2)] transition-colors"
               >
                 Account
               </Link>

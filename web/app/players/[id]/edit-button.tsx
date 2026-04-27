@@ -5,9 +5,9 @@ export function EditPlayerButton({ playerId }: { playerId: string }) {
   return (
     <Link
       href={`/players/${playerId}/edit`}
-      className="inline-flex items-center gap-2 h-9 px-3 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[12px] font-medium hover:bg-[color:var(--surface-2)] transition-colors flex-shrink-0"
+      className="inline-flex items-center gap-2 h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)] transition-colors flex-shrink-0"
     >
-      <Pencil size={14} /> Edit
+      <Pencil size={14} strokeWidth={2.5} /> Edit Profile
     </Link>
   );
 }
