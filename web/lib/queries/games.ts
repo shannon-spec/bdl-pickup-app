@@ -399,10 +399,13 @@ export async function getMatchupOdds(
     bW = 0,
     bTot = 0,
     teamGames = 0;
-  // Average total points across decided games with both scores —
-  // feeds the predicted-score model below.
+  // Average total points and average winning margin across decided
+  // games with both scores. Total feeds the open-ended fallback model;
+  // margin calibrates the race-to-N model below.
   let totalPointsSum = 0;
   let totalPointsN = 0;
+  let marginSum = 0;
+  let marginN = 0;
   for (const g of last) {
     if (teamGames >= lookback) break;
     const decided =
@@ -419,6 +422,10 @@ export async function getMatchupOdds(
     if (g.scoreA !== null && g.scoreB !== null) {
       totalPointsSum += g.scoreA + g.scoreB;
       totalPointsN++;
+      if (decided !== "Tie") {
+        marginSum += Math.abs(g.scoreA - g.scoreB);
+        marginN++;
+      }
     }
     if (decided === "Tie") continue;
     if (decided === "A") {
@@ -485,14 +492,20 @@ export async function getMatchupOdds(
 
   // 6. Predicted final score. Gated on rosters so we don't imply
   // precision from team-color noise alone. Two models:
-  //   playTo set → race-to-N: winner = N, loser = N · (1 − 0.30·margin).
+  //   playTo set → race-to-N: winner = N, loser = N − avgMargin·(1+probMargin).
+  //     The league's empirical avg winning margin self-calibrates the
+  //     spread; toss-ups predict ~avgMargin, lopsided games predict up
+  //     to 2·avgMargin. Falls back to 0.20·N when no margin history.
   //   else → average-total: spread capped at ~20% of total.
   let predictedScore: { a: number; b: number } | null = null;
   if (hasRosterData) {
-    const margin = Math.abs(probA - 50) / 50; // 0..1
+    const probMargin = Math.abs(probA - 50) / 50; // 0..1
     if (playTo && playTo > 0) {
+      const avgMargin =
+        marginN > 0 ? marginSum / marginN : playTo * 0.2;
+      const expectedMargin = avgMargin * (1 + probMargin);
       const winner = playTo;
-      const loser = Math.max(0, Math.round(playTo * (1 - 0.3 * margin)));
+      const loser = Math.max(0, Math.round(playTo - expectedMargin));
       predictedScore =
         probA >= probB ? { a: winner, b: loser } : { a: loser, b: winner };
     } else {
