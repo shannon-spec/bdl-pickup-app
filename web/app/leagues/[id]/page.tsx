@@ -211,13 +211,10 @@ export default async function LeagueDetailPage({
                             {bScore} {nextGame.teamBName}
                           </span>
                         </div>
-                        <div className="flex items-center justify-center gap-2 text-[11px] font-[family-name:var(--mono)] num font-semibold text-[color:var(--text-2)]">
-                          <span className="text-[10px] tracking-[0.14em] uppercase text-[color:var(--text-3)] font-semibold">
-                            Spread
-                          </span>
-                          <span>
-                            {favorite ? `${favorite} −${spread}` : "Pick"}
-                          </span>
+                        <div className="flex justify-center">
+                          <Pill tone="neutral">
+                            Spread · {favorite ? `${favorite} −${spread}` : "Pick"}
+                          </Pill>
                         </div>
                       </>
                     );
