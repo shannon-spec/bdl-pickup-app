@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Send } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
 import { canManageGame, canViewGame } from "@/lib/auth/perms";
 import { getViewCaps } from "@/lib/auth/view";
@@ -20,19 +20,12 @@ import {
   getMatchupOdds,
 } from "@/lib/queries/games";
 import {
-  getInvitesForGame,
-  getInvitePool,
-  getInviteActivity,
-  getEffectiveInviteSettings,
-} from "@/lib/queries/game-invites";
-import {
   GameScore,
   GameMetaEditor,
   RosterRow,
   AddRoster,
   DangerZone,
 } from "./game-detail-client";
-import { InviteManager } from "./invite-manager";
 
 export const dynamic = "force-dynamic";
 
@@ -214,6 +207,30 @@ export default async function GameDetailPage({
           {canEdit && <GameScore detail={detail} />}
         </div>
 
+        {canEdit && (
+          <Link
+            href={`/games/${game.id}/invites`}
+            className="flex items-center justify-between gap-3 rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-5 py-4 hover:bg-[color:var(--surface-2)] transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center justify-center w-10 h-10 rounded-[12px] bg-[color:var(--brand-soft)] text-[color:var(--brand)]">
+                <Send size={18} />
+              </span>
+              <div className="flex flex-col leading-tight">
+                <span className="font-extrabold text-[15px] text-[color:var(--text)]">
+                  Invite Manager
+                </span>
+                <span className="text-[11.5px] text-[color:var(--text-3)]">
+                  Send, track, and manage invites for this game
+                </span>
+              </div>
+            </div>
+            <span className="text-[11px] font-bold tracking-[0.08em] uppercase text-[color:var(--brand)]">
+              Open →
+            </span>
+          </Link>
+        )}
+
         {detail.subgames.length > 0 && (
           <SeriesBreakdown
             teamA={game.teamAName ?? "White"}
@@ -256,25 +273,6 @@ export default async function GameDetailPage({
               teamAName={game.teamAName ?? "White"}
               teamBName={game.teamBName ?? "Dark"}
             />
-
-            {await (async () => {
-              const [invites, pool, activity, settings] = await Promise.all([
-                getInvitesForGame(game.id),
-                getInvitePool(game.id),
-                getInviteActivity(game.id, 30),
-                getEffectiveInviteSettings(game.id),
-              ]);
-              if (!settings) return null;
-              return (
-                <InviteManager
-                  gameId={game.id}
-                  initialInvites={invites}
-                  initialPool={pool}
-                  initialActivity={activity}
-                  settings={settings}
-                />
-              );
-            })()}
 
             <DangerZone gameId={game.id} />
           </>

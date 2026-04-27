@@ -27,6 +27,7 @@ const AUTH_REQUIRED_PREFIXES = [
 const AUTH_REQUIRED_REGEX = [
   /^\/leagues\/[^/]+\/edit$/,
   /^\/players\/[^/]+\/edit$/,
+  /^\/games\/[^/]+\/invites$/,
 ];
 
 export function proxy(request: NextRequest) {
