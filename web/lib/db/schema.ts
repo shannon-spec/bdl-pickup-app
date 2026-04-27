@@ -64,6 +64,30 @@ export const inviteStatusEnum = pgEnum("invite_status", [
   "expired",
 ]);
 
+// Game-level invite state machine, distinct from the league-level
+// invite_status enum above.
+export const gameInviteStateEnum = pgEnum("game_invite_state", [
+  "queued",
+  "pending",
+  "confirmed",
+  "declined",
+  "expired",
+  "cancelled",
+  "superseded",
+]);
+
+export const gameInviteModeEnum = pgEnum("game_invite_mode", [
+  "single",
+  "group",
+  "fcfs",
+  "backfill",
+]);
+
+export const gameInviteAssignedTeamEnum = pgEnum(
+  "game_invite_assigned_team",
+  ["A", "B", "unassigned"],
+);
+
 /* ============== PLAYERS ============== */
 
 export const players = pgTable(
@@ -142,6 +166,24 @@ export const leagues = pgTable("leagues", {
   seriesPointTarget: integer("series_point_target"),
   teamAName: text("team_a_name").notNull().default("White"),
   teamBName: text("team_b_name").notNull().default("Dark"),
+  // Invite Manager defaults inherited by every game in this league.
+  // Game-level overrides live on `games` and fall back to these.
+  inviteExpiryMinutes: integer("invite_expiry_minutes")
+    .notNull()
+    .default(120),
+  inviteFcfsEnabled: boolean("invite_fcfs_enabled").notNull().default(false),
+  inviteOverInviteCap: integer("invite_over_invite_cap")
+    .notNull()
+    .default(2),
+  inviteAutoBackfill: boolean("invite_auto_backfill").notNull().default(false),
+  inviteReminderLeadMinutes: integer("invite_reminder_lead_minutes")
+    .notNull()
+    .default(15),
+  // text[] subset of {sms,email,push}
+  inviteAllowedChannels: text("invite_allowed_channels")
+    .array()
+    .notNull()
+    .default(sql`ARRAY['email']::text[]`),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
@@ -206,6 +248,13 @@ export const games = pgTable(
     numInvites: integer("num_invites").notNull().default(10),
     seriesId: uuid("series_id"),
     seriesBestOf: integer("series_best_of"),
+    // Invite Manager per-game overrides. NULL = inherit from league.
+    targetSeats: integer("target_seats"),
+    inviteExpiryMinutes: integer("invite_expiry_minutes"),
+    inviteFcfsEnabled: boolean("invite_fcfs_enabled"),
+    inviteOverInviteCap: integer("invite_over_invite_cap"),
+    inviteAutoBackfill: boolean("invite_auto_backfill"),
+    inviteReminderLeadMinutes: integer("invite_reminder_lead_minutes"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
@@ -251,6 +300,106 @@ export const playerGrades = pgTable(
       t.voterPlayerId,
     ),
     index("player_grades_target_idx").on(t.targetPlayerId),
+  ],
+);
+
+/* ============== GAME INVITES (Invite Manager) ============== */
+
+// Groups invites that were sent together (Single/Group/FCFS/Backfill).
+// Useful for analytics and the activity feed.
+export const gameInviteBatches = pgTable(
+  "game_invite_batches",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    gameId: uuid("game_id")
+      .notNull()
+      .references(() => games.id, { onDelete: "cascade" }),
+    mode: gameInviteModeEnum("mode").notNull(),
+    createdBy: uuid("created_by").references(() => players.id, {
+      onDelete: "set null",
+    }),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("game_invite_batches_game_idx").on(t.gameId)],
+);
+
+// One row per (game, player, attempt). Resends mark the prior row as
+// `superseded` and create a new row with a fresh claim_token.
+export const gameInvites = pgTable(
+  "game_invites",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    gameId: uuid("game_id")
+      .notNull()
+      .references(() => games.id, { onDelete: "cascade" }),
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    batchId: uuid("batch_id").references(() => gameInviteBatches.id, {
+      onDelete: "set null",
+    }),
+    mode: gameInviteModeEnum("mode").notNull(),
+    state: gameInviteStateEnum("state").notNull().default("queued"),
+    // text[] subset of {sms,email,push}
+    channels: text("channels")
+      .array()
+      .notNull()
+      .default(sql`ARRAY[]::text[]`),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    respondedAt: timestamp("responded_at", { withTimezone: true }),
+    assignedTeam: gameInviteAssignedTeamEnum("assigned_team")
+      .notNull()
+      .default("unassigned"),
+    claimToken: varchar("claim_token", { length: 64 }).notNull().unique(),
+    extendedCount: integer("extended_count").notNull().default(0),
+    reminderSentAt: timestamp("reminder_sent_at", { withTimezone: true }),
+    createdBy: uuid("created_by").references(() => players.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index("game_invites_game_state_idx").on(t.gameId, t.state),
+    index("game_invites_state_expires_idx").on(t.state, t.expiresAt),
+    index("game_invites_player_created_idx").on(t.playerId, t.createdAt),
+  ],
+);
+
+// Append-only event log per invite (state changes, deliveries,
+// commissioner actions). Drives the activity feed and audit log.
+export const gameInviteEvents = pgTable(
+  "game_invite_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    inviteId: uuid("invite_id")
+      .notNull()
+      .references(() => gameInvites.id, { onDelete: "cascade" }),
+    gameId: uuid("game_id")
+      .notNull()
+      .references(() => games.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    actorId: uuid("actor_id").references(() => players.id, {
+      onDelete: "set null",
+    }),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("game_invite_events_game_idx").on(t.gameId, t.createdAt),
+    index("game_invite_events_invite_idx").on(t.inviteId, t.createdAt),
   ],
 );
 
@@ -440,6 +589,12 @@ export type GameSubgame = typeof gameSubgames.$inferSelect;
 export type NewGameSubgame = typeof gameSubgames.$inferInsert;
 export type PlayerGrade = typeof playerGrades.$inferSelect;
 export type NewPlayerGrade = typeof playerGrades.$inferInsert;
+export type GameInvite = typeof gameInvites.$inferSelect;
+export type NewGameInvite = typeof gameInvites.$inferInsert;
+export type GameInviteBatch = typeof gameInviteBatches.$inferSelect;
+export type NewGameInviteBatch = typeof gameInviteBatches.$inferInsert;
+export type GameInviteEvent = typeof gameInviteEvents.$inferSelect;
+export type NewGameInviteEvent = typeof gameInviteEvents.$inferInsert;
 export type SuperAdmin = typeof superAdmins.$inferSelect;
 export type NewSuperAdmin = typeof superAdmins.$inferInsert;
 export type Invite = typeof invites.$inferSelect;

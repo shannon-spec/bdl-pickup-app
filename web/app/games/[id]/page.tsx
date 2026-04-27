@@ -20,12 +20,19 @@ import {
   getMatchupOdds,
 } from "@/lib/queries/games";
 import {
+  getInvitesForGame,
+  getInvitePool,
+  getInviteActivity,
+  getEffectiveInviteSettings,
+} from "@/lib/queries/game-invites";
+import {
   GameScore,
   GameMetaEditor,
   RosterRow,
   AddRoster,
   DangerZone,
 } from "./game-detail-client";
+import { InviteManager } from "./invite-manager";
 
 export const dynamic = "force-dynamic";
 
@@ -249,6 +256,25 @@ export default async function GameDetailPage({
               teamAName={game.teamAName ?? "White"}
               teamBName={game.teamBName ?? "Dark"}
             />
+
+            {await (async () => {
+              const [invites, pool, activity, settings] = await Promise.all([
+                getInvitesForGame(game.id),
+                getInvitePool(game.id),
+                getInviteActivity(game.id, 30),
+                getEffectiveInviteSettings(game.id),
+              ]);
+              if (!settings) return null;
+              return (
+                <InviteManager
+                  gameId={game.id}
+                  initialInvites={invites}
+                  initialPool={pool}
+                  initialActivity={activity}
+                  settings={settings}
+                />
+              );
+            })()}
 
             <DangerZone gameId={game.id} />
           </>

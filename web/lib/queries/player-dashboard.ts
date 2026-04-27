@@ -43,33 +43,12 @@ function isComplete(g: Game): boolean {
 
 export async function getPlayerLeagues(playerId: string): Promise<League[]> {
   return db
-    .select({
-      id: leagues.id,
-      name: leagues.name,
-      season: leagues.season,
-      description: leagues.description,
-      format: leagues.format,
-      leagueType: leagues.leagueType,
-      schedule: leagues.schedule,
-      location: leagues.location,
-      startDate: leagues.startDate,
-      endDate: leagues.endDate,
-      startTime: leagues.startTime,
-      startTimeType: leagues.startTimeType,
-      days: leagues.days,
-      maxPlayers: leagues.maxPlayers,
-      level: leagues.level,
-      seriesGameCount: leagues.seriesGameCount,
-      seriesPointTarget: leagues.seriesPointTarget,
-      teamAName: leagues.teamAName,
-      teamBName: leagues.teamBName,
-      createdAt: leagues.createdAt,
-      updatedAt: leagues.updatedAt,
-    })
+    .select()
     .from(leagues)
     .innerJoin(leaguePlayers, eq(leaguePlayers.leagueId, leagues.id))
     .where(eq(leaguePlayers.playerId, playerId))
-    .orderBy(asc(leagues.name));
+    .orderBy(asc(leagues.name))
+    .then((rows) => rows.map((r) => r.leagues));
 }
 
 /* ---------- Per-league game roster sides for a player ---------- */

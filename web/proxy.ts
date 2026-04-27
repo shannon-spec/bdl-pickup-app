@@ -38,6 +38,7 @@ export function proxy(request: NextRequest) {
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/api/") ||
     pathname.startsWith("/invite/") ||
+    pathname.startsWith("/i/") ||
     pathname === "/login" ||
     pathname === "/favicon.ico" ||
     pathname === "/robots.txt" ||
