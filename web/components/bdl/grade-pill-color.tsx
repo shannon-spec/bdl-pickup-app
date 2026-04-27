@@ -67,7 +67,7 @@ export function GradePill({
   const p = GRADE_PALETTE[grade];
   const sizeCx =
     size === "lg"
-      ? "px-5 py-2 text-[26px] tracking-[-0.01em] max-sm:text-[22px] max-sm:px-4 max-sm:py-1.5"
+      ? "px-4 py-1.5 text-[21px] tracking-[-0.01em] max-sm:text-[18px] max-sm:px-3 max-sm:py-1"
       : "px-2.5 py-1 text-[11px] tracking-[0.06em] uppercase";
   return (
     <span
