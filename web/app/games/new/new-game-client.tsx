@@ -26,12 +26,18 @@ export function NewGameClient({
   const onSubmit = (formData: FormData) => {
     setError(null);
     setFieldErrors({});
+    // The button that submitted the form sets `intent` so we can
+    // route to the Invite Manager only when the user explicitly
+    // chose to continue into invites.
+    const intent = formData.get("intent");
     start(async () => {
       const res = await createGame(formData);
       if (res.ok && res.data?.id) {
-        // Continue into the Invite Manager so the commissioner can
-        // immediately fill the roster for the freshly-scheduled game.
-        router.push(`/games/${res.data.id}/invites`);
+        router.push(
+          intent === "invite"
+            ? `/games/${res.data.id}/invites`
+            : `/games/${res.data.id}`,
+        );
         return;
       }
       setError(res.ok ? "Could not schedule game." : res.error);
@@ -96,7 +102,7 @@ export function NewGameClient({
         </div>
       )}
 
-      <div className="flex items-center justify-end gap-2 pt-4 border-t border-[color:var(--hairline)]">
+      <div className="flex items-center justify-end gap-2 pt-4 border-t border-[color:var(--hairline)] flex-wrap">
         <button
           type="button"
           onClick={() => router.push("/games")}
@@ -106,6 +112,17 @@ export function NewGameClient({
         </button>
         <button
           type="submit"
+          name="intent"
+          value="schedule"
+          disabled={pending}
+          className="h-10 px-5 rounded-[var(--r-lg)] border border-[color:var(--brand)] bg-[color:var(--surface)] text-[color:var(--brand)] hover:bg-[color:var(--brand-soft)] font-bold text-[12px] tracking-[0.06em] uppercase disabled:opacity-60"
+        >
+          {pending ? "Scheduling…" : "Schedule"}
+        </button>
+        <button
+          type="submit"
+          name="intent"
+          value="invite"
           disabled={pending}
           className="h-10 px-5 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)] disabled:opacity-60"
         >
