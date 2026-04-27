@@ -68,7 +68,7 @@ export function GradePill({
   const sizeCx =
     size === "lg"
       ? "px-4 py-1.5 text-[21px] tracking-[-0.01em] max-sm:text-[18px] max-sm:px-3 max-sm:py-1"
-      : "px-2.5 py-1 text-[11px] tracking-[0.06em] uppercase";
+      : "px-2 py-0.5 text-[10px] tracking-[0.06em] uppercase";
   return (
     <span
       className={`inline-flex items-center rounded-full font-extrabold leading-none whitespace-nowrap ${sizeCx} ${className}`}
