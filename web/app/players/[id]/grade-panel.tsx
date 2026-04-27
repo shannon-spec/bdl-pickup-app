@@ -100,7 +100,7 @@ export function GradePanel({
                   key={g}
                   type="button"
                   onClick={() => setPick(g)}
-                  className="h-9 px-3 rounded-full text-[12px] font-bold tracking-[0.04em] transition-colors"
+                  className="h-7 px-2.5 rounded-full text-[10px] font-bold tracking-[0.04em] transition-colors"
                   style={
                     active
                       ? {
