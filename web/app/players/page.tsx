@@ -36,21 +36,21 @@ import { PlayersGrid } from "./players-grid";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Players · BDL" };
 
-type Scope = "league" | "all";
+/**
+ * Scope is "all" (BDL Universe) or a league UUID. The Players page
+ * shows one tab per league the viewer is in plus BDL Universe — so
+ * a multi-league viewer sees their leagues by name instead of a
+ * generic "My League" label that hides which league they're on.
+ */
+type Scope = string;
 
 export default async function PlayersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ scope?: Scope }>;
+  searchParams: Promise<{ scope?: string }>;
 }) {
   const session = await readSession();
   const caps = await getViewCaps(session);
-
-  const sp = await searchParams;
-  // Guests have no leagues so the league-scoped tab would always be
-  // empty — fall through to the universe scope.
-  const scope: Scope =
-    sp.scope === "all" || !session ? "all" : "league";
 
   const [memberIds, commishIds] = session
     ? await Promise.all([
@@ -60,32 +60,47 @@ export default async function PlayersPage({
     : [[] as string[], [] as string[]];
   const viewerLeagueIds = Array.from(new Set([...memberIds, ...commishIds]));
 
+  const sp = await searchParams;
+  const requestedScope = sp.scope;
+  const activeLeagueId = await getActiveLeagueId();
+  // Resolve actual scope:
+  //   1. explicit ?scope=all → BDL Universe
+  //   2. explicit ?scope={uuid} when viewer is in that league → that league
+  //   3. default: active-league cookie if it's a viewer league, else first
+  //      viewer league, else BDL Universe (guests, admins not in any league)
+  let scope: Scope;
+  if (requestedScope === "all" || !session) {
+    scope = "all";
+  } else if (requestedScope && viewerLeagueIds.includes(requestedScope)) {
+    scope = requestedScope;
+  } else if (activeLeagueId && viewerLeagueIds.includes(activeLeagueId)) {
+    scope = activeLeagueId;
+  } else if (viewerLeagueIds.length > 0) {
+    scope = viewerLeagueIds[0];
+  } else {
+    scope = "all";
+  }
+
   // Add Player vs Invite Player split:
   //   - Admin view → direct Add Player (all leagues optional)
   //   - Commissioner view → Invite Player (their managed leagues only)
   //   - Player view → no add/invite UI
   const isAdminView = caps.view === "admin" && isAdminLike(session);
 
+  // Directory query: filter to JUST the selected league when scope
+  // is a UUID; show every viewer league when scope === "all" was
+  // chosen via the tab (which is really a "show me everyone" view).
   const players = await getPlayersDirectory({
-    scope,
-    viewerLeagueIds,
+    scope: scope === "all" ? "all" : "league",
+    viewerLeagueIds: scope === "all" ? viewerLeagueIds : [scope],
     viewerIsAdmin: isAdminView,
   });
 
   // League-scoped grade attribution. The grade pill on each card
-  // is for the active league context only — there is no global
-  // grade. In BDL Universe scope (or when no league is active),
-  // the pill is hidden so we never imply a grade lives outside its
-  // league.
-  const activeLeagueId = scope === "league" ? await getActiveLeagueId() : null;
-  // Fall back to the viewer's first league if no cookie is set yet —
-  // mirrors what the rest of the app does for first-time visitors.
-  const gradeLeagueId =
-    activeLeagueId && viewerLeagueIds.includes(activeLeagueId)
-      ? activeLeagueId
-      : scope === "league" && viewerLeagueIds[0]
-        ? viewerLeagueIds[0]
-        : null;
+  // is for the selected league only — there is no global grade.
+  // In BDL Universe scope, the pill is hidden so we never imply a
+  // grade lives outside its league.
+  const gradeLeagueId = scope === "all" ? null : scope;
 
   const crowdGrades = gradeLeagueId
     ? await getCrowdGradesForPlayers(
@@ -170,6 +185,18 @@ export default async function PlayersPage({
           .orderBy(asc(leaguesTbl.name))
       : [];
 
+  // Tabs: one per league the viewer is in (by name), plus BDL
+  // Universe at the end. Drives the whole filter rather than the
+  // generic "My League" lump.
+  const viewerLeagueTabs =
+    viewerLeagueIds.length > 0
+      ? await db
+          .select({ id: leaguesTbl.id, name: leaguesTbl.name })
+          .from(leaguesTbl)
+          .where(inArray(leaguesTbl.id, viewerLeagueIds))
+          .orderBy(asc(leaguesTbl.name))
+      : [];
+
   return (
     <>
       <TopBar active="/players" />
@@ -192,7 +219,7 @@ export default async function PlayersPage({
           }
         />
 
-        <ScopeTabs current={scope} />
+        <ScopeTabs current={scope} leagues={viewerLeagueTabs} />
 
         <PlayersGrid
           players={playersWithGrade}
@@ -204,24 +231,48 @@ export default async function PlayersPage({
   );
 }
 
-function ScopeTabs({ current }: { current: Scope }) {
-  const Tab = ({ value, children }: { value: Scope; children: React.ReactNode }) => (
+function ScopeTabs({
+  current,
+  leagues,
+}: {
+  current: Scope;
+  leagues: { id: string; name: string }[];
+}) {
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      {leagues.map((l) => (
+        <ScopeTab key={l.id} value={l.id} current={current}>
+          {l.name}
+        </ScopeTab>
+      ))}
+      <ScopeTab value="all" current={current}>
+        BDL Universe
+      </ScopeTab>
+    </div>
+  );
+}
+
+function ScopeTab({
+  value,
+  current,
+  children,
+}: {
+  value: Scope;
+  current: Scope;
+  children: React.ReactNode;
+}) {
+  const isActive = current === value;
+  return (
     <Link
-      href={value === "league" ? "/players" : "/players?scope=all"}
+      href={`/players?scope=${value}`}
       className={`inline-flex items-center h-9 px-4 rounded-full text-[12px] font-semibold tracking-[0.04em] uppercase transition-colors border ${
-        current === value
+        isActive
           ? "bg-[color:var(--brand)] text-white border-transparent"
           : "bg-[color:var(--surface)] border-[color:var(--hairline-2)] text-[color:var(--text-2)] hover:text-[color:var(--text)]"
       }`}
     >
       {children}
     </Link>
-  );
-  return (
-    <div className="flex items-center gap-2">
-      <Tab value="league">My League</Tab>
-      <Tab value="all">BDL Universe</Tab>
-    </div>
   );
 }
 
