@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -12,6 +13,10 @@ import {
 } from "@/lib/db";
 import { requireLeagueManager } from "@/lib/auth/perms";
 import { requireManageView } from "@/lib/auth/view";
+import {
+  isInviteEmailConfigured,
+  sendLeagueJoinInvite,
+} from "@/lib/email/invite-email";
 
 export type ActionResult<T = unknown> =
   | { ok: true; data?: T }
@@ -23,6 +28,10 @@ const createSchema = z.object({
   lastName: z.string().trim().min(1, "Last name required.").max(60),
   email: z.string().trim().email("Valid email required.").max(120),
   cell: z.string().trim().max(40).optional().or(z.literal("")),
+  /** When "1", the action also emails the invite link. When absent
+   *  or any other value, it only generates the link (legacy
+   *  copy-link-only behavior). */
+  sendEmail: z.string().optional(),
 });
 
 const acceptSchema = z.object({
@@ -46,7 +55,16 @@ const nullable = (s?: string | null) => {
 /** Commissioner of the league or admin can invite. */
 export async function createInvite(
   formData: FormData,
-): Promise<ActionResult<{ id: string }>> {
+): Promise<
+  ActionResult<{
+    id: string;
+    /** Present when the caller asked for an email send. The action
+     *  always creates the invite row first, then attempts to send;
+     *  failures here don't undo the invite. */
+    emailSent?: boolean;
+    emailError?: string;
+  }>
+> {
   const parsed = createSchema.safeParse(readForm(formData));
   if (!parsed.success) {
     return {
@@ -56,6 +74,19 @@ export async function createInvite(
     };
   }
   const v = parsed.data;
+  const wantsEmail = v.sendEmail === "1";
+
+  // Preflight the email-config so the user gets a clear no-op
+  // refusal instead of a silent "I created the invite but no email
+  // ever left." Mirrors the game-invite preflight pattern.
+  if (wantsEmail && !isInviteEmailConfigured()) {
+    return {
+      ok: false,
+      error:
+        "Email isn't configured for this project — set RESEND_API_KEY and ADMIN_FROM_EMAIL in Vercel, or generate the link without sending.",
+    };
+  }
+
   const session = await requireLeagueManager(v.leagueId);
   await requireManageView();
 
@@ -81,6 +112,51 @@ export async function createInvite(
     .returning({ id: invites.id });
 
   revalidatePath(`/leagues/${v.leagueId}`);
+
+  if (wantsEmail) {
+    // Build the absolute claim URL from the request host. We can't
+    // hardcode a domain — preview deploys, custom domains, and
+    // localhost all need to work.
+    const h = await headers();
+    const proto = h.get("x-forwarded-proto") ?? "https";
+    const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
+    const claimUrl = host
+      ? `${proto}://${host}/invite/${row.id}`
+      : `/invite/${row.id}`;
+
+    // Inviter display name — best-effort, tolerant of session
+    // variants. Falls back to null which renders the neutral
+    // "You've been invited" copy.
+    const invitedByName = session.playerId
+      ? await db
+          .select({
+            firstName: players.firstName,
+            lastName: players.lastName,
+          })
+          .from(players)
+          .where(eq(players.id, session.playerId))
+          .limit(1)
+          .then((r) =>
+            r[0] ? `${r[0].firstName} ${r[0].lastName}`.trim() : null,
+          )
+      : null;
+
+    const sendRes = await sendLeagueJoinInvite({
+      to: v.email,
+      firstName: v.firstName,
+      leagueName: league.name,
+      claimUrl,
+      invitedByName,
+    });
+
+    return {
+      ok: true,
+      data: sendRes.ok
+        ? { id: row.id, emailSent: true }
+        : { id: row.id, emailSent: false, emailError: sendRes.error },
+    };
+  }
+
   return { ok: true, data: { id: row.id } };
 }
 

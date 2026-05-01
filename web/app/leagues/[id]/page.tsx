@@ -18,6 +18,7 @@ import { getLeagueDetail } from "@/lib/queries/leagues";
 import { formatLabel } from "@/lib/format";
 import { getInvitesForLeague } from "@/lib/queries/invites";
 import { getLeagueNextGame, getMatchupOdds } from "@/lib/queries/games";
+import { isInviteEmailConfigured } from "@/lib/email/invite-email";
 import { LeagueDetailClient, Invites } from "./league-detail-client";
 
 const fmtWD = (d: string | null) => {
@@ -233,6 +234,7 @@ export default async function LeagueDetailPage({
             <SectionHead title="Invites" count={<span>{pendingInvites.length}</span>} />
             <Invites
               leagueId={detail.league.id}
+              emailConfigured={isInviteEmailConfigured()}
               invites={pendingInvites.map((i) => ({
                 id: i.id,
                 firstName: i.firstName,

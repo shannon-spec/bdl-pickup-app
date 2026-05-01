@@ -151,6 +151,47 @@ export function sendInviteReminder(ctx: InviteEmailContext) {
   return send({ to: ctx.to, subject, text, html });
 }
 
+/**
+ * League-join invite email — sent from the league detail page when a
+ * commissioner generates an invite link for a new player. Distinct
+ * from the game-invite emails above: this one invites someone to
+ * JOIN the league, not claim a seat for a specific game.
+ */
+export type LeagueJoinEmailContext = {
+  to: string;
+  firstName: string;
+  leagueName: string;
+  /** Full URL to the public invite-accept page (/invite/{id}). */
+  claimUrl: string;
+  /** Optional commissioner display name to put in the body ("from X"). */
+  invitedByName?: string | null;
+};
+
+export function sendLeagueJoinInvite(ctx: LeagueJoinEmailContext) {
+  const subject = `You're invited to join ${ctx.leagueName} on BDL`;
+  const fromLine = ctx.invitedByName
+    ? `${ctx.invitedByName} invited you to join `
+    : "You've been invited to join ";
+  const text =
+    `Hi ${ctx.firstName},\n\n` +
+    `${fromLine}${ctx.leagueName} on BDL — Ball Don't Lie.\n\n` +
+    `Accept the invite and create your player profile here:\n${ctx.claimUrl}\n\n— BDL`;
+  const html = wrapHtml(`
+    <h2 style="margin:0 0 6px;font-size:18px;letter-spacing:-0.01em;">You're invited to join</h2>
+    <p style="font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#666;margin:0 0 16px;">${escapeHtml(ctx.leagueName)}</p>
+    <p style="font-size:14px;line-height:1.55;margin:0 0 6px;">Hi ${escapeHtml(ctx.firstName)},</p>
+    <p style="font-size:14px;line-height:1.55;margin:0 0 18px;">
+      ${escapeHtml(fromLine)}<strong>${escapeHtml(ctx.leagueName)}</strong> on BDL — Ball Don't Lie.
+      Accept below to create your player profile and lock in your spot.
+    </p>
+    <p style="margin:20px 0;">
+      <a href="${escapeHtml(ctx.claimUrl)}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;font-size:14px;">Accept invite</a>
+    </p>
+    <p style="color:#666;font-size:13px;margin:0;">Or paste this URL into your browser:<br/><a href="${escapeHtml(ctx.claimUrl)}">${escapeHtml(ctx.claimUrl)}</a></p>
+  `);
+  return send({ to: ctx.to, subject, text, html });
+}
+
 export function sendSeatsFilledNotice(ctx: Omit<InviteEmailContext, "expiresAtLabel" | "teamAName" | "teamBName">) {
   const subject = `${ctx.leagueName}: seats filled`;
   const text =

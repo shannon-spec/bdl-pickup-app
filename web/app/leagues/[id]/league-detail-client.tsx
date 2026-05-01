@@ -297,29 +297,56 @@ function PlayerAdder({
 export function Invites({
   leagueId,
   invites,
+  emailConfigured,
 }: {
   leagueId: string;
   invites: InviteLite[];
+  /** Whether RESEND_API_KEY + ADMIN_FROM_EMAIL are set on the
+   *  server. When false the "Generate & Email" button is disabled
+   *  and a warning banner explains why. */
+  emailConfigured: boolean;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const onSubmit = (formData: FormData) => {
+  const submit = (formData: FormData, sendEmail: boolean) => {
     setError(null);
+    setSuccess(null);
     formData.set("leagueId", leagueId);
+    if (sendEmail) formData.set("sendEmail", "1");
+    else formData.delete("sendEmail");
     start(async () => {
       const res = await createInvite(formData);
-      if (res.ok) {
-        router.refresh();
-        const form = document.getElementById("invite-form") as HTMLFormElement | null;
-        form?.reset();
-      } else {
+      if (!res.ok) {
         setError(res.error);
+        return;
+      }
+      router.refresh();
+      const form = document.getElementById("invite-form") as HTMLFormElement | null;
+      form?.reset();
+      if (sendEmail) {
+        if (res.data?.emailSent) {
+          setSuccess("Invite created and emailed.");
+        } else {
+          setError(
+            `Invite created, but email failed to send${res.data?.emailError ? ` (${res.data.emailError})` : ""}. The link is below — copy and share it manually.`,
+          );
+        }
+      } else {
+        setSuccess("Invite link created. Copy below.");
       }
     });
   };
+
+  // The form's default `action` (used when the user hits Enter or
+  // clicks the primary button) is the email-send path when email is
+  // configured, since that's the typical action. The "Generate Link"
+  // button uses formAction to override and skip email.
+  const onSubmitDefault = (formData: FormData) =>
+    submit(formData, emailConfigured);
 
   const copyLink = async (id: string) => {
     const url = `${window.location.origin}/invite/${id}`;
@@ -343,9 +370,25 @@ export function Invites({
 
   return (
     <>
+      {!emailConfigured && (
+        <div className="rounded-[12px] border border-[color:var(--warn)] bg-[color:var(--warn-soft)] px-4 py-3 text-[12.5px] text-[color:var(--warn)] leading-snug mb-3">
+          <span className="font-bold">Email is not configured.</span>{" "}
+          You can still generate invite links to copy &amp; share manually.
+          To enable sending, set
+          <code className="mx-1 px-1 py-0.5 rounded bg-[color:var(--surface)] text-[color:var(--text-2)] font-[family-name:var(--mono)] text-[11.5px]">
+            RESEND_API_KEY
+          </code>
+          and
+          <code className="mx-1 px-1 py-0.5 rounded bg-[color:var(--surface)] text-[color:var(--text-2)] font-[family-name:var(--mono)] text-[11.5px]">
+            ADMIN_FROM_EMAIL
+          </code>
+          in Vercel and redeploy.
+        </div>
+      )}
+
       <form
         id="invite-form"
-        action={onSubmit}
+        action={onSubmitDefault}
         className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-5 flex flex-col gap-3"
       >
         <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)]">
@@ -384,13 +427,32 @@ export function Invites({
             {error}
           </div>
         )}
-        <div className="flex justify-end">
+        {success && (
+          <div className="text-[12px] text-[color:var(--up)] bg-[color:var(--up-soft)] rounded-[var(--r-md)] px-3 py-2">
+            {success}
+          </div>
+        )}
+        <div className="flex justify-end gap-2 max-sm:flex-col">
           <button
             type="submit"
+            formAction={(fd) => submit(fd, false)}
             disabled={pending}
-            className="inline-flex items-center gap-2 h-10 px-5 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)] disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] hover:bg-[color:var(--surface-2)] text-[color:var(--text-2)] font-bold text-[12px] tracking-[0.06em] uppercase disabled:opacity-60"
           >
-            <Mail size={14} /> {pending ? "Creating…" : "Generate Invite Link"}
+            <Copy size={14} /> {pending ? "Creating…" : "Generate Link"}
+          </button>
+          <button
+            type="submit"
+            formAction={(fd) => submit(fd, true)}
+            disabled={pending || !emailConfigured}
+            title={
+              !emailConfigured
+                ? "Email isn't configured — see warning above"
+                : undefined
+            }
+            className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)] disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <Mail size={14} /> {pending ? "Sending…" : "Generate & Email"}
           </button>
         </div>
       </form>
