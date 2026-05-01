@@ -1,13 +1,13 @@
 /**
- * Player grading aggregate.
+ * Player grading aggregate — league-scoped.
  *
- * Each voter casts at most one grade per target player. The voter's
- * bucket (peer vs commissioner) is derived at read time from the set
- * of leagues they share with the target — if the voter commissions
- * any league the target is in, their vote counts toward the
- * commissioner side. Otherwise it counts as a peer vote.
+ * Each voter casts at most one grade per (target, league). The
+ * voter's bucket (peer vs commissioner) is derived at read time:
+ * the voter is a commissioner ONLY when they commission THIS
+ * specific league. So the same person can be a commissioner-voter
+ * in League A and a peer-voter in League B.
  *
- * Final score:
+ * Final score (computed per league):
  *   peerAvg = mean of peer-vote numeric grades
  *   commAvg = mean of commissioner-vote numeric grades
  *   final   = 0.5 * peerAvg + 0.5 * commAvg  (when both exist)
@@ -23,6 +23,7 @@ import {
   playerGrades,
   leaguePlayers,
   leagueCommissioners,
+  leagues,
 } from "@/lib/db";
 import type { Session } from "@/lib/auth/session";
 
@@ -63,74 +64,67 @@ const valueToGrade = (v: number): GradeKey => {
 };
 
 export type PlayerGradeAggregate = {
-  /**
-   * Crowd-derived grade. Null when no votes (or only "Not Rated"
-   * placeholders, which can't actually be cast).
-   */
+  /** Crowd-derived grade for THIS league. Null when no votes here. */
   crowdGrade: GradeKey | null;
   /** Numeric blend in 1..5; null when no votes. */
   crowdScore: number | null;
   peerCount: number;
   commissionerCount: number;
-  /** The viewer's own vote on this target, if any. */
+  /** The viewer's own vote on this target in this league, if any. */
   myVote: GradeKey | null;
   /**
-   * True when the viewer is signed in, has a player record, shares
-   * at least one league with the target, and isn't the target. The
-   * UI uses this to decide whether to show the voting widget.
+   * True when the viewer can cast a vote in THIS league: signed in,
+   * has a player record, is a member of the league, and isn't the
+   * target (self-vote allowed).
    */
   canVote: boolean;
 };
 
+/**
+ * League-scoped grade aggregate for a single player.
+ *
+ * `leagueId` is required: this is the league the grade is being
+ * attributed to. Without a league context grades aren't meaningful,
+ * so callers that don't have a league should use
+ * `getPlayerGradesByLeague` instead and choose a league themselves.
+ */
 export async function getPlayerGradeAggregate(
   targetId: string,
+  leagueId: string,
   session: Session | null,
 ): Promise<PlayerGradeAggregate> {
-  // Pull all votes on this target plus the leagues the target is in.
-  // We fan out from there to figure out who's a commissioner of one
-  // of those leagues at read time.
-  const [allVotes, targetLeagueRows] = await Promise.all([
+  // Pull votes for this (target, league) plus the commissioners of
+  // this specific league. Commissioner status is league-scoped.
+  const [votes, commRows] = await Promise.all([
     db
       .select({
         voterId: playerGrades.voterPlayerId,
         grade: playerGrades.grade,
       })
       .from(playerGrades)
-      .where(eq(playerGrades.targetPlayerId, targetId)),
-    db
-      .select({ leagueId: leaguePlayers.leagueId })
-      .from(leaguePlayers)
-      .where(eq(leaguePlayers.playerId, targetId)),
-  ]);
-
-  const targetLeagueIds = targetLeagueRows.map((r) => r.leagueId);
-
-  // Voters who commission any of the target's leagues. Single
-  // round-trip; empty set when target isn't in any leagues yet.
-  const commissionerVoterIds = new Set<string>();
-  if (targetLeagueIds.length > 0 && allVotes.length > 0) {
-    const voterIds = allVotes.map((v) => v.voterId);
-    const commRows = await db
-      .select({ playerId: leagueCommissioners.playerId })
-      .from(leagueCommissioners)
       .where(
         and(
-          inArray(leagueCommissioners.leagueId, targetLeagueIds),
-          inArray(leagueCommissioners.playerId, voterIds),
+          eq(playerGrades.targetPlayerId, targetId),
+          eq(playerGrades.leagueId, leagueId),
         ),
-      );
-    for (const r of commRows) commissionerVoterIds.add(r.playerId);
-  }
+      ),
+    db
+      .select({ playerId: leagueCommissioners.playerId })
+      .from(leagueCommissioners)
+      .where(eq(leagueCommissioners.leagueId, leagueId)),
+  ]);
+
+  const commissionerIds = new Set(commRows.map((r) => r.playerId));
 
   let peerSum = 0;
   let peerCount = 0;
   let commSum = 0;
   let commCount = 0;
   let myVote: GradeKey | null = null;
-  for (const v of allVotes) {
+  for (const v of votes) {
     const num = GRADE_VALUE[v.grade as GradeKey];
     if (num === null) continue;
-    if (commissionerVoterIds.has(v.voterId)) {
+    if (commissionerIds.has(v.voterId)) {
       commSum += num;
       commCount++;
     } else {
@@ -154,24 +148,47 @@ export async function getPlayerGradeAggregate(
   }
   const crowdGrade = crowdScore !== null ? valueToGrade(crowdScore) : null;
 
-  // Eligibility: voter must have a player record and share a league
-  // with the target. Self-voting is allowed.
+  // Eligibility: voter must be a member of THIS league. Self-voting
+  // allowed (you're still in your own league).
   let canVote = false;
-  if (session?.playerId && targetLeagueIds.length > 0) {
+  if (session?.playerId) {
     if (session.playerId === targetId) {
-      canVote = true;
-    } else {
-      const [overlap] = await db
+      // Voter must still be a member of this league to cast.
+      const [self] = await db
         .select({ leagueId: leaguePlayers.leagueId })
         .from(leaguePlayers)
         .where(
           and(
             eq(leaguePlayers.playerId, session.playerId),
-            inArray(leaguePlayers.leagueId, targetLeagueIds),
+            eq(leaguePlayers.leagueId, leagueId),
           ),
         )
         .limit(1);
-      canVote = !!overlap;
+      canVote = !!self;
+    } else {
+      const [voterMember, targetMember] = await Promise.all([
+        db
+          .select({ leagueId: leaguePlayers.leagueId })
+          .from(leaguePlayers)
+          .where(
+            and(
+              eq(leaguePlayers.playerId, session.playerId),
+              eq(leaguePlayers.leagueId, leagueId),
+            ),
+          )
+          .limit(1),
+        db
+          .select({ leagueId: leaguePlayers.leagueId })
+          .from(leaguePlayers)
+          .where(
+            and(
+              eq(leaguePlayers.playerId, targetId),
+              eq(leaguePlayers.leagueId, leagueId),
+            ),
+          )
+          .limit(1),
+      ]);
+      canVote = !!voterMember[0] && !!targetMember[0];
     }
   }
 
@@ -187,17 +204,17 @@ export async function getPlayerGradeAggregate(
 
 /**
  * Bulk variant for the players directory: returns a Map<targetId,
- * crowdGrade> populated only for targets with at least one vote.
- * Skips the eligibility / myVote computation since the directory
- * cards don't surface them.
+ * crowdGrade> populated only for targets with at least one vote in
+ * the given league. Skips eligibility / myVote.
  */
 export async function getCrowdGradesForPlayers(
   targetIds: string[],
+  leagueId: string,
 ): Promise<Map<string, GradeKey>> {
   const out = new Map<string, GradeKey>();
   if (targetIds.length === 0) return out;
 
-  const [votes, allLeagueRows] = await Promise.all([
+  const [votes, commRows] = await Promise.all([
     db
       .select({
         targetId: playerGrades.targetPlayerId,
@@ -205,64 +222,26 @@ export async function getCrowdGradesForPlayers(
         grade: playerGrades.grade,
       })
       .from(playerGrades)
-      .where(inArray(playerGrades.targetPlayerId, targetIds)),
+      .where(
+        and(
+          inArray(playerGrades.targetPlayerId, targetIds),
+          eq(playerGrades.leagueId, leagueId),
+        ),
+      ),
     db
-      .select({
-        playerId: leaguePlayers.playerId,
-        leagueId: leaguePlayers.leagueId,
-      })
-      .from(leaguePlayers)
-      .where(inArray(leaguePlayers.playerId, targetIds)),
+      .select({ playerId: leagueCommissioners.playerId })
+      .from(leagueCommissioners)
+      .where(eq(leagueCommissioners.leagueId, leagueId)),
   ]);
 
   if (votes.length === 0) return out;
+  const commissionerIds = new Set(commRows.map((r) => r.playerId));
 
-  // target → set of league IDs
-  const targetLeagues = new Map<string, Set<string>>();
-  for (const r of allLeagueRows) {
-    const s = targetLeagues.get(r.playerId) ?? new Set<string>();
-    s.add(r.leagueId);
-    targetLeagues.set(r.playerId, s);
-  }
-
-  // All commissioner rows for any of the involved leagues.
-  const allLeagueIds = Array.from(
-    new Set(allLeagueRows.map((r) => r.leagueId)),
-  );
-  const commRows =
-    allLeagueIds.length > 0
-      ? await db
-          .select({
-            leagueId: leagueCommissioners.leagueId,
-            playerId: leagueCommissioners.playerId,
-          })
-          .from(leagueCommissioners)
-          .where(inArray(leagueCommissioners.leagueId, allLeagueIds))
-      : [];
-  // league → set of commissioner player IDs
-  const leagueComms = new Map<string, Set<string>>();
-  for (const r of commRows) {
-    const s = leagueComms.get(r.leagueId) ?? new Set<string>();
-    s.add(r.playerId);
-    leagueComms.set(r.leagueId, s);
-  }
-
-  // Per-target accumulator.
   type Acc = { peerSum: number; peerCount: number; commSum: number; commCount: number };
   const buckets = new Map<string, Acc>();
   for (const v of votes) {
     const num = GRADE_VALUE[v.grade as GradeKey];
     if (num === null) continue;
-    const targetLeagueSet = targetLeagues.get(v.targetId);
-    let isCommish = false;
-    if (targetLeagueSet) {
-      for (const lid of targetLeagueSet) {
-        if (leagueComms.get(lid)?.has(v.voterId)) {
-          isCommish = true;
-          break;
-        }
-      }
-    }
     const acc =
       buckets.get(v.targetId) ?? {
         peerSum: 0,
@@ -270,7 +249,7 @@ export async function getCrowdGradesForPlayers(
         commSum: 0,
         commCount: 0,
       };
-    if (isCommish) {
+    if (commissionerIds.has(v.voterId)) {
       acc.commSum += num;
       acc.commCount++;
     } else {
@@ -290,4 +269,115 @@ export async function getCrowdGradesForPlayers(
     if (score !== null) out.set(targetId, valueToGrade(score));
   }
   return out;
+}
+
+/**
+ * Per-league grade breakdown for a single target. Used by the
+ * profile page (one row per league the target is in) and by the
+ * directory hover-tooltip.
+ *
+ * Returns rows ONLY for leagues the target is currently a member
+ * of, even if older votes exist for leagues they've since left.
+ */
+export type LeagueGradeRow = {
+  leagueId: string;
+  leagueName: string;
+  /** Crowd-derived grade — null when no votes in this league. */
+  crowdGrade: GradeKey | null;
+  /** Admin-set per-league override (leaguePlayers.leagueLevel). Null
+   *  when no override; falls back to player.level upstream. */
+  adminLevel: GradeKey | null;
+  peerCount: number;
+  commissionerCount: number;
+};
+
+export async function getPlayerGradesByLeague(
+  targetId: string,
+): Promise<LeagueGradeRow[]> {
+  const [memberships, votes, allCommRows] = await Promise.all([
+    db
+      .select({
+        leagueId: leaguePlayers.leagueId,
+        leagueName: leagues.name,
+        leagueLevel: leaguePlayers.leagueLevel,
+      })
+      .from(leaguePlayers)
+      .innerJoin(leagues, eq(leagues.id, leaguePlayers.leagueId))
+      .where(eq(leaguePlayers.playerId, targetId)),
+    db
+      .select({
+        leagueId: playerGrades.leagueId,
+        voterId: playerGrades.voterPlayerId,
+        grade: playerGrades.grade,
+      })
+      .from(playerGrades)
+      .where(eq(playerGrades.targetPlayerId, targetId)),
+    db
+      .select({
+        leagueId: leagueCommissioners.leagueId,
+        playerId: leagueCommissioners.playerId,
+      })
+      .from(leagueCommissioners),
+  ]);
+
+  if (memberships.length === 0) return [];
+
+  // league → commissioner set
+  const commByLeague = new Map<string, Set<string>>();
+  for (const r of allCommRows) {
+    const s = commByLeague.get(r.leagueId) ?? new Set<string>();
+    s.add(r.playerId);
+    commByLeague.set(r.leagueId, s);
+  }
+
+  // league → accumulator
+  type Acc = { peerSum: number; peerCount: number; commSum: number; commCount: number };
+  const buckets = new Map<string, Acc>();
+  for (const v of votes) {
+    const num = GRADE_VALUE[v.grade as GradeKey];
+    if (num === null) continue;
+    const acc =
+      buckets.get(v.leagueId) ?? {
+        peerSum: 0,
+        peerCount: 0,
+        commSum: 0,
+        commCount: 0,
+      };
+    const isComm = commByLeague.get(v.leagueId)?.has(v.voterId) ?? false;
+    if (isComm) {
+      acc.commSum += num;
+      acc.commCount++;
+    } else {
+      acc.peerSum += num;
+      acc.peerCount++;
+    }
+    buckets.set(v.leagueId, acc);
+  }
+
+  return memberships.map((m) => {
+    const acc = buckets.get(m.leagueId);
+    let crowdGrade: GradeKey | null = null;
+    if (acc) {
+      const peerAvg = acc.peerCount > 0 ? acc.peerSum / acc.peerCount : null;
+      const commAvg = acc.commCount > 0 ? acc.commSum / acc.commCount : null;
+      let score: number | null = null;
+      if (peerAvg !== null && commAvg !== null) score = 0.5 * peerAvg + 0.5 * commAvg;
+      else if (peerAvg !== null) score = peerAvg;
+      else if (commAvg !== null) score = commAvg;
+      if (score !== null) crowdGrade = valueToGrade(score);
+    }
+    const ll = m.leagueLevel as string | null;
+    const adminLevel: GradeKey | null =
+      ll && ll !== "Not Rated" && (VOTABLE_GRADES as string[]).includes(ll)
+        ? (ll as GradeKey)
+        : null;
+    return {
+      leagueId: m.leagueId,
+      leagueName: m.leagueName,
+      crowdGrade,
+      adminLevel,
+      peerCount: acc?.peerCount ?? 0,
+      commissionerCount: acc?.commCount ?? 0,
+    };
+  });
 }

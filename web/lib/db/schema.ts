@@ -276,10 +276,15 @@ export const games = pgTable(
 
 /* ============== PLAYER GRADES (peer rating) ============== */
 
-// One vote per (target, voter). Voter must share a league with the
-// target — enforced in the server action, not at the DB level. The
-// voter's bucket (peer vs commissioner) is derived at read time from
-// league_commissioners so role changes flow through automatically.
+// One vote per (target, voter, league). Grades are per-league so a
+// player can carry different grades in each league they're in (e.g.
+// Game Changer in their home league, Intermediate in a stronger one).
+//
+// Voter must share THIS league with the target — enforced in the
+// server action. The voter's bucket (peer vs commissioner) is derived
+// at read time from league_commissioners scoped to this same league,
+// so a commissioner of league A casting a vote in league B counts as
+// a peer there.
 // "Not Rated" is excluded from voting in the action validator.
 export const playerGrades = pgTable(
   "player_grades",
@@ -291,6 +296,9 @@ export const playerGrades = pgTable(
     voterPlayerId: uuid("voter_player_id")
       .notNull()
       .references(() => players.id, { onDelete: "cascade" }),
+    leagueId: uuid("league_id")
+      .notNull()
+      .references(() => leagues.id, { onDelete: "cascade" }),
     grade: playerLevelEnum("grade").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -301,11 +309,12 @@ export const playerGrades = pgTable(
       .$onUpdate(() => new Date()),
   },
   (t) => [
-    uniqueIndex("player_grades_target_voter_uq").on(
+    uniqueIndex("player_grades_target_voter_league_uq").on(
       t.targetPlayerId,
       t.voterPlayerId,
+      t.leagueId,
     ),
-    index("player_grades_target_idx").on(t.targetPlayerId),
+    index("player_grades_target_league_idx").on(t.targetPlayerId, t.leagueId),
   ],
 );
 

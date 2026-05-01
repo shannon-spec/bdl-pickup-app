@@ -10,6 +10,7 @@ import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
+import { getActiveLeagueId } from "@/lib/cookies/active-league";
 import { getPlayersDirectory } from "@/lib/queries/players-directory";
 import {
   getCrowdGradesForPlayers,
@@ -26,8 +27,8 @@ const ALL_GRADES: GradeKey[] = [
 ];
 const isGradeKey = (s: string): s is GradeKey =>
   (ALL_GRADES as string[]).includes(s);
-import { db, leagues as leaguesTbl } from "@/lib/db";
-import { asc, inArray } from "drizzle-orm";
+import { db, leagues as leaguesTbl, leaguePlayers } from "@/lib/db";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { InviteControls } from "./invite-controls";
 import { AddPlayerControls } from "./add-player-controls";
 import { PlayersGrid } from "./players-grid";
@@ -70,15 +71,85 @@ export default async function PlayersPage({
     viewerLeagueIds,
     viewerIsAdmin: isAdminView,
   });
-  const crowdGrades = await getCrowdGradesForPlayers(players.map((p) => p.id));
-  const playersWithGrade = players.map((p) => {
-    const crowd = crowdGrades.get(p.id) ?? null;
-    const adminLevel: GradeKey | null =
-      p.level && p.level !== "Not Rated" && isGradeKey(p.level)
-        ? p.level
+
+  // League-scoped grade attribution. The grade pill on each card
+  // is for the active league context only — there is no global
+  // grade. In BDL Universe scope (or when no league is active),
+  // the pill is hidden so we never imply a grade lives outside its
+  // league.
+  const activeLeagueId = scope === "league" ? await getActiveLeagueId() : null;
+  // Fall back to the viewer's first league if no cookie is set yet —
+  // mirrors what the rest of the app does for first-time visitors.
+  const gradeLeagueId =
+    activeLeagueId && viewerLeagueIds.includes(activeLeagueId)
+      ? activeLeagueId
+      : scope === "league" && viewerLeagueIds[0]
+        ? viewerLeagueIds[0]
         : null;
-    return { ...p, displayGrade: crowd ?? adminLevel };
+
+  const crowdGrades = gradeLeagueId
+    ? await getCrowdGradesForPlayers(
+        players.map((p) => p.id),
+        gradeLeagueId,
+      )
+    : new Map<string, GradeKey>();
+
+  // Per-league admin overrides (leaguePlayers.leagueLevel) for the
+  // active league. Falls back to the global players.level when no
+  // override is set.
+  const overrideRows = gradeLeagueId
+    ? await db
+        .select({
+          playerId: leaguePlayers.playerId,
+          leagueLevel: leaguePlayers.leagueLevel,
+        })
+        .from(leaguePlayers)
+        .where(
+          and(
+            eq(leaguePlayers.leagueId, gradeLeagueId),
+            inArray(
+              leaguePlayers.playerId,
+              players.map((p) => p.id),
+            ),
+          ),
+        )
+    : [];
+  const overrideByPlayer = new Map<string, GradeKey | null>(
+    overrideRows.map((r) => [
+      r.playerId,
+      r.leagueLevel && r.leagueLevel !== "Not Rated" && isGradeKey(r.leagueLevel)
+        ? (r.leagueLevel as GradeKey)
+        : null,
+    ]),
+  );
+
+  const playersWithGrade = players.map((p) => {
+    if (!gradeLeagueId) {
+      // Universe scope: no league context, no pill. Grades are
+      // always for a specific league — never imply otherwise.
+      return { ...p, displayGrade: null as GradeKey | null };
+    }
+    // League scope: peer-vote crowd grade > per-league admin
+    // override > ungraded. We deliberately do NOT fall through to
+    // players.level (the global admin level) because that would
+    // surface "a grade from another league" in this league's
+    // context — exactly what per-league grades are meant to fix.
+    const crowd = crowdGrades.get(p.id) ?? null;
+    if (crowd) return { ...p, displayGrade: crowd };
+    const override = overrideByPlayer.get(p.id) ?? null;
+    return { ...p, displayGrade: override };
   });
+
+  // League name for the "in {league}" tag rendered below each pill.
+  const gradeLeagueName = gradeLeagueId
+    ? (
+        await db
+          .select({ name: leaguesTbl.name })
+          .from(leaguesTbl)
+          .where(eq(leaguesTbl.id, gradeLeagueId))
+          .limit(1)
+      )[0]?.name ?? null
+    : null;
   const canInvite = caps.canManage && !isAdminView;
   const manageLeagueIds = isAdminView ? null : commishIds;
   const showAddPlayer = isAdminView;
@@ -123,7 +194,10 @@ export default async function PlayersPage({
 
         <ScopeTabs current={scope} />
 
-        <PlayersGrid players={playersWithGrade} />
+        <PlayersGrid
+          players={playersWithGrade}
+          gradeLeagueName={gradeLeagueName}
+        />
       </PageFrame>
       <MobileBottomBar active="home" />
     </>

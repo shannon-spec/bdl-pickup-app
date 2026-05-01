@@ -15,13 +15,16 @@ import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
 import { PlayerAvatar } from "@/components/bdl/player-avatar";
 import { StatBlock, StatRow } from "@/components/bdl/stat-block";
+import { getActiveLeagueId } from "@/lib/cookies/active-league";
 import { getPlayerProfile } from "@/lib/queries/player-profile";
 import {
   getPlayerGradeAggregate,
+  getPlayerGradesByLeague,
   type GradeKey,
 } from "@/lib/queries/player-grades";
 import { EditPlayerButton } from "./edit-button";
 import { GradePanel } from "./grade-panel";
+import { LeagueGradesCard } from "./league-grades-card";
 import type { Player as PlayerType } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -46,7 +49,30 @@ export default async function PlayerProfilePage({
   if (!profile) notFound();
 
   const { player } = profile;
-  const gradeAgg = await getPlayerGradeAggregate(id, session);
+
+  // Per-league grade breakdown drives the new Grade card layout. Each
+  // row is a league the target is currently a member of, with that
+  // league's crowd grade + admin override.
+  const leagueGrades = await getPlayerGradesByLeague(id);
+
+  // Pick the league the BDL Grade card is scoped to. Prefer the
+  // active-league cookie when the target is in it; otherwise fall
+  // back to the target's first league. The aggregate query
+  // determines `canVote` based on whether the voter is also a
+  // member of that league, so non-members see a read-only card.
+  const activeLeagueId = await getActiveLeagueId();
+  const targetLeagueIds = leagueGrades.map((r) => r.leagueId);
+  const voteLeagueId =
+    activeLeagueId && targetLeagueIds.includes(activeLeagueId)
+      ? activeLeagueId
+      : targetLeagueIds[0] ?? null;
+  const gradeAgg = voteLeagueId
+    ? await getPlayerGradeAggregate(id, voteLeagueId, session)
+    : null;
+  const voteLeagueName =
+    voteLeagueId
+      ? leagueGrades.find((r) => r.leagueId === voteLeagueId)?.leagueName ?? null
+      : null;
   const initials = `${player.firstName[0] ?? ""}${player.lastName[0] ?? ""}`.toUpperCase();
   const isMe = session?.playerId === player.id;
   const caps = await getViewCaps(session);
@@ -96,9 +122,9 @@ export default async function PlayerProfilePage({
               >
                 {player.status}
               </Pill>
-              {player.level && player.level !== "Not Rated" && (
-                <Pill tone="brand">{player.level}</Pill>
-              )}
+              {/* Header no longer carries a global grade pill — grades
+                  are per-league and surfaced in the Grade card / By
+                  League table below. */}
               {player.position && <Pill tone="neutral">{player.position}</Pill>}
               {player.city && (
                 <span className="text-[12px] text-[color:var(--text-3)]">
@@ -195,11 +221,18 @@ export default async function PlayerProfilePage({
           </StatRow>
         </section>
 
-        <GradePanel
-          targetId={player.id}
-          agg={gradeAgg}
-          adminLevel={
-            (() => {
+        {gradeAgg && voteLeagueId && voteLeagueName && (
+          <GradePanel
+            targetId={player.id}
+            leagueId={voteLeagueId}
+            leagueName={voteLeagueName}
+            agg={gradeAgg}
+            adminLevel={(() => {
+              // Admin-set baseline for THIS league: prefer the
+              // per-league override, fall back to the global level
+              // (which acts as the seed when no override is set).
+              const row = leagueGrades.find((r) => r.leagueId === voteLeagueId);
+              if (row?.adminLevel) return row.adminLevel;
               const lv = player.level;
               const allowed: GradeKey[] = [
                 "Novice",
@@ -211,9 +244,16 @@ export default async function PlayerProfilePage({
               return lv && (allowed as readonly string[]).includes(lv)
                 ? (lv as GradeKey)
                 : null;
-            })()
-          }
-        />
+            })()}
+          />
+        )}
+
+        {/* Per-league grade breakdown — one row per league the
+            player is currently in, so their full grade picture is
+            visible without bouncing between leagues. */}
+        {leagueGrades.length > 0 && (
+          <LeagueGradesCard rows={leagueGrades} />
+        )}
 
         {/* Per-league breakdown */}
         {profile.byLeague.length > 0 && (

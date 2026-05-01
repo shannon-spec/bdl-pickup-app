@@ -14,7 +14,8 @@
     "db:pull-env": "npx vercel@latest env pull .env.local",
     "db:verify": "dotenv -e .env.local -- tsx scripts/verify-db.ts",
     "db:seed": "dotenv -e .env.local -- tsx scripts/seed.ts",
-    "db:backup": "node --env-file=.env.local scripts/backup.mjs"
+    "db:backup": "node --env-file=.env.local scripts/backup.mjs",
+    "db:migrate:grades": "dotenv -e .env.local -- tsx scripts/migrate-grades-per-league.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

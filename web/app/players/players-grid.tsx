@@ -12,7 +12,16 @@ type DirectoryPlayerWithGrade = DirectoryPlayer & {
   displayGrade: GradeKey | null;
 };
 
-export function PlayersGrid({ players }: { players: DirectoryPlayerWithGrade[] }) {
+export function PlayersGrid({
+  players,
+  gradeLeagueName,
+}: {
+  players: DirectoryPlayerWithGrade[];
+  /** Active league for the grade pill — null in BDL Universe scope.
+   *  When set, each pill gets a small "in {leagueName}" tag below it
+   *  so the per-league attribution is explicit. */
+  gradeLeagueName: string | null;
+}) {
   const [q, setQ] = useState("");
 
   const filtered = useMemo(() => {
@@ -54,7 +63,7 @@ export function PlayersGrid({ players }: { players: DirectoryPlayerWithGrade[] }
       ) : (
         <div className="grid grid-cols-3 gap-3 max-[900px]:grid-cols-2 max-sm:grid-cols-1">
           {filtered.map((p) => (
-            <PlayerCard key={p.id} p={p} />
+            <PlayerCard key={p.id} p={p} gradeLeagueName={gradeLeagueName} />
           ))}
         </div>
       )}
@@ -62,7 +71,13 @@ export function PlayersGrid({ players }: { players: DirectoryPlayerWithGrade[] }
   );
 }
 
-function PlayerCard({ p }: { p: DirectoryPlayerWithGrade }) {
+function PlayerCard({
+  p,
+  gradeLeagueName,
+}: {
+  p: DirectoryPlayerWithGrade;
+  gradeLeagueName: string | null;
+}) {
   const initials = `${p.firstName[0] ?? ""}${p.lastName[0] ?? ""}`.toUpperCase();
   return (
     <Link
@@ -96,7 +111,16 @@ function PlayerCard({ p }: { p: DirectoryPlayerWithGrade }) {
         </span>
       </div>
       <div className="flex items-center gap-1.5 flex-shrink-0">
-        {p.displayGrade && <GradePill grade={p.displayGrade} />}
+        {p.displayGrade && (
+          <div className="flex flex-col items-end gap-0.5">
+            <GradePill grade={p.displayGrade} />
+            {gradeLeagueName && (
+              <span className="text-[9px] font-bold tracking-[0.05em] uppercase text-[color:var(--text-4)] truncate max-w-[140px]">
+                in {gradeLeagueName}
+              </span>
+            )}
+          </div>
+        )}
         {p.status !== "Active" && (
           <Pill tone={p.status === "IR" ? "loss" : "neutral"}>{p.status}</Pill>
         )}

@@ -23,14 +23,22 @@ const VOTABLE: GradeKey[] = [
 
 export function GradePanel({
   targetId,
+  leagueId,
+  leagueName,
   agg,
   adminLevel,
 }: {
   targetId: string;
+  /** League the vote is being cast in. The action validates voter +
+   *  target are both members of this league. */
+  leagueId: string;
+  /** Pretty name for the active vote-context league, rendered as
+   *  context so the voter knows which league this grade applies to. */
+  leagueName: string;
   agg: PlayerGradeAggregate;
-  /** Admin-set baseline level, used as a fallback when there are no
-   *  peer/commissioner votes yet. Same fallback the players directory
-   *  uses, so the profile and the list don't disagree. */
+  /** Admin-set baseline for THIS league (per-league override, or the
+   *  global level as seed). Used as the displayed grade when no
+   *  peer/commissioner votes exist yet. */
   adminLevel: GradeKey | null;
 }) {
   const router = useRouter();
@@ -50,7 +58,7 @@ export function GradePanel({
   const onClear = () => {
     setError(null);
     start(async () => {
-      const res = await clearPlayerGrade(targetId);
+      const res = await clearPlayerGrade(targetId, leagueId);
       if (res.ok) {
         setPick("");
         router.refresh();
@@ -63,9 +71,14 @@ export function GradePanel({
 
   return (
     <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6">
-      <div className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)] flex items-center gap-2 mb-5">
-        <span aria-hidden className="w-[3px] h-[12px] rounded-sm bg-[color:var(--brand)]" />
-        BDL Grade
+      <div className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)] flex items-center justify-between gap-2 mb-5">
+        <span className="flex items-center gap-2">
+          <span aria-hidden className="w-[3px] h-[12px] rounded-sm bg-[color:var(--brand)]" />
+          BDL Grade
+        </span>
+        <span className="text-[10px] font-semibold tracking-[0.08em] uppercase text-[color:var(--text-3)] normal-case">
+          in {leagueName}
+        </span>
       </div>
 
       <div className="flex items-center gap-5 flex-wrap mb-2 max-sm:gap-3">
@@ -96,8 +109,9 @@ export function GradePanel({
       {agg.canVote ? (
         <form action={onSubmit} className="mt-5">
           <input type="hidden" name="targetId" value={targetId} />
+          <input type="hidden" name="leagueId" value={leagueId} />
           <div className="text-[10.5px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)] mb-2">
-            Your grade
+            Your grade <span className="text-[color:var(--text-4)] normal-case font-medium tracking-normal">· counts toward {leagueName}</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {VOTABLE.map((g) => {

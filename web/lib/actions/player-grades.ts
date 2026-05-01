@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db, playerGrades, leaguePlayers } from "@/lib/db";
 import { readSession } from "@/lib/auth/session";
@@ -11,9 +11,10 @@ export type ActionResult =
   | { ok: false; error: string };
 
 /**
- * Cast (or update) the viewer's grade for a target player. The
- * voter must share at least one league with the target and may
- * not grade themselves.
+ * Cast (or update) the viewer's grade for a target player IN A
+ * SPECIFIC LEAGUE. Both voter and target must be members of that
+ * league. Self-voting is allowed (you're still a member of your own
+ * league).
  */
 export async function castPlayerGrade(formData: FormData): Promise<ActionResult> {
   const session = await readSession();
@@ -21,37 +22,44 @@ export async function castPlayerGrade(formData: FormData): Promise<ActionResult>
     return { ok: false, error: "Sign in to grade players." };
   }
   const targetId = String(formData.get("targetId") ?? "");
+  const leagueId = String(formData.get("leagueId") ?? "");
   const grade = String(formData.get("grade") ?? "");
   if (!targetId) return { ok: false, error: "Missing target." };
+  if (!leagueId) return { ok: false, error: "Missing league context." };
   if (!isVotableGrade(grade)) {
     return { ok: false, error: "Pick a grade." };
   }
 
-  // Voter must share at least one league with the target. Voting on
-  // yourself is allowed — that's still your own league.
-  const targetLeagues = await db
+  // Both target and voter must be members of THIS league.
+  const [targetMember] = await db
     .select({ leagueId: leaguePlayers.leagueId })
     .from(leaguePlayers)
-    .where(eq(leaguePlayers.playerId, targetId));
-  if (targetLeagues.length === 0) {
-    return { ok: false, error: "This player isn't in any league yet." };
+    .where(
+      and(
+        eq(leaguePlayers.playerId, targetId),
+        eq(leaguePlayers.leagueId, leagueId),
+      ),
+    )
+    .limit(1);
+  if (!targetMember) {
+    return { ok: false, error: "This player isn't in that league." };
   }
+
   if (session.playerId !== targetId) {
-    const targetLeagueIds = targetLeagues.map((r) => r.leagueId);
-    const [overlap] = await db
+    const [voterMember] = await db
       .select({ leagueId: leaguePlayers.leagueId })
       .from(leaguePlayers)
       .where(
         and(
           eq(leaguePlayers.playerId, session.playerId),
-          inArray(leaguePlayers.leagueId, targetLeagueIds),
+          eq(leaguePlayers.leagueId, leagueId),
         ),
       )
       .limit(1);
-    if (!overlap) {
+    if (!voterMember) {
       return {
         ok: false,
-        error: "You can only grade players in your league.",
+        error: "You can only grade players in leagues you're in.",
       };
     }
   }
@@ -61,36 +69,48 @@ export async function castPlayerGrade(formData: FormData): Promise<ActionResult>
     .values({
       targetPlayerId: targetId,
       voterPlayerId: session.playerId,
+      leagueId,
       grade,
     })
     .onConflictDoUpdate({
-      target: [playerGrades.targetPlayerId, playerGrades.voterPlayerId],
+      target: [
+        playerGrades.targetPlayerId,
+        playerGrades.voterPlayerId,
+        playerGrades.leagueId,
+      ],
       set: { grade, updatedAt: new Date() },
     });
 
   revalidatePath(`/players/${targetId}`);
   revalidatePath("/players");
+  revalidatePath(`/leagues/${leagueId}`);
   return { ok: true };
 }
 
 /**
- * Remove the viewer's vote on a target. Used by the "Clear" action
- * in the grade widget.
+ * Remove the viewer's vote on a target in a specific league. Used by
+ * the "Clear" action in the grade widget.
  */
-export async function clearPlayerGrade(targetId: string): Promise<ActionResult> {
+export async function clearPlayerGrade(
+  targetId: string,
+  leagueId: string,
+): Promise<ActionResult> {
   const session = await readSession();
   if (!session?.playerId) {
     return { ok: false, error: "Sign in to grade players." };
   }
+  if (!leagueId) return { ok: false, error: "Missing league context." };
   await db
     .delete(playerGrades)
     .where(
       and(
         eq(playerGrades.targetPlayerId, targetId),
         eq(playerGrades.voterPlayerId, session.playerId),
+        eq(playerGrades.leagueId, leagueId),
       ),
     );
   revalidatePath(`/players/${targetId}`);
   revalidatePath("/players");
+  revalidatePath(`/leagues/${leagueId}`);
   return { ok: true };
 }

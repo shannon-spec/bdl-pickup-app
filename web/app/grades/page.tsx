@@ -90,6 +90,29 @@ export default async function GradesPage({
             />
           </div>
 
+          {context === "player" && (
+            <div className="rk-note">
+              <div className="rk-note-label">How player grades work</div>
+              <p>
+                Grades are <strong>per league</strong>. The same player can be a
+                Game Changer in one league and Intermediate in a stronger one —
+                the tier reflects how they play <em>in that specific room</em>.
+                Anywhere you see a player&rsquo;s grade, it&rsquo;s scoped to
+                the league you&rsquo;re browsing. Their{" "}
+                <strong>profile</strong> shows the full picture: one row per
+                league they&rsquo;re in.
+              </p>
+              <p>
+                Voting is league-scoped too. When you grade someone, your vote
+                counts toward the league you&rsquo;re currently inside —
+                shown as <em>&ldquo;counts toward {`{league}`}&rdquo;</em> next
+                to the form. Every vote is anonymous; individual votes are never
+                shown. Final grade blends peer votes (50%) and commissioner
+                votes (50%).
+              </p>
+            </div>
+          )}
+
           <ul className="rk-rows" role="list">
             {GRADES.map((g) => {
               const def = grades[g];
@@ -208,6 +231,38 @@ const pageStyles = `
   .rk-page .rk-rows {
     padding: 0 28px 8px;
   }
+  .rk-page .rk-note {
+    margin: 14px 28px 6px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: var(--brand-soft);
+    border: 1px solid color-mix(in srgb, var(--brand) 25%, transparent);
+    color: var(--text-2);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .rk-page .rk-note p {
+    margin: 0;
+  }
+  .rk-page .rk-note p + p {
+    margin-top: 8px;
+  }
+  .rk-page .rk-note strong {
+    color: var(--text);
+    font-weight: 700;
+  }
+  .rk-page .rk-note em {
+    font-style: italic;
+    color: var(--text);
+  }
+  .rk-page .rk-note-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--brand-ink, var(--brand));
+    margin-bottom: 8px;
+  }
   .rk-page .rk-row-active {
     background: rgba(232,119,34,0.08);
   }
@@ -233,6 +288,7 @@ const pageStyles = `
     .rk-page-header { padding: 22px 18px 6px; }
     .rk-page .rk-tabs { margin: 14px 18px 4px; }
     .rk-page .rk-rows { padding: 0 18px 8px; }
+    .rk-page .rk-note { margin: 12px 18px 6px; }
     .rk-bottom { padding: 14px 18px 22px; }
     .rk-page .rk-row {
       grid-template-columns: 1fr;
