@@ -160,6 +160,55 @@ export async function createInvite(
   return { ok: true, data: { id: row.id } };
 }
 
+/**
+ * Mint a fresh pending invite from a previously-accepted (or
+ * expired) one. Same name/email/cell, new ID, status=pending. Used
+ * when a commissioner needs a fresh link without re-typing — e.g.
+ * the original recipient lost the email, or the invite was used by
+ * a tester and needs to be regenerated for the real recipient.
+ *
+ * The original invite row is left in place. Only its status matters
+ * to the public accept page, and we don't want to lose history.
+ */
+export async function regenerateInvite(
+  inviteId: string,
+): Promise<ActionResult<{ id: string }>> {
+  const [orig] = await db
+    .select()
+    .from(invites)
+    .where(eq(invites.id, inviteId))
+    .limit(1);
+  if (!orig) return { ok: false, error: "Invite not found." };
+  if (!orig.leagueId) return { ok: false, error: "Original invite has no league." };
+
+  const session = await requireLeagueManager(orig.leagueId);
+  await requireManageView();
+
+  const [league] = await db
+    .select({ id: leagues.id, name: leagues.name })
+    .from(leagues)
+    .where(eq(leagues.id, orig.leagueId))
+    .limit(1);
+  if (!league) return { ok: false, error: "League not found." };
+
+  const [row] = await db
+    .insert(invites)
+    .values({
+      leagueId: league.id,
+      leagueName: league.name,
+      firstName: orig.firstName,
+      lastName: orig.lastName,
+      email: orig.email,
+      cell: orig.cell,
+      invitedBy: session.playerId,
+      status: "pending",
+    })
+    .returning({ id: invites.id });
+
+  revalidatePath(`/leagues/${orig.leagueId}`);
+  return { ok: true, data: { id: row.id } };
+}
+
 export async function deleteInvite(inviteId: string): Promise<ActionResult> {
   // Look up the invite first to authorize against its league.
   const [inv] = await db

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Copy, Mail, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Copy, Mail, Pencil, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import type { LeagueDetail } from "@/lib/queries/leagues";
 import {
   addCommissioner,
@@ -12,7 +12,11 @@ import {
   removeCommissioner,
   removeLeaguePlayer,
 } from "@/lib/actions/leagues";
-import { createInvite, deleteInvite } from "@/lib/actions/invites";
+import {
+  createInvite,
+  deleteInvite,
+  regenerateInvite,
+} from "@/lib/actions/invites";
 import { Pill } from "@/components/bdl/pill";
 
 type PlayerLite = { id: string; firstName: string; lastName: string };
@@ -365,8 +369,28 @@ export function Invites({
       if (res.ok) router.refresh();
     });
 
+  const onRegen = (id: string) => {
+    setError(null);
+    setSuccess(null);
+    start(async () => {
+      const res = await regenerateInvite(id);
+      if (res.ok) {
+        setSuccess("Fresh invite link minted. See pending list above.");
+        router.refresh();
+      } else {
+        setError(res.error);
+      }
+    });
+  };
+
   const pendingInvites = invites.filter((i) => i.status === "pending");
-  const acceptedInvites = invites.filter((i) => i.status === "accepted");
+  // Recent accepted invites — surfaced so commissioners can mint a
+  // fresh link for the same person without re-typing name/email
+  // (e.g. they tested the original or the recipient lost the email).
+  // Cap at 8 so the UI doesn't sprawl on busy leagues.
+  const acceptedInvites = invites
+    .filter((i) => i.status === "accepted")
+    .slice(0, 8);
 
   return (
     <>
@@ -501,8 +525,40 @@ export function Invites({
       )}
 
       {acceptedInvites.length > 0 && (
-        <div className="text-[11.5px] text-[color:var(--text-3)] mt-2">
-          {acceptedInvites.length} accepted
+        <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden mt-3">
+          <div className="px-5 py-2.5 border-b border-[color:var(--hairline)] flex items-center justify-between">
+            <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)]">
+              Accepted
+            </div>
+            <span className="text-[11px] text-[color:var(--text-4)]">
+              {acceptedInvites.length}
+            </span>
+          </div>
+          {acceptedInvites.map((inv) => (
+            <div
+              key={inv.id}
+              className="grid grid-cols-[1fr_auto] items-center gap-3 px-5 py-3 border-t border-[color:var(--hairline)] first:border-t-0 max-sm:grid-cols-1 max-sm:gap-1.5"
+            >
+              <div className="min-w-0">
+                <div className="font-bold text-[14px]">
+                  {inv.firstName} {inv.lastName}
+                </div>
+                <div className="text-[11.5px] text-[color:var(--text-3)] truncate">
+                  {inv.email}
+                  {inv.cell ? ` · ${inv.cell}` : ""}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onRegen(inv.id)}
+                disabled={pending}
+                title="Mint a fresh invite link with the same name/email"
+                className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[12px] font-medium hover:bg-[color:var(--surface-2)] disabled:opacity-60"
+              >
+                <RotateCcw size={13} /> Regenerate
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
