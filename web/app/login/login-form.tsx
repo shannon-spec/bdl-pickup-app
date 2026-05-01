@@ -27,13 +27,14 @@ export function LoginForm() {
     <form action={onSubmit} className="flex flex-col gap-3">
       <label className="flex flex-col gap-1.5">
         <span className="text-[11px] font-semibold tracking-[0.12em] uppercase text-[color:var(--text-3)]">
-          Username
+          Username or email
         </span>
         <input
           name="username"
           autoComplete="username"
           autoFocus
           required
+          placeholder="username or you@example.com"
           className="h-10 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface-2)] px-3 text-[14px] text-[color:var(--text)] outline-none focus:border-[color:var(--brand)] focus:ring-2 focus:ring-[color:var(--brand-soft)]"
         />
       </label>

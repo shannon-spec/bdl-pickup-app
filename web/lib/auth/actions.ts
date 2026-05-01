@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import { db, superAdmins, players } from "@/lib/db";
@@ -27,19 +27,36 @@ function safeEq(a: string, b: string): boolean {
 
 export type SignInResult = { ok: true } | { ok: false; error: string };
 
-export async function signInAdmin(formData: FormData): Promise<SignInResult> {
-  const username = String(formData.get("username") ?? "").trim().toLowerCase();
-  const password = String(formData.get("password") ?? "");
-  if (!username || !password) {
-    return { ok: false, error: "Username and password are required." };
-  }
+const looksLikeEmail = (s: string) => s.includes("@");
 
-  // Try super_admins first — shared-password gate stays in place for them.
-  const [admin] = await db
+export async function signInAdmin(formData: FormData): Promise<SignInResult> {
+  // The form field is still named "username" but accepts either a
+  // username OR an email — whichever the user remembers. Heuristic:
+  // anything containing "@" is treated as an email.
+  const identifier = String(formData.get("username") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
+  if (!identifier || !password) {
+    return { ok: false, error: "Username/email and password are required." };
+  }
+  const isEmail = looksLikeEmail(identifier);
+
+  // Look up super_admins by either username or email. `players.email`
+  // and `super_admins.email` aren't unique columns, so an email match
+  // could in theory return multiple rows. We refuse ambiguous matches
+  // outright — same generic error so we don't leak which side failed.
+  const adminMatches = await db
     .select()
     .from(superAdmins)
-    .where(eq(superAdmins.username, username))
-    .limit(1);
+    .where(
+      isEmail
+        ? sql`lower(${superAdmins.email}) = ${identifier}`
+        : eq(superAdmins.username, identifier),
+    )
+    .limit(2);
+  if (adminMatches.length > 1) {
+    return { ok: false, error: "Invalid credentials." };
+  }
+  const admin = adminMatches[0];
 
   if (admin) {
     const expected = process.env.ADMIN_SHARED_PASSWORD;
@@ -64,15 +81,26 @@ export async function signInAdmin(formData: FormData): Promise<SignInResult> {
 
   // Fall back to player credentials. Players store a per-account bcrypt
   // hash; no shared password.
-  const [player] = await db
+  const playerMatches = await db
     .select({
       id: players.id,
       username: players.username,
       passwordHash: players.passwordHash,
     })
     .from(players)
-    .where(eq(players.username, username))
-    .limit(1);
+    .where(
+      isEmail
+        ? sql`lower(${players.email}) = ${identifier}`
+        : eq(players.username, identifier),
+    )
+    .limit(2);
+  if (playerMatches.length > 1) {
+    // Ambiguous — multiple players with the same email. Refuse and
+    // keep the error generic. The phase-2 unique-email constraint
+    // makes this branch unreachable.
+    return { ok: false, error: "Invalid credentials." };
+  }
+  const player = playerMatches[0];
 
   if (!player || !player.passwordHash) {
     return { ok: false, error: "Invalid credentials." };
@@ -82,7 +110,7 @@ export async function signInAdmin(formData: FormData): Promise<SignInResult> {
 
   const token = await createSession({
     adminId: "",
-    username: player.username ?? username,
+    username: player.username ?? identifier,
     role: "player",
     playerId: player.id,
   });
