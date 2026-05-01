@@ -135,7 +135,13 @@ export const players = pgTable(
   },
   (t) => [
     index("players_last_first_idx").on(t.lastName, t.firstName),
-    index("players_email_idx").on(t.email),
+    // Email is unique among non-null values. Multiple players can
+    // legitimately have null email (legacy/imported names) so the
+    // index is partial. Enforces single-account-per-email and makes
+    // login-by-email unambiguous by construction.
+    uniqueIndex("players_email_uq")
+      .on(t.email)
+      .where(sql`email IS NOT NULL`),
     uniqueIndex("players_username_idx").on(t.username),
   ],
 );
