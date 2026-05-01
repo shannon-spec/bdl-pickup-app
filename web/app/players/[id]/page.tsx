@@ -3,7 +3,11 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ChevronUp } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
 import { getViewCaps } from "@/lib/auth/view";
-import { canEditPlayer } from "@/lib/auth/perms";
+import {
+  canEditPlayer,
+  getMyCommissionerLeagueIds,
+  getMyMemberLeagueIds,
+} from "@/lib/auth/perms";
 import {
   getPlayerContactAccess,
   type ContactAccess,
@@ -55,17 +59,34 @@ export default async function PlayerProfilePage({
   // league's crowd grade + admin override.
   const leagueGrades = await getPlayerGradesByLeague(id);
 
-  // Pick the league the BDL Grade card is scoped to. Prefer the
-  // active-league cookie when the target is in it; otherwise fall
-  // back to the target's first league. The aggregate query
-  // determines `canVote` based on whether the voter is also a
-  // member of that league, so non-members see a read-only card.
+  // Pick the league the BDL Grade card is scoped to. Priority:
+  //   1. active-league cookie if both target AND viewer are in it
+  //   2. any league the viewer and target share (so the voter
+  //      always lands on a league they can actually vote in)
+  //   3. target's first league (read-only display for outside viewers)
+  // Falling straight to (3) when the cookie isn't set was the
+  // original bug — viewers in CPA League looking at someone in
+  // [Hillsboro, CPA] would land on Hillsboro just because it sorted
+  // first, and the panel would silently disappear (canVote = false).
   const activeLeagueId = await getActiveLeagueId();
   const targetLeagueIds = leagueGrades.map((r) => r.leagueId);
+  const viewerLeagueIds = session
+    ? Array.from(
+        new Set([
+          ...(await getMyMemberLeagueIds(session)),
+          ...(await getMyCommissionerLeagueIds(session)),
+        ]),
+      )
+    : [];
+  const sharedWithViewer = targetLeagueIds.filter((lid) =>
+    viewerLeagueIds.includes(lid),
+  );
   const voteLeagueId =
-    activeLeagueId && targetLeagueIds.includes(activeLeagueId)
+    activeLeagueId &&
+    targetLeagueIds.includes(activeLeagueId) &&
+    (viewerLeagueIds.length === 0 || viewerLeagueIds.includes(activeLeagueId))
       ? activeLeagueId
-      : targetLeagueIds[0] ?? null;
+      : sharedWithViewer[0] ?? targetLeagueIds[0] ?? null;
   const gradeAgg = voteLeagueId
     ? await getPlayerGradeAggregate(id, voteLeagueId, session)
     : null;
