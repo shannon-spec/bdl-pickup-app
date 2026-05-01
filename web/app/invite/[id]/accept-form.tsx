@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { acceptInvite } from "@/lib/actions/invites";
 
 const POSITIONS = ["", "PG", "SG", "SF", "PF", "C", "G", "F"];
 
 export function AcceptForm({ inviteId }: { inviteId: string }) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
   const [pending, start] = useTransition();
 
   const onSubmit = (formData: FormData) => {
@@ -15,18 +16,16 @@ export function AcceptForm({ inviteId }: { inviteId: string }) {
     formData.set("inviteId", inviteId);
     start(async () => {
       const res = await acceptInvite(formData);
-      if (res.ok) setDone(true);
-      else setError(res.error);
+      if (res.ok) {
+        // Redirect to the same invite URL with ?accepted=1 so the
+        // server renders a celebratory welcome state. Refreshing
+        // there stays put — no more "Already accepted" surprise.
+        router.replace(`/invite/${inviteId}?accepted=1`);
+      } else {
+        setError(res.error);
+      }
     });
   };
-
-  if (done) {
-    return (
-      <div className="rounded-[var(--r-md)] bg-[color:var(--up-soft)] text-[color:var(--up)] px-4 py-3 text-[13px] text-center">
-        You&apos;re in. See you on the court.
-      </div>
-    );
-  }
 
   return (
     <form action={onSubmit} className="flex flex-col gap-3">
