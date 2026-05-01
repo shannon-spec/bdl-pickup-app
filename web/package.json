@@ -15,7 +15,8 @@
     "db:verify": "dotenv -e .env.local -- tsx scripts/verify-db.ts",
     "db:seed": "dotenv -e .env.local -- tsx scripts/seed.ts",
     "db:backup": "node --env-file=.env.local scripts/backup.mjs",
-    "db:migrate:grades": "dotenv -e .env.local -- tsx scripts/migrate-grades-per-league.ts"
+    "db:migrate:grades": "dotenv -e .env.local -- tsx scripts/migrate-grades-per-league.ts",
+    "db:cleanup:grade-explosions": "dotenv -e .env.local -- tsx scripts/cleanup-grade-explosions.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

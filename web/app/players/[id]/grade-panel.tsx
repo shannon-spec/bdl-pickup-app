@@ -71,13 +71,24 @@ export function GradePanel({
 
   return (
     <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6">
-      <div className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)] flex items-center justify-between gap-2 mb-5">
-        <span className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <div className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)] flex items-center gap-2">
           <span aria-hidden className="w-[3px] h-[12px] rounded-sm bg-[color:var(--brand)]" />
           BDL Grade
-        </span>
-        <span className="text-[10px] font-semibold tracking-[0.08em] uppercase text-[color:var(--text-3)] normal-case">
-          in {leagueName}
+        </div>
+        {/* Prominent league-attribution pill — makes the per-league
+            scope unmissable so a viewer never confuses one league's
+            grade for another's. */}
+        <span
+          className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-[11px] font-bold tracking-[0.04em] uppercase whitespace-nowrap"
+          style={{
+            background: "var(--brand-soft)",
+            color: "var(--brand-ink, var(--brand))",
+            boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--brand) 25%, transparent)",
+          }}
+        >
+          <span aria-hidden className="w-1.5 h-1.5 rounded-full bg-[color:var(--brand)]" />
+          For {leagueName}
         </span>
       </div>
 
