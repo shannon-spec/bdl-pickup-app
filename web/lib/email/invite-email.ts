@@ -322,6 +322,48 @@ export function sendTempCredentialsEmail(ctx: TempCredentialsEmailContext) {
   return send({ to: ctx.to, subject, text, html });
 }
 
+/**
+ * Direct-message email — sent when an admin or commissioner DMs a
+ * player with the Email channel toggled on. The body is the message
+ * text the sender typed; we add a salutation, a "Reply on BDL" CTA
+ * back to the in-app thread, and the standard footer.
+ */
+export type DirectMessageEmailContext = {
+  to: string;
+  /** Recipient's first name when known — for the salutation. */
+  firstName: string | null;
+  /** Display name of the sending admin/commissioner. */
+  fromName: string;
+  body: string;
+  /** Already-absolute URL to the in-app thread (/messages/{senderId}). */
+  threadUrl: string;
+};
+
+export function sendDirectMessageEmail(ctx: DirectMessageEmailContext) {
+  const subject = `${ctx.fromName} sent you a message on BDL`;
+  const greeting = ctx.firstName ? `Hi ${ctx.firstName},` : "Hi,";
+  const fromLine = `${ctx.fromName} sent you a direct message on BDL — Ball Don't Lie.`;
+
+  const text =
+    `${greeting}\n\n` +
+    `${fromLine}\n\n` +
+    `${ctx.body}\n\n` +
+    `Reply on BDL: ${ctx.threadUrl}\n\n— BDL`;
+
+  const html = wrapHtml(`
+    <p style="font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#666;margin:0 0 8px;">BDL · DIRECT MESSAGE</p>
+    <h2 style="margin:0 0 14px;font-size:20px;letter-spacing:-0.01em;line-height:1.25;">${escapeHtml(ctx.fromName)} sent you a message</h2>
+    <p style="font-size:14px;line-height:1.55;margin:0 0 6px;color:#333;">${escapeHtml(greeting)}</p>
+    <p style="font-size:14px;line-height:1.55;margin:0 0 14px;color:#333;">${escapeHtml(fromLine)}</p>
+    <div style="font-size:14px;line-height:1.6;color:#0a0a0a;white-space:pre-wrap;border-left:3px solid #2563eb;background:#f5f8ff;padding:14px 16px;border-radius:6px;margin:0 0 16px;">${escapeHtml(ctx.body)}</div>
+    <p style="margin:18px 0;">
+      <a href="${escapeHtml(ctx.threadUrl)}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;font-size:14px;">Reply on BDL</a>
+    </p>
+    <p style="color:#666;font-size:13px;margin:0;">Or paste this URL: <a href="${escapeHtml(ctx.threadUrl)}">${escapeHtml(ctx.threadUrl)}</a></p>
+  `);
+  return send({ to: ctx.to, subject, text, html });
+}
+
 export function sendSeatsFilledNotice(ctx: Omit<InviteEmailContext, "expiresAtLabel" | "teamAName" | "teamBName">) {
   const subject = `${ctx.leagueName}: seats filled`;
   const text =

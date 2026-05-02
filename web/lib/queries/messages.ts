@@ -282,6 +282,10 @@ export type MessageablePlayer = {
    *  (via membership or commissioner role). Drives the "Your Leagues"
    *  vs "BDL Universe" sectioning in the picker. */
   inMyLeague: boolean;
+  /** True when the player has an email on file (used to enable the
+   *  Email channel toggle when an admin/commissioner DMs them). The
+   *  actual address is never returned to the client. */
+  hasEmail: boolean;
 };
 
 /**
@@ -326,13 +330,18 @@ export async function getMessageablePlayers(
       firstName: players.firstName,
       lastName: players.lastName,
       avatarUrl: players.avatarUrl,
+      emailHash: players.emailHash,
     })
     .from(players)
     .where(ne(players.id, session.playerId))
     .orderBy(asc(players.firstName), asc(players.lastName));
 
   return rows.map((r) => ({
-    ...r,
+    id: r.id,
+    firstName: r.firstName,
+    lastName: r.lastName,
+    avatarUrl: r.avatarUrl,
     inMyLeague: inLeagueIds.has(r.id),
+    hasEmail: !!r.emailHash,
   }));
 }

@@ -3,13 +3,21 @@
 import { z } from "zod";
 import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import {
   db,
   conversations,
   messages,
+  players,
 } from "@/lib/db";
 import { readSession } from "@/lib/auth/session";
 import { canMessage, canonicalPair } from "@/lib/auth/messaging";
+import { getViewCaps } from "@/lib/auth/view";
+import { decryptOptional } from "@/lib/crypto/secrets";
+import {
+  isInviteEmailConfigured,
+  sendDirectMessageEmail,
+} from "@/lib/email/invite-email";
 
 export type ActionResult<T = unknown> =
   | { ok: true; data: T }
@@ -18,6 +26,7 @@ export type ActionResult<T = unknown> =
 const sendSchema = z.object({
   toPlayerId: z.string().uuid(),
   body: z.string().trim().min(1, "Message can't be blank.").max(4000),
+  alsoEmail: z.boolean().optional(),
 });
 
 /**
@@ -28,7 +37,17 @@ const sendSchema = z.object({
 export async function sendMessage(input: {
   toPlayerId: string;
   body: string;
-}): Promise<ActionResult<{ messageId: string; conversationId: string }>> {
+  /** When true AND the sender is an admin or commissioner, also
+   *  deliver the message via email to the recipient. Silently ignored
+   *  for player-view senders or recipients without an email on file. */
+  alsoEmail?: boolean;
+}): Promise<
+  ActionResult<{
+    messageId: string;
+    conversationId: string;
+    emailSent: boolean;
+  }>
+> {
   const session = await readSession();
   if (!session?.playerId) return { ok: false, error: "Sign in to send messages." };
 
@@ -36,7 +55,7 @@ export async function sendMessage(input: {
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
   }
-  const { toPlayerId, body } = parsed.data;
+  const { toPlayerId, body, alsoEmail } = parsed.data;
 
   if (toPlayerId === session.playerId) {
     return { ok: false, error: "You can't message yourself." };
@@ -76,9 +95,54 @@ export async function sendMessage(input: {
     })
     .returning({ id: messages.id });
 
+  let emailSent = false;
+  if (alsoEmail) {
+    const caps = await getViewCaps(session);
+    const canEmail =
+      (caps.view === "admin" || caps.view === "commissioner") &&
+      isInviteEmailConfigured();
+    if (canEmail) {
+      const [recipient] = await db
+        .select({
+          firstName: players.firstName,
+          email: players.email,
+        })
+        .from(players)
+        .where(eq(players.id, toPlayerId))
+        .limit(1);
+      const [sender] = await db
+        .select({
+          firstName: players.firstName,
+          lastName: players.lastName,
+        })
+        .from(players)
+        .where(eq(players.id, session.playerId))
+        .limit(1);
+      const decryptedEmail = decryptOptional(recipient?.email ?? null);
+      if (recipient && sender && decryptedEmail) {
+        const h = await headers();
+        const origin =
+          h.get("origin") ||
+          `${h.get("x-forwarded-proto") ?? "https"}://${h.get("x-forwarded-host") ?? h.get("host") ?? "bdlpickup.com"}`;
+        const fromName = `${sender.firstName} ${sender.lastName}`.trim();
+        const result = await sendDirectMessageEmail({
+          to: decryptedEmail,
+          firstName: recipient.firstName,
+          fromName,
+          body,
+          threadUrl: `${origin}/messages/${session.playerId}`,
+        });
+        emailSent = result.ok;
+      }
+    }
+  }
+
   revalidatePath("/messages");
   revalidatePath(`/messages/${toPlayerId}`);
-  return { ok: true, data: { messageId: msg.id, conversationId: convo.id } };
+  return {
+    ok: true,
+    data: { messageId: msg.id, conversationId: convo.id, emailSent },
+  };
 }
 
 /** Mark every unread message in this thread (sent by the OTHER party) as read for the viewer. */
