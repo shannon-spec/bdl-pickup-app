@@ -187,7 +187,7 @@ export function GradePanel({
         </form>
       ) : null}
 
-      <p className="text-[11px] text-[color:var(--text-4)] mt-5 italic">
+      <p className="text-[12px] text-[color:var(--text-2)] mt-5 font-bold">
         All player-grade voting is anonymous — individual votes are
         never shown.
       </p>
