@@ -8,7 +8,7 @@ import {
   getMyMemberLeagueIds,
 } from "@/lib/auth/perms";
 import { canMessage } from "@/lib/auth/messaging";
-import { Lock, MessageSquare } from "lucide-react";
+import { Lock, MessageSquare, Pencil } from "lucide-react";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
@@ -110,61 +110,55 @@ export default async function PlayerProfilePage({
           <ArrowLeft size={13} /> Players
         </Link>
 
-        <div className="flex items-start gap-4 max-sm:flex-col max-sm:items-start">
-          <PlayerAvatar url={player.avatarUrl} initials={initials} size={64} />
-          <div className="flex-1 min-w-0">
-            <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)] flex items-center gap-2">
-              Player Profile
-              {isMe && <Pill tone="brand">You</Pill>}
+        {isMe ? (
+          <SelfProfileBar player={player} canEdit={canEdit} />
+        ) : (
+          <div className="flex items-start gap-4 max-sm:flex-col max-sm:items-start">
+            <PlayerAvatar url={player.avatarUrl} initials={initials} size={64} />
+            <div className="flex-1 min-w-0">
+              <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)]">
+                Player Profile
+              </div>
+              <h1 className="text-[26px] font-extrabold tracking-[-0.03em] mt-0.5">
+                {player.firstName} {player.lastName}
+              </h1>
+              <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                <Pill
+                  tone={
+                    player.status === "Active"
+                      ? "win"
+                      : player.status === "IR"
+                        ? "loss"
+                        : "neutral"
+                  }
+                  dot={player.status === "Active"}
+                >
+                  {player.status}
+                </Pill>
+                {player.position && (
+                  <Pill tone="neutral">{player.position}</Pill>
+                )}
+                {player.city && (
+                  <span className="text-[12px] text-[color:var(--text-3)]">
+                    {player.city}
+                    {player.state ? `, ${player.state}` : ""}
+                  </span>
+                )}
+              </div>
             </div>
-            <h1 className="text-[26px] font-extrabold tracking-[-0.03em] mt-0.5">
-              {player.firstName} {player.lastName}
-            </h1>
-            <div className="flex items-center gap-1.5 flex-wrap mt-2">
-              <Pill
-                tone={
-                  player.status === "Active"
-                    ? "win"
-                    : player.status === "IR"
-                    ? "loss"
-                    : "neutral"
-                }
-                dot={player.status === "Active"}
-              >
-                {player.status}
-              </Pill>
-              {/* Header no longer carries a global grade pill — grades
-                  are per-league and surfaced in the Grade card / By
-                  League table below. */}
-              {player.position && <Pill tone="neutral">{player.position}</Pill>}
-              {player.city && (
-                <span className="text-[12px] text-[color:var(--text-3)]">
-                  {player.city}
-                  {player.state ? `, ${player.state}` : ""}
-                </span>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {canDm && (
+                <Link
+                  href={`/messages/${player.id}`}
+                  className="inline-flex items-center gap-2 h-10 px-3.5 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[12px] font-bold tracking-[0.06em] uppercase hover:bg-[color:var(--surface-2)] transition-colors"
+                >
+                  <MessageSquare size={13} /> Message
+                </Link>
               )}
+              {canEdit && <EditPlayerButton playerId={player.id} />}
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {canDm && (
-              <Link
-                href={`/messages/${player.id}`}
-                className="inline-flex items-center gap-2 h-10 px-3.5 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[12px] font-bold tracking-[0.06em] uppercase hover:bg-[color:var(--surface-2)] transition-colors"
-              >
-                <MessageSquare size={13} /> Message
-              </Link>
-            )}
-            {isMe && (
-              <Link
-                href="/account"
-                className="inline-flex items-center gap-2 h-10 px-3.5 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[12px] font-bold tracking-[0.06em] uppercase hover:bg-[color:var(--surface-2)] transition-colors"
-              >
-                Account
-              </Link>
-            )}
-            {canEdit && <EditPlayerButton playerId={player.id} />}
-          </div>
-        </div>
+        )}
 
         {/* Career stats */}
         <section className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-7 pt-6 pb-5 max-sm:px-5">
@@ -607,6 +601,114 @@ function Field({
         {value}
       </span>
     </div>
+  );
+}
+
+/**
+ * Self-view header replacement — your name, avatar, and chips are
+ * already in the unified context header, so this surface focuses on
+ * what's UNIQUE to the profile page: a profile-completion meter and
+ * the Account / Edit Profile actions.
+ */
+function SelfProfileBar({
+  player,
+  canEdit,
+}: {
+  player: PlayerType;
+  canEdit: boolean;
+}) {
+  const hometown = player.city
+    ? `${player.city}${player.state ? `, ${player.state}` : ""}`
+    : null;
+  const checks: Array<{ key: string; label: string; ok: boolean }> = [
+    { key: "position", label: "Position", ok: !!player.position },
+    { key: "hometown", label: "Hometown", ok: !!hometown },
+    { key: "height", label: "Height", ok: player.heightFt !== null },
+    { key: "weight", label: "Weight", ok: player.weight !== null },
+    { key: "headshot", label: "Headshot", ok: !!player.avatarUrl },
+  ];
+  const missing = checks.filter((c) => !c.ok);
+  const pct = Math.round(
+    ((checks.length - missing.length) / checks.length) * 100,
+  );
+
+  return (
+    <section className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-5 py-4 flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <span
+            aria-hidden
+            className="w-[3px] h-[12px] rounded-sm bg-[color:var(--brand)]"
+          />
+          <span className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)]">
+            Your Profile
+          </span>
+          <Pill
+            tone={
+              player.status === "Active"
+                ? "win"
+                : player.status === "IR"
+                  ? "loss"
+                  : "neutral"
+            }
+            dot={player.status === "Active"}
+          >
+            {player.status}
+          </Pill>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Link
+            href="/account"
+            className="inline-flex items-center gap-2 h-9 px-3.5 rounded-full border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[11.5px] font-bold tracking-[0.04em] uppercase text-[color:var(--text-2)] hover:text-[color:var(--text)] hover:bg-[color:var(--surface-2)] transition-colors"
+          >
+            Account
+          </Link>
+          {canEdit && (
+            <Link
+              href={`/players/${player.id}/edit`}
+              className="inline-flex items-center gap-2 h-9 px-3.5 rounded-full bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white text-[11.5px] font-bold tracking-[0.04em] uppercase shadow-[var(--cta-shadow)]"
+            >
+              <Pencil size={12} /> Edit Profile
+            </Link>
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center justify-between text-[11px] font-semibold tracking-[0.06em] uppercase">
+          <span className="text-[color:var(--text-3)]">Profile Completion</span>
+          <span
+            className={`font-[family-name:var(--mono)] num ${
+              pct === 100
+                ? "text-[color:var(--up)]"
+                : "text-[color:var(--text-2)]"
+            }`}
+          >
+            {pct}%
+          </span>
+        </div>
+        <div className="h-1.5 w-full rounded-full bg-[color:var(--surface-2)] overflow-hidden">
+          <div
+            className="h-full rounded-full bg-[color:var(--brand)] transition-[width]"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        {missing.length > 0 && (
+          <div className="text-[12px] text-[color:var(--text-3)] mt-0.5">
+            <span className="text-[color:var(--text-3)]">Still missing: </span>
+            {missing.map((m, i) => (
+              <span
+                key={m.key}
+                className="font-semibold text-[color:var(--text-2)]"
+              >
+                {m.label}
+                {i < missing.length - 1 ? ", " : ""}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
