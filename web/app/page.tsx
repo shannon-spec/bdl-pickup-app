@@ -140,10 +140,12 @@ export default async function Home() {
             are" with a nudge to fill in missing fields. */}
         <ProfileHero player={me} leagueName={currentLeague.name} />
 
-        {/* Next Game — full-width when present. Skipped entirely
-            when no upcoming game, in which case the Commissioners
-            strip below carries the page. */}
-        {nextGame && (
+        {/* Next Game + Commissioners — paired two-column band on
+            desktop, stacked on narrow viewports. When there's no
+            upcoming game, the Commissioner strip stretches to full
+            width by itself instead of leaving an awkward empty col. */}
+        {nextGame ? (
+          <div className="grid grid-cols-2 gap-4 max-[1100px]:grid-cols-1 items-stretch">
           <section
             className="group relative rounded-[16px] border border-[color:var(--hairline-2)] overflow-hidden hover:border-[color:var(--hairline-2)]"
             style={{
@@ -255,10 +257,11 @@ export default async function Home() {
               })()}
             </div>
           </section>
+            <CommissionerStrip leagueId={currentLeague.id} />
+          </div>
+        ) : (
+          <CommissionerStrip leagueId={currentLeague.id} />
         )}
-
-        {/* Commissioners — full width below Next Game. */}
-        <CommissionerStrip leagueId={currentLeague.id} />
 
         {/* Hero */}
         <section className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-7 pt-6 pb-5 max-sm:px-5 max-sm:pt-5 max-sm:pb-4">
