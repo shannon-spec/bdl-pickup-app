@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ChevronRight, Users, Trophy, Globe, Settings, BarChart3, Activity, KeyRound, ShieldCheck } from "lucide-react";
+import { ChevronRight, Megaphone, Users, Trophy, Globe, Settings, BarChart3, Activity, KeyRound, ShieldCheck } from "lucide-react";
 import { count } from "drizzle-orm";
 import { readSession } from "@/lib/auth/session";
 import { isAdminLike } from "@/lib/auth/perms";
@@ -67,6 +67,12 @@ export default async function AdminPage() {
       icon: <KeyRound size={20} />,
       label: "Credentials",
       desc: "Issue logins for commissioners + players.",
+    },
+    {
+      href: "/admin/announcements",
+      icon: <Megaphone size={20} />,
+      label: "Announcements",
+      desc: "Send platform-wide or league announcements to player inboxes.",
     },
     {
       href: "/settings",

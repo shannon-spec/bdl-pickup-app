@@ -510,6 +510,67 @@ export const invites = pgTable(
   ],
 );
 
+/* ============== ANNOUNCEMENTS (in-app inbox) ============== */
+
+export const announcementScopeEnum = pgEnum("announcement_scope", [
+  "global",
+  "league",
+]);
+
+// Authored by an admin or commissioner. Scope = global → fans out to
+// every player; scope = league → fans out to that league's members
+// (leagueId required). Channels beyond the in-app inbox (email, push,
+// SMS) will layer on later — for v1 inbox is implicit.
+export const announcements = pgTable(
+  "announcements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    scope: announcementScopeEnum("scope").notNull(),
+    leagueId: uuid("league_id").references(() => leagues.id, {
+      onDelete: "cascade",
+    }),
+    authorId: uuid("author_id").references(() => players.id, {
+      onDelete: "set null",
+    }),
+    headline: text("headline").notNull(),
+    body: text("body").notNull(),
+    ctaLabel: text("cta_label"),
+    ctaUrl: text("cta_url"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("announcements_league_created_idx").on(t.leagueId, t.createdAt),
+    index("announcements_author_created_idx").on(t.authorId, t.createdAt),
+    index("announcements_created_idx").on(t.createdAt),
+  ],
+);
+
+// One row per (announcement, player) — the fan-out from a single
+// announcement to its audience. Read state is per-recipient so the
+// inbox can render unread counts and the badge.
+export const announcementRecipients = pgTable(
+  "announcement_recipients",
+  {
+    announcementId: uuid("announcement_id")
+      .notNull()
+      .references(() => announcements.id, { onDelete: "cascade" }),
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    dismissedAt: timestamp("dismissed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.announcementId, t.playerId] }),
+    index("announcement_recipients_player_read_idx").on(t.playerId, t.readAt),
+  ],
+);
+
 /* ============== PASSWORD RESET TOKENS ============== */
 
 // One-shot reset tokens emailed to players when they hit Forgot
@@ -620,6 +681,10 @@ export type SuperAdmin = typeof superAdmins.$inferSelect;
 export type NewSuperAdmin = typeof superAdmins.$inferInsert;
 export type Invite = typeof invites.$inferSelect;
 export type NewInvite = typeof invites.$inferInsert;
+export type Announcement = typeof announcements.$inferSelect;
+export type NewAnnouncement = typeof announcements.$inferInsert;
+export type AnnouncementRecipient = typeof announcementRecipients.$inferSelect;
+export type NewAnnouncementRecipient = typeof announcementRecipients.$inferInsert;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type NewPasswordResetToken = typeof passwordResetTokens.$inferInsert;
 

@@ -7,6 +7,7 @@ import { signOut } from "@/lib/auth/actions";
 import { readSession } from "@/lib/auth/session";
 import { getViewCaps, type View } from "@/lib/auth/view";
 import { db, players } from "@/lib/db";
+import { getUnreadAnnouncementCount } from "@/lib/queries/announcements";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -66,6 +67,12 @@ export async function TopBar({
     }
   }
 
+  // Bell badge — only render the dot when there's actually unread
+  // mail. Skipped for guests / unlinked admins (no playerId, no inbox).
+  const unreadCount = session?.playerId
+    ? await getUnreadAnnouncementCount(session.playerId)
+    : 0;
+
   return (
     <header
       className={cn(
@@ -122,9 +129,13 @@ export async function TopBar({
               <Settings size={16} />
             </Link>
           )}
-          <button
-            type="button"
-            aria-label="Notifications"
+          <Link
+            href="/inbox"
+            aria-label={
+              unreadCount > 0
+                ? `Inbox · ${unreadCount} unread`
+                : "Inbox"
+            }
             className={cn(
               "relative inline-flex items-center justify-center",
               "w-[34px] h-[34px] rounded-[var(--r-lg)]",
@@ -134,12 +145,14 @@ export async function TopBar({
             )}
           >
             <Bell size={16} />
-            <span
-              aria-hidden
-              className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[color:var(--brand)]"
-              style={{ boxShadow: "0 0 0 2px var(--badge-dot-border)" }}
-            />
-          </button>
+            {unreadCount > 0 && (
+              <span
+                aria-hidden
+                className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[color:var(--brand)]"
+                style={{ boxShadow: "0 0 0 2px var(--badge-dot-border)" }}
+              />
+            )}
+          </Link>
           {avatar &&
             (avatar.url ? (
               <Link
