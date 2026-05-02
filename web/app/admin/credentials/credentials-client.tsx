@@ -96,6 +96,11 @@ export function CredentialsTable({ rows }: { rows: CredRow[] }) {
                   ) : (
                     <Pill tone="neutral">No login</Pill>
                   )}
+                  {r.hasPassword && !r.email && (
+                    /* Locked out of Forgot Password — flag it so the
+                       admin can fix the email on this row. */
+                    <Pill tone="loss">No email</Pill>
+                  )}
                 </div>
                 <div className="text-[12px] text-[color:var(--text-3)] mt-0.5 truncate">
                   {r.username ? (
@@ -196,6 +201,10 @@ function CredentialModal({
     player.username ?? suggestUsername(player.firstName, player.lastName),
   );
   const [password, setPassword] = useState(generatePassword());
+  // Email is required so the player can use Forgot Password. Pre-fill
+  // from the player record when available; otherwise the admin must
+  // enter one before the credentials can be saved.
+  const [email, setEmail] = useState(player.email ?? "");
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<{ username: string; password: string } | null>(null);
   const [pending, start] = useTransition();
@@ -206,6 +215,7 @@ function CredentialModal({
     const fd = new FormData();
     fd.set("username", username);
     fd.set("password", password);
+    fd.set("email", email);
     start(async () => {
       try {
         const res = await setPlayerCredentials(player.id, fd);
@@ -283,6 +293,28 @@ function CredentialModal({
           <SavedCard saved={saved} onCopy={copy} copied={copied} onDone={onClose} />
         ) : (
           <div className="flex flex-col gap-3 mt-1">
+            {!player.email && (
+              <div className="rounded-[var(--r-md)] border border-[color:var(--warn)] bg-[color:var(--warn-soft)] px-3 py-2 text-[12px] text-[color:var(--warn)] leading-snug">
+                <span className="font-bold">Email is required.</span>{" "}
+                This player has no email on file — without one they
+                can&apos;t use Forgot Password to recover their account.
+              </div>
+            )}
+            <Field label="Email">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                spellCheck={false}
+                autoCapitalize="none"
+                placeholder="player@example.com"
+                required
+                className="w-full h-10 px-3 rounded-[var(--r-md)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[14px] outline-none"
+              />
+              <div className="text-[11.5px] text-[color:var(--text-3)] mt-1">
+                Used for Forgot Password. Saved to the player record.
+              </div>
+            </Field>
             <Field label="Username">
               <input
                 value={username}

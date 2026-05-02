@@ -47,6 +47,9 @@ async function canManagePlayerCreds(
 }
 
 const USERNAME_RE = /^[a-zA-Z0-9._-]{3,40}$/;
+// Pragmatic email regex — same shape Zod's .email() accepts, just
+// inlined to avoid pulling Zod for one check.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function setPlayerCredentials(
   playerId: string,
@@ -64,6 +67,8 @@ export async function setPlayerCredentials(
 
   const usernameRaw = String(formData.get("username") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
+  const emailRaw = String(formData.get("email") ?? "").trim().toLowerCase();
+
   if (!USERNAME_RE.test(usernameRaw)) {
     return {
       ok: false,
@@ -72,6 +77,29 @@ export async function setPlayerCredentials(
   }
   if (password.length < 8) {
     return { ok: false, error: "Password must be at least 8 characters." };
+  }
+
+  // Email is now required for any player with credentials. Without
+  // one, the forgot-password flow can never reach them — which is
+  // exactly the failure mode this guard exists to prevent.
+  const [current] = await db
+    .select({ email: players.email })
+    .from(players)
+    .where(eq(players.id, playerId))
+    .limit(1);
+  if (!current) {
+    return { ok: false, error: "Player not found." };
+  }
+  const finalEmail = emailRaw || current.email || "";
+  if (!finalEmail) {
+    return {
+      ok: false,
+      error:
+        "Email is required so the player can use Forgot Password. Add one to the player record or fill it here.",
+    };
+  }
+  if (!EMAIL_RE.test(finalEmail)) {
+    return { ok: false, error: "Email looks invalid." };
   }
 
   // Username uniqueness — across players AND super_admins so creds
@@ -93,10 +121,27 @@ export async function setPlayerCredentials(
     return { ok: false, error: "That username is reserved for an admin account." };
   }
 
+  // Email uniqueness — enforced at DB level by players_email_uq, but
+  // pre-check so we can return a friendly error instead of letting the
+  // unique-violation bubble up as a 500.
+  if (finalEmail !== current.email) {
+    const [emailClash] = await db
+      .select({ id: players.id })
+      .from(players)
+      .where(and(eq(players.email, finalEmail), ne(players.id, playerId)))
+      .limit(1);
+    if (emailClash) {
+      return {
+        ok: false,
+        error: "That email is already on another player's account.",
+      };
+    }
+  }
+
   const passwordHash = await bcrypt.hash(password, 10);
   await db
     .update(players)
-    .set({ username: usernameRaw, passwordHash })
+    .set({ username: usernameRaw, passwordHash, email: finalEmail })
     .where(eq(players.id, playerId));
 
   revalidatePath("/admin/credentials");
