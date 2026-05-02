@@ -26,11 +26,19 @@ export type CredentialRow = {
  * the current credential state so the UI can render Set vs Reset
  * actions without a second roundtrip.
  *
+ * When `leagueId` is provided, the result is further narrowed to
+ * members of that specific league — used to keep the Credentials
+ * page in sync with the active-league header context, so a
+ * commissioner viewing CPA League doesn't see Hillsboro members
+ * mixed into the same list.
+ *
  * Lives in /lib/queries (not in /lib/actions/credentials.ts) because
  * a "use server" file's exports are treated as RPC server actions —
  * fine for mutations, awkward for plain reads consumed by an RSC.
  */
-export async function getCredentialPlayers(): Promise<{
+export async function getCredentialPlayers(
+  opts: { leagueId?: string | null } = {},
+): Promise<{
   rows: CredentialRow[];
   scope: "admin" | "commissioner" | "none";
 }> {
@@ -46,6 +54,27 @@ export async function getCredentialPlayers(): Promise<{
       .from(leaguePlayers)
       .where(inArray(leaguePlayers.leagueId, myLeagues));
     allowedPlayerIds = new Set(memberRows.map((m) => m.playerId));
+  }
+
+  // Active-league scope: intersect with that league's roster.
+  // Applies to admins too — the header context drives what's
+  // shown, so flipping leagues swaps the list.
+  if (opts.leagueId) {
+    const leagueMemberRows = await db
+      .select({ playerId: leaguePlayers.playerId })
+      .from(leaguePlayers)
+      .where(inArray(leaguePlayers.leagueId, [opts.leagueId]));
+    const leagueMembers = new Set(leagueMemberRows.map((m) => m.playerId));
+    if (allowedPlayerIds) {
+      // Commissioner: keep only players who are both manageable AND
+      // in the active league.
+      for (const id of allowedPlayerIds) {
+        if (!leagueMembers.has(id)) allowedPlayerIds.delete(id);
+      }
+    } else {
+      // Admin: scope to the active league's roster directly.
+      allowedPlayerIds = leagueMembers;
+    }
   }
 
   const playerRows = await db

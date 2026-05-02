@@ -9,6 +9,7 @@ import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { getCredentialPlayers } from "@/lib/queries/credentials";
+import { getActiveLeagueId } from "@/lib/cookies/active-league";
 import { isInviteEmailConfigured } from "@/lib/email/invite-email";
 import { CredentialsTable } from "./credentials-client";
 
@@ -27,7 +28,14 @@ export default async function CredentialsPage() {
     if (mine.length === 0) redirect("/");
   }
 
-  const { rows, scope } = await getCredentialPlayers();
+  // Scope the credentials list to the active league so the
+  // commissioner viewing CPA League doesn't see Hillsboro members
+  // mixed in. Header switcher updates this cookie; this page
+  // refetches accordingly.
+  const activeLeagueId = await getActiveLeagueId();
+  const { rows, scope } = await getCredentialPlayers({
+    leagueId: activeLeagueId,
+  });
 
   return (
     <>
