@@ -21,7 +21,13 @@ export function ContextHeaderClient({
 }) {
   const hasPlayer = !!ctx.user.playerId;
   return (
-    <section className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-5 py-4 flex items-start justify-between gap-[18px] flex-wrap max-sm:flex-col max-sm:items-stretch">
+    <section
+      className="rounded-[16px] border border-[color:var(--hairline-2)] px-5 py-4 flex items-start justify-between gap-[18px] flex-wrap max-sm:flex-col max-sm:items-stretch overflow-hidden"
+      style={{
+        background:
+          "radial-gradient(ellipse at top left, var(--next-game-tint), transparent 60%), var(--surface)",
+      }}
+    >
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <PlayerAvatar
           url={ctx.user.avatarUrl}
