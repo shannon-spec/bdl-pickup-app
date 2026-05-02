@@ -207,6 +207,12 @@ export const leagues = pgTable("leagues", {
     .array()
     .notNull()
     .default(sql`ARRAY['email']::text[]`),
+  // League avatar — Apple Contact-poster style. Kind toggles between
+  // initials over a color and a single emoji. The color key indexes
+  // a preset palette in components/bdl/league-avatar.tsx.
+  avatarKind: text("avatar_kind").notNull().default("monogram"),
+  avatarColor: text("avatar_color").notNull().default("brand"),
+  avatarEmoji: text("avatar_emoji"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()

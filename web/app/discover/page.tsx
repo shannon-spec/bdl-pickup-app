@@ -6,6 +6,7 @@ import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
+import { LeagueAvatar } from "@/components/bdl/league-avatar";
 import { getLeaguesWithStats } from "@/lib/queries/leagues";
 import { db, leaguePlayers } from "@/lib/db";
 import { eq } from "drizzle-orm";
@@ -122,12 +123,12 @@ function LeagueCard({
           : undefined
       }
     >
-      <div
-        className="w-9 h-9 rounded-full"
-        style={{
-          background: "linear-gradient(135deg, var(--brand), var(--brand-2))",
-          boxShadow: "inset 0 0 0 2px var(--mark-inset)",
-        }}
+      <LeagueAvatar
+        kind={l.avatarKind}
+        color={l.avatarColor}
+        emoji={l.avatarEmoji}
+        abbr={(l.name[0] ?? "?").toUpperCase()}
+        size={36}
       />
       <div>
         <div className="font-bold text-[16px]">{l.name}</div>

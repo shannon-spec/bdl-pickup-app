@@ -19,6 +19,9 @@ export type SessionLeague = {
   cadence: string;
   timeOfDay: string;
   role: LeagueRoleInContext;
+  avatarKind: string;
+  avatarColor: string;
+  avatarEmoji: string | null;
 };
 
 export type SessionContext = {
@@ -121,6 +124,9 @@ export async function getSessionContext(): Promise<SessionContext | null> {
     name: string;
     season: string | null;
     schedule: string | null;
+    avatarKind: string;
+    avatarColor: string;
+    avatarEmoji: string | null;
   }[];
   if (isSuperAdmin && allIds.size === 0) {
     leagueRows = await db
@@ -129,6 +135,9 @@ export async function getSessionContext(): Promise<SessionContext | null> {
         name: leagues.name,
         season: leagues.season,
         schedule: leagues.schedule,
+        avatarKind: leagues.avatarKind,
+        avatarColor: leagues.avatarColor,
+        avatarEmoji: leagues.avatarEmoji,
       })
       .from(leagues)
       .orderBy(asc(leagues.name));
@@ -139,6 +148,9 @@ export async function getSessionContext(): Promise<SessionContext | null> {
         name: leagues.name,
         season: leagues.season,
         schedule: leagues.schedule,
+        avatarKind: leagues.avatarKind,
+        avatarColor: leagues.avatarColor,
+        avatarEmoji: leagues.avatarEmoji,
       })
       .from(leagues)
       .where(inArray(leagues.id, Array.from(allIds)))
@@ -165,6 +177,9 @@ export async function getSessionContext(): Promise<SessionContext | null> {
       cadence: sched.cadence,
       timeOfDay: sched.timeOfDay,
       role,
+      avatarKind: l.avatarKind,
+      avatarColor: l.avatarColor,
+      avatarEmoji: l.avatarEmoji,
     };
   });
 

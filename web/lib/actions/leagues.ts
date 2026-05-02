@@ -31,6 +31,22 @@ const intString = z
   .optional()
   .or(z.literal(""));
 
+const AVATAR_KINDS = ["monogram", "emoji"] as const;
+const AVATAR_COLORS = [
+  "brand",
+  "emerald",
+  "teal",
+  "ruby",
+  "sage",
+  "rose",
+  "coral",
+  "pink",
+  "amber",
+  "violet",
+  "slate",
+  "graphite",
+] as const;
+
 const leagueSchema = z.object({
   name: z.string().trim().min(1, "Name is required.").max(80),
   season: z.string().trim().max(20).optional().or(z.literal("")),
@@ -47,6 +63,9 @@ const leagueSchema = z.object({
   showProjections: z.string().trim().optional().or(z.literal("")),
   teamAName: z.string().trim().min(1).max(40).default("White"),
   teamBName: z.string().trim().min(1).max(40).default("Dark"),
+  avatarKind: z.enum(AVATAR_KINDS).default("monogram"),
+  avatarColor: z.enum(AVATAR_COLORS).default("brand"),
+  avatarEmoji: z.string().trim().max(8).optional().or(z.literal("")),
 });
 
 const toInt = (s?: string | null) => {
@@ -110,6 +129,10 @@ export async function createLeague(formData: FormData): Promise<ActionResult<{ i
       showProjections: v.showProjections === "off" ? false : true,
       teamAName: v.teamAName || "White",
       teamBName: v.teamBName || "Dark",
+      avatarKind: v.avatarKind,
+      avatarColor: v.avatarColor,
+      avatarEmoji:
+        v.avatarKind === "emoji" ? nullable(v.avatarEmoji) : null,
     })
     .returning({ id: leagues.id });
 
@@ -162,6 +185,10 @@ export async function updateLeague(
       showProjections: v.showProjections === "off" ? false : true,
       teamAName: v.teamAName || "White",
       teamBName: v.teamBName || "Dark",
+      avatarKind: v.avatarKind,
+      avatarColor: v.avatarColor,
+      avatarEmoji:
+        v.avatarKind === "emoji" ? nullable(v.avatarEmoji) : null,
     })
     .where(eq(leagues.id, id));
   revalidatePath("/leagues");

@@ -10,6 +10,7 @@ import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
 import { GradePill } from "@/components/bdl/grade-pill";
+import { LeagueAvatar } from "@/components/bdl/league-avatar";
 import { getLeaguesWithStats } from "@/lib/queries/leagues";
 import { formatLabel } from "@/lib/format";
 import { LeaguesPageClient } from "./leagues-client";
@@ -62,12 +63,12 @@ export default async function LeaguesPage() {
                   href={`/leagues/${l.id}`}
                   className="group rounded-[14px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-4 flex flex-col gap-3 hover:border-[color:var(--text-4)] transition-colors"
                 >
-                  <div
-                    className="w-9 h-9 rounded-full"
-                    style={{
-                      background: "linear-gradient(135deg, var(--brand), var(--brand-2))",
-                      boxShadow: "inset 0 0 0 2px var(--mark-inset)",
-                    }}
+                  <LeagueAvatar
+                    kind={l.avatarKind}
+                    color={l.avatarColor}
+                    emoji={l.avatarEmoji}
+                    abbr={(l.name[0] ?? "?").toUpperCase()}
+                    size={36}
                   />
                   <div>
                     <div className="font-bold text-[16px] text-[color:var(--text)]">{l.name}</div>

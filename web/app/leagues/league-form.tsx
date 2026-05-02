@@ -3,6 +3,15 @@
 import { useState, useTransition } from "react";
 import type { League } from "@/lib/db";
 import { createLeague, updateLeague } from "@/lib/actions/leagues";
+import {
+  AVATAR_COLORS,
+  LeagueAvatar,
+} from "@/components/bdl/league-avatar";
+
+const EMOJI_PRESETS = [
+  "🏀", "🔥", "⭐️", "🏆", "💪", "🚀", "⚡️", "🎯",
+  "🐺", "🦅", "🐯", "🦁", "🐍", "🦊", "🦈", "🐉",
+];
 
 const FORMATS = [
   { v: "5v5", l: "5 V 5" },
@@ -48,6 +57,20 @@ export function LeagueForm({
   const [format, setFormat] = useState<string>(normalizeFormat(editing?.format));
   const isSeries = format === "series";
 
+  const [name, setName] = useState<string>(editing?.name ?? "");
+  const [avatarKind, setAvatarKind] = useState<"monogram" | "emoji">(
+    (editing?.avatarKind as "monogram" | "emoji") ?? "monogram",
+  );
+  const [avatarColor, setAvatarColor] = useState<string>(
+    editing?.avatarColor ?? "brand",
+  );
+  const [avatarEmoji, setAvatarEmoji] = useState<string>(
+    editing?.avatarEmoji ?? "",
+  );
+
+  // Initials follow the league name as the user types.
+  const abbr = (name.trim()[0] ?? "?").toUpperCase();
+
   const onSubmit = (formData: FormData) => {
     setError(null);
     setFieldErrors({});
@@ -66,10 +89,100 @@ export function LeagueForm({
 
   return (
     <form action={onSubmit} className="flex flex-col gap-3.5">
+      {/* Avatar picker — Apple Contact-poster style */}
+      <input type="hidden" name="avatarKind" value={avatarKind} />
+      <input type="hidden" name="avatarColor" value={avatarColor} />
+      <input type="hidden" name="avatarEmoji" value={avatarEmoji} />
+      <div className="flex flex-col gap-3 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface-2)] p-4">
+        <div className="flex items-center gap-4">
+          <LeagueAvatar
+            kind={avatarKind}
+            color={avatarColor}
+            emoji={avatarEmoji}
+            abbr={abbr}
+            size={64}
+          />
+          <div className="flex flex-col gap-1.5 min-w-0 flex-1">
+            <span className="text-[11px] font-semibold tracking-[0.12em] uppercase text-[color:var(--text-3)]">
+              Avatar
+            </span>
+            <div className="inline-flex p-0.5 rounded-full bg-[color:var(--surface)] border border-[color:var(--hairline-2)] self-start">
+              <KindToggle
+                active={avatarKind === "monogram"}
+                onClick={() => setAvatarKind("monogram")}
+              >
+                Monogram
+              </KindToggle>
+              <KindToggle
+                active={avatarKind === "emoji"}
+                onClick={() => setAvatarKind("emoji")}
+              >
+                Emoji
+              </KindToggle>
+            </div>
+          </div>
+        </div>
+        <div>
+          <span className="text-[11px] font-semibold tracking-[0.12em] uppercase text-[color:var(--text-3)] mb-1.5 block">
+            Color
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {AVATAR_COLORS.map((c) => (
+              <button
+                key={c.key}
+                type="button"
+                aria-label={c.label}
+                title={c.label}
+                onClick={() => setAvatarColor(c.key)}
+                className={`relative w-8 h-8 rounded-full transition-transform hover:scale-110 ${
+                  avatarColor === c.key
+                    ? "ring-2 ring-offset-2 ring-offset-[color:var(--surface-2)] ring-[color:var(--text)]"
+                    : ""
+                }`}
+                style={{ background: c.background }}
+              />
+            ))}
+          </div>
+        </div>
+        {avatarKind === "emoji" && (
+          <div>
+            <span className="text-[11px] font-semibold tracking-[0.12em] uppercase text-[color:var(--text-3)] mb-1.5 block">
+              Emoji
+            </span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <input
+                value={avatarEmoji}
+                onChange={(e) => setAvatarEmoji(e.target.value.slice(0, 4))}
+                placeholder="🏀"
+                aria-label="Custom emoji"
+                className="w-14 h-9 rounded-[var(--r-md)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-center text-[18px] outline-none focus:border-[color:var(--brand)]"
+              />
+              <div className="flex flex-wrap gap-1">
+                {EMOJI_PRESETS.map((e) => (
+                  <button
+                    key={e}
+                    type="button"
+                    onClick={() => setAvatarEmoji(e)}
+                    className={`w-9 h-9 rounded-[var(--r-md)] flex items-center justify-center text-[18px] hover:bg-[color:var(--surface)] transition-colors ${
+                      avatarEmoji === e
+                        ? "bg-[color:var(--surface)] ring-2 ring-[color:var(--brand)]"
+                        : ""
+                    }`}
+                  >
+                    {e}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       <Field label="Name *" error={fieldErrors.name?.[0]}>
         <input
           name="name"
-          defaultValue={editing?.name ?? ""}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
           required
           autoFocus
           className={inputCx}
@@ -282,4 +395,28 @@ function Field({
 
 function Row({ children }: { children: React.ReactNode }) {
   return <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">{children}</div>;
+}
+
+function KindToggle({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`px-3.5 h-7 rounded-full text-[11.5px] font-bold tracking-[0.04em] uppercase transition-colors ${
+        active
+          ? "bg-[color:var(--brand)] text-white"
+          : "text-[color:var(--text-3)] hover:text-[color:var(--text)]"
+      }`}
+    >
+      {children}
+    </button>
+  );
 }

@@ -624,6 +624,9 @@ export type DiscoverLeague = {
   playerCount: number;
   maxPlayers: number | null;
   spots: number | null;
+  avatarKind: string;
+  avatarColor: string;
+  avatarEmoji: string | null;
 };
 
 export async function getDiscoverLeagues(
@@ -666,6 +669,9 @@ export async function getDiscoverLeagues(
       playerCount,
       maxPlayers: l.maxPlayers ?? null,
       spots,
+      avatarKind: l.avatarKind,
+      avatarColor: l.avatarColor,
+      avatarEmoji: l.avatarEmoji ?? null,
     };
   });
 }

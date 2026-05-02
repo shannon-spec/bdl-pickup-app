@@ -12,6 +12,7 @@ import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
 import { GradePill } from "@/components/bdl/grade-pill";
+import { LeagueAvatar } from "@/components/bdl/league-avatar";
 import { TeamBadge } from "@/components/bdl/team-badge";
 import { ProbabilityBar } from "@/components/bdl/probability-bar";
 import { getLeagueDetail } from "@/lib/queries/leagues";
@@ -70,12 +71,12 @@ export default async function LeagueDetailPage({
       <PageFrame>
         <ContextHeader />
         <div className="flex items-center gap-4 max-sm:flex-col max-sm:items-start">
-          <div
-            className="w-14 h-14 rounded-full flex-shrink-0"
-            style={{
-              background: "linear-gradient(135deg, var(--brand), var(--brand-2))",
-              boxShadow: "inset 0 0 0 2px var(--mark-inset)",
-            }}
+          <LeagueAvatar
+            kind={detail.league.avatarKind}
+            color={detail.league.avatarColor}
+            emoji={detail.league.avatarEmoji}
+            abbr={(detail.league.name[0] ?? "?").toUpperCase()}
+            size={56}
           />
           <div className="flex-1 min-w-0">
             <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)]">

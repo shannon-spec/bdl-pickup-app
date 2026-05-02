@@ -14,6 +14,7 @@ import { TeamBadge } from "@/components/bdl/team-badge";
 import { ProbabilityBar } from "@/components/bdl/probability-bar";
 import { Pill } from "@/components/bdl/pill";
 import { HeroTag, isHeroGame } from "@/components/bdl/hero-tag";
+import { LeagueAvatar } from "@/components/bdl/league-avatar";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import type { Player } from "@/lib/db";
 import {
@@ -502,6 +503,9 @@ export default async function Home() {
               schedule={currentLeague.schedule ?? "Your home league"}
               playerCount={leaguePlayerCount}
               level={currentLeague.level}
+              avatarKind={currentLeague.avatarKind}
+              avatarColor={currentLeague.avatarColor}
+              avatarEmoji={currentLeague.avatarEmoji}
             />
             {discover.map((l) => (
               <DiscoverCard
@@ -511,6 +515,9 @@ export default async function Home() {
                 playerCount={l.playerCount}
                 spots={l.spots}
                 level={l.level}
+                avatarKind={l.avatarKind}
+                avatarColor={l.avatarColor}
+                avatarEmoji={l.avatarEmoji}
               />
             ))}
           </div>
@@ -717,6 +724,9 @@ function DiscoverCard({
   spots,
   you,
   level,
+  avatarKind,
+  avatarColor,
+  avatarEmoji,
 }: {
   name: string;
   schedule: string;
@@ -724,6 +734,9 @@ function DiscoverCard({
   spots?: number | null;
   you?: boolean;
   level?: string;
+  avatarKind?: string | null;
+  avatarColor?: string | null;
+  avatarEmoji?: string | null;
 }) {
   return (
     <div
@@ -741,12 +754,12 @@ function DiscoverCard({
           : undefined
       }
     >
-      <span
-        className="w-8 h-8 rounded-full"
-        style={{
-          background: "linear-gradient(135deg, var(--brand), var(--brand-2))",
-          boxShadow: "inset 0 0 0 2px var(--mark-inset)",
-        }}
+      <LeagueAvatar
+        kind={avatarKind}
+        color={avatarColor}
+        emoji={avatarEmoji}
+        abbr={(name[0] ?? "?").toUpperCase()}
+        size={32}
       />
       <div>
         <div className="font-bold text-[15px] leading-tight text-[color:var(--text)]">

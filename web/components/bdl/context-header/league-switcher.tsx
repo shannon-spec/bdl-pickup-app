@@ -7,6 +7,7 @@ import { Check, ChevronDown, Plus } from "lucide-react";
 import type { SessionLeague } from "@/lib/queries/session-context";
 import type { View } from "@/lib/cookies/active-view";
 import { setActiveLeagueAction } from "@/lib/cookies/active-league";
+import { LeagueAvatar } from "@/components/bdl/league-avatar";
 
 export function LeagueSwitcher({
   leagues,
@@ -88,7 +89,13 @@ export function LeagueSwitcher({
           "max-sm:w-full max-sm:justify-start",
         ].join(" ")}
     >
-        <LeagueDot abbr={active.abbr} />
+        <LeagueAvatar
+          kind={active.avatarKind}
+          color={active.avatarColor}
+          emoji={active.avatarEmoji}
+          abbr={active.abbr}
+          size={32}
+        />
         <span className="font-bold whitespace-nowrap">{active.name}</span>
         {triggerMeta && (
           <span className="font-[family-name:var(--mono)] text-[12px] text-[color:var(--text-3)] num whitespace-nowrap">
@@ -145,7 +152,13 @@ export function LeagueSwitcher({
                   "transition-colors",
                 ].join(" ")}
               >
-                <LeagueDot abbr={l.abbr} />
+                <LeagueAvatar
+                  kind={l.avatarKind}
+                  color={l.avatarColor}
+                  emoji={l.avatarEmoji}
+                  abbr={l.abbr}
+                  size={32}
+                />
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-[14px] truncate">{l.name}</div>
                   {longMeta && (
@@ -184,17 +197,3 @@ export function LeagueSwitcher({
   );
 }
 
-function LeagueDot({ abbr }: { abbr: string }) {
-  return (
-    <span
-      aria-hidden
-      className="inline-flex items-center justify-center w-8 h-8 rounded-full text-white font-extrabold text-[12px] flex-shrink-0"
-      style={{
-        background: "linear-gradient(135deg, var(--brand) 0%, #0461C2 100%)",
-        boxShadow: "inset 0 0 0 2px var(--mark-inset)",
-      }}
-    >
-      {abbr}
-    </span>
-  );
-}
