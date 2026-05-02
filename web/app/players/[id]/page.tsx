@@ -8,7 +8,7 @@ import {
   getMyMemberLeagueIds,
 } from "@/lib/auth/perms";
 import { canMessage } from "@/lib/auth/messaging";
-import { MessageSquare } from "lucide-react";
+import { Lock, MessageSquare } from "lucide-react";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
@@ -380,14 +380,13 @@ export default async function PlayerProfilePage({
             entry point so we don't leak phone/email outside the app. */}
         <div className="grid grid-cols-2 gap-4 max-[1100px]:grid-cols-1">
           <PlayerInfoCard player={player} />
-          {isMe ? (
-            <SelfContactCard player={player} />
-          ) : canDm ? (
-            <MessageCtaCard
-              firstName={player.firstName}
-              playerId={player.id}
+          {(isMe || canDm) && (
+            <ContactPrivacyCard
+              player={player}
+              isMe={isMe}
+              canDm={canDm}
             />
-          ) : null}
+          )}
         </div>
       </PageFrame>
       <MobileBottomBar active="profile" />
@@ -463,51 +462,25 @@ function PlayerInfoCard({ player }: { player: PlayerType }) {
 }
 
 /**
- * Replaces the old phone/email contact card for everyone except the
- * viewing player themselves. Cell + email are private-by-policy — we
- * don't display them, period — so the public profile gets a Message
- * Center CTA instead.
+ * Locked contact card — cell + email rendered behind a CSS blur so the
+ * viewer can see "data is on file" without actually reading it. The
+ * "Send private message" CTA opens the in-app Message Center thread,
+ * which is the only sanctioned way to reach the player on platform.
+ *
+ * Self-view shows your own data behind a tap-to-reveal toggle (so you
+ * can verify what's stored) and links to Messages instead of a thread.
  */
-function MessageCtaCard({
-  firstName,
-  playerId,
+function ContactPrivacyCard({
+  player,
+  isMe,
+  canDm,
 }: {
-  firstName: string;
-  playerId: string;
+  player: PlayerType;
+  isMe: boolean;
+  canDm: boolean;
 }) {
-  return (
-    <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6 flex flex-col gap-4">
-      <div className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)] flex items-center gap-2">
-        <span aria-hidden className="w-[3px] h-[12px] rounded-sm bg-[color:var(--brand)]" />
-        Get in touch
-      </div>
-      <p className="text-[13px] text-[color:var(--text-3)] leading-relaxed">
-        Cell and email aren&apos;t shown publicly on BDL. Reach{" "}
-        <span className="font-semibold text-[color:var(--text-2)]">
-          {firstName}
-        </span>{" "}
-        through the in-app Message Center — they&apos;ll see it in their
-        inbox.
-      </p>
-      <div>
-        <Link
-          href={`/messages/${playerId}`}
-          className="inline-flex items-center gap-2 h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)]"
-        >
-          <MessageSquare size={13} /> Message {firstName}
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Self-view of contact data — the player can confirm what's on file
- * even though the public profile hides it. Each row carries a privacy
- * note so they understand the data is for internal contact only.
- */
-function SelfContactCard({ player }: { player: PlayerType }) {
-  if (!player.cell && !player.email) {
+  const hasAny = !!player.cell || !!player.email;
+  if (isMe && !hasAny) {
     return (
       <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6 flex flex-col gap-3">
         <div className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)] flex items-center gap-2">
@@ -518,27 +491,98 @@ function SelfContactCard({ player }: { player: PlayerType }) {
           Your Contact Info
         </div>
         <p className="text-[13px] text-[color:var(--text-3)] leading-relaxed">
-          No cell or email on file. Add them in Edit Profile so we can email
-          you league updates — they&apos;ll never appear on your public
-          profile.
+          No cell or email on file. Add them in Edit Profile so we can
+          email you league updates — they&apos;ll never appear on your
+          public profile.
         </p>
       </div>
     );
   }
+
+  // Use placeholder text when there's no real value so the layout
+  // still renders the locked rows.
+  const cellDisplay = player.cell ?? "—";
+  const emailDisplay = player.email ?? "—";
+
   return (
-    <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6">
-      <div className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)] flex items-center gap-2 mb-3">
-        <span aria-hidden className="w-[3px] h-[12px] rounded-sm bg-[color:var(--brand)]" />
-        Your Contact Info
+    <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6 flex flex-col gap-4">
+      <div className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)] flex items-center gap-2">
+        <span
+          aria-hidden
+          className="w-[3px] h-[12px] rounded-sm bg-[color:var(--brand)]"
+        />
+        {isMe ? "Your Contact Info" : "Get in touch"}
       </div>
-      <p className="text-[12px] text-[color:var(--text-3)] mb-5 leading-relaxed">
-        Used privately to send league updates. Never displayed on your
-        public profile.
+      <p className="text-[12.5px] text-[color:var(--text-3)] leading-relaxed">
+        {isMe
+          ? "Stored privately. Never displayed publicly — even other players see it locked."
+          : `Cell and email are kept private on BDL. Reach ${player.firstName} through the in-app Message Center.`}
       </p>
+
       <div className="grid grid-cols-2 gap-x-6 gap-y-5 max-sm:grid-cols-1">
-        {player.cell && <Field label="Cell" value={player.cell} />}
-        {player.email && <Field label="Email" value={player.email} />}
+        {(player.cell || !isMe) && (
+          <LockedField label="Cell" value={cellDisplay} revealable={isMe} />
+        )}
+        {(player.email || !isMe) && (
+          <LockedField label="Email" value={emailDisplay} revealable={isMe} />
+        )}
       </div>
+
+      {isMe ? (
+        <div>
+          <Link
+            href="/messages"
+            className="inline-flex items-center gap-2 h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)]"
+          >
+            <MessageSquare size={13} /> Open Message Center
+          </Link>
+        </div>
+      ) : (
+        canDm && (
+          <div>
+            <Link
+              href={`/messages/${player.id}`}
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)]"
+            >
+              <MessageSquare size={13} /> Send a private message
+            </Link>
+          </div>
+        )
+      )}
+    </div>
+  );
+}
+
+/**
+ * Visually locked value — value is rendered with a heavy CSS blur and
+ * a small Lock glyph. When `revealable` (self-view), tap/hover lifts
+ * the blur so you can read your own data.
+ */
+function LockedField({
+  label,
+  value,
+  revealable,
+}: {
+  label: string;
+  value: string;
+  revealable: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[10.5px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)] flex items-center gap-1.5">
+        <Lock size={10} strokeWidth={2.4} /> {label}
+      </span>
+      <span
+        className={`font-bold text-[15.5px] text-[color:var(--text)] inline-block select-none ${
+          revealable
+            ? "filter blur-[6px] hover:blur-0 focus:blur-0 transition-[filter] duration-200 cursor-pointer"
+            : "filter blur-[6px]"
+        }`}
+        tabIndex={revealable ? 0 : -1}
+        title={revealable ? "Hover or tap to reveal" : undefined}
+      >
+        {value}
+      </span>
     </div>
   );
 }
