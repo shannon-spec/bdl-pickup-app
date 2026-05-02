@@ -9,12 +9,14 @@ import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { CommissionerStrip } from "@/components/bdl/commissioner-strip";
 import { MembersStrip } from "@/components/bdl/members-strip";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
+import { PlayerAvatar } from "@/components/bdl/player-avatar";
 import { StatBlock, StatRow } from "@/components/bdl/stat-block";
 import { TeamBadge } from "@/components/bdl/team-badge";
 import { ProbabilityBar } from "@/components/bdl/probability-bar";
 import { Pill } from "@/components/bdl/pill";
 import { HeroTag, isHeroGame } from "@/components/bdl/hero-tag";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
+import type { Player } from "@/lib/db";
 import {
   getPlayerById,
   getPlayerLeagues,
@@ -133,126 +135,130 @@ export default async function Home() {
 
         <ContextHeader />
 
-        {/* Commissioners + Next Game side by side. If no upcoming game,
-            commissioner strip stretches full-width. */}
-        {nextGame ? (
-          <div className="grid grid-cols-2 gap-4 max-[1100px]:grid-cols-1 items-stretch">
-            <CommissionerStrip leagueId={currentLeague.id} />
-            <section
-              className="group relative rounded-[16px] border border-[color:var(--hairline-2)] overflow-hidden hover:border-[color:var(--hairline-2)]"
-              style={{
-                background:
-                  "radial-gradient(ellipse at top left, var(--next-game-tint), transparent 60%), var(--surface)",
-              }}
-            >
-              <Link
-                href={`/games/${nextGame.id}`}
-                aria-label={`Game details for ${nextGame.teamAName} vs ${nextGame.teamBName}`}
-                className="absolute inset-0 z-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand)] rounded-[16px]"
-              />
-              <div className="absolute top-2.5 right-2.5 z-10 flex items-center gap-1.5">
-                {nextGame.mySide ? (
-                  <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[color:var(--up-soft)] text-[color:var(--up)] text-[10.5px] font-bold uppercase tracking-[0.08em]">
-                    <Check size={11} strokeWidth={3} /> In
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[color:var(--brand)] text-white text-[10.5px] font-bold uppercase tracking-[0.08em] shadow-[var(--cta-shadow)]">
-                    <Check size={11} strokeWidth={3} /> I&apos;m In
-                  </span>
+        {/* Profile snapshot — full-width hero at the top of the
+            dashboard. Quick at-a-glance "this is who BDL knows you
+            are" with a nudge to fill in missing fields. */}
+        <ProfileHero player={me} leagueName={currentLeague.name} />
+
+        {/* Next Game — full-width when present. Skipped entirely
+            when no upcoming game, in which case the Commissioners
+            strip below carries the page. */}
+        {nextGame && (
+          <section
+            className="group relative rounded-[16px] border border-[color:var(--hairline-2)] overflow-hidden hover:border-[color:var(--hairline-2)]"
+            style={{
+              background:
+                "radial-gradient(ellipse at top left, var(--next-game-tint), transparent 60%), var(--surface)",
+            }}
+          >
+            <Link
+              href={`/games/${nextGame.id}`}
+              aria-label={`Game details for ${nextGame.teamAName} vs ${nextGame.teamBName}`}
+              className="absolute inset-0 z-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand)] rounded-[16px]"
+            />
+            <div className="absolute top-2.5 right-2.5 z-10 flex items-center gap-1.5">
+              {nextGame.mySide ? (
+                <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[color:var(--up-soft)] text-[color:var(--up)] text-[10.5px] font-bold uppercase tracking-[0.08em]">
+                  <Check size={11} strokeWidth={3} /> In
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[color:var(--brand)] text-white text-[10.5px] font-bold uppercase tracking-[0.08em] shadow-[var(--cta-shadow)]">
+                  <Check size={11} strokeWidth={3} /> I&apos;m In
+                </span>
+              )}
+              {canEditNextGame && (
+                <Link
+                  href={`/games/${nextGame.id}`}
+                  className="relative z-10 inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[color:var(--surface-2)] hover:bg-[color:var(--brand-soft)] border border-[color:var(--hairline-2)] text-[10.5px] font-bold uppercase tracking-[0.08em] text-[color:var(--text-2)] hover:text-[color:var(--brand-ink)]"
+                >
+                  <Pencil size={10.5} /> Edit
+                </Link>
+              )}
+            </div>
+            <div className="relative z-[1] px-5 py-3.5 flex flex-col gap-2.5 pointer-events-none">
+              <div className="flex items-center gap-2.5 flex-wrap text-[12px] pr-[120px]">
+                <Pill tone="brand">
+                  Next · {fmtWD(nextGame.date)}
+                  {nextGame.time ? ` · ${fmtTime(nextGame.time)}` : ""}
+                </Pill>
+                {nextGame.venue && (
+                  <span className="text-[color:var(--text-3)]">{nextGame.venue}</span>
                 )}
-                {canEditNextGame && (
-                  <Link
-                    href={`/games/${nextGame.id}`}
-                    className="relative z-10 inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[color:var(--surface-2)] hover:bg-[color:var(--brand-soft)] border border-[color:var(--hairline-2)] text-[10.5px] font-bold uppercase tracking-[0.08em] text-[color:var(--text-2)] hover:text-[color:var(--brand-ink)]"
-                  >
-                    <Pencil size={10.5} /> Edit
-                  </Link>
-                )}
+                <Link
+                  href="/games"
+                  className="ml-auto pointer-events-auto inline-flex items-center gap-1 text-[11.5px] text-[color:var(--text-3)] hover:text-[color:var(--text)]"
+                >
+                  All games <ChevronRight size={12} />
+                </Link>
               </div>
-              <div className="relative z-[1] px-5 py-3.5 flex flex-col gap-2.5 pointer-events-none">
-                <div className="flex items-center gap-2.5 flex-wrap text-[12px] pr-[120px]">
-                  <Pill tone="brand">
-                    Next · {fmtWD(nextGame.date)}
-                    {nextGame.time ? ` · ${fmtTime(nextGame.time)}` : ""}
-                  </Pill>
-                  {nextGame.venue && (
-                    <span className="text-[color:var(--text-3)]">{nextGame.venue}</span>
+              <div className="flex items-start gap-3 flex-wrap">
+                <div className="flex flex-col gap-1.5 min-w-0">
+                  <TeamPick
+                    name={nextGame.teamAName}
+                    record={`${nextGame.teamARecord.w}-${nextGame.teamARecord.l} last 5`}
+                    team="white"
+                    me={nextGame.mySide === "A"}
+                  />
+                  {nextGame.rosterA.length > 0 && (
+                    <RosterList players={nextGame.rosterA} />
                   )}
-                  <Link
-                    href="/games"
-                    className="ml-auto pointer-events-auto inline-flex items-center gap-1 text-[11.5px] text-[color:var(--text-3)] hover:text-[color:var(--text)]"
-                  >
-                    All games <ChevronRight size={12} />
-                  </Link>
                 </div>
-                <div className="flex items-start gap-3 flex-wrap">
-                  <div className="flex flex-col gap-1.5 min-w-0">
-                    <TeamPick
-                      name={nextGame.teamAName}
-                      record={`${nextGame.teamARecord.w}-${nextGame.teamARecord.l} last 5`}
-                      team="white"
-                      me={nextGame.mySide === "A"}
-                    />
-                    {nextGame.rosterA.length > 0 && (
-                      <RosterList players={nextGame.rosterA} />
-                    )}
-                  </div>
-                  <span className="text-[color:var(--text-4)] text-[12px] font-medium pt-3">vs</span>
-                  <div className="flex flex-col gap-1.5 min-w-0">
-                    <TeamPick
-                      name={nextGame.teamBName}
-                      record={`${nextGame.teamBRecord.w}-${nextGame.teamBRecord.l} last 5`}
-                      team="dark"
-                      me={nextGame.mySide === "B"}
-                    />
-                    {nextGame.rosterB.length > 0 && (
-                      <RosterList players={nextGame.rosterB} />
-                    )}
-                  </div>
+                <span className="text-[color:var(--text-4)] text-[12px] font-medium pt-3">vs</span>
+                <div className="flex flex-col gap-1.5 min-w-0">
+                  <TeamPick
+                    name={nextGame.teamBName}
+                    record={`${nextGame.teamBRecord.w}-${nextGame.teamBRecord.l} last 5`}
+                    team="dark"
+                    me={nextGame.mySide === "B"}
+                  />
+                  {nextGame.rosterB.length > 0 && (
+                    <RosterList players={nextGame.rosterB} />
+                  )}
                 </div>
-                <ProbabilityBar
-                  aLabel={nextGame.teamAName}
-                  bLabel={nextGame.teamBName}
-                  a={nextGame.probA}
-                  b={nextGame.probB}
-                  compact
-                />
-                {nextGame.predictedScore && (() => {
-                  const aScore = nextGame.predictedScore.a;
-                  const bScore = nextGame.predictedScore.b;
-                  const spread = Math.abs(aScore - bScore);
-                  const favorite =
-                    aScore > bScore
-                      ? nextGame.teamAName
-                      : bScore > aScore
-                        ? nextGame.teamBName
-                        : null;
-                  return (
-                    <div className="flex flex-col gap-1 mt-1.5">
-                      <div className="flex items-center justify-center gap-2 text-[11px] font-[family-name:var(--mono)] num font-semibold text-[color:var(--text-2)]">
-                        <span className="text-[10px] tracking-[0.14em] uppercase text-[color:var(--text-3)] font-semibold">
-                          Projected
-                        </span>
-                        <span>
-                          {nextGame.teamAName} {aScore}
-                          <span className="mx-1.5 text-[color:var(--text-3)]">—</span>
-                          {bScore} {nextGame.teamBName}
-                        </span>
-                      </div>
-                      <div className="flex justify-center">
-                        <Pill tone="neutral">
-                          Spread · {favorite ? `${favorite} −${spread}` : "Pick"}
-                        </Pill>
-                      </div>
-                    </div>
-                  );
-                })()}
               </div>
-            </section>
-          </div>
-        ) : (
-          <CommissionerStrip leagueId={currentLeague.id} />
+              <ProbabilityBar
+                aLabel={nextGame.teamAName}
+                bLabel={nextGame.teamBName}
+                a={nextGame.probA}
+                b={nextGame.probB}
+                compact
+              />
+              {nextGame.predictedScore && (() => {
+                const aScore = nextGame.predictedScore.a;
+                const bScore = nextGame.predictedScore.b;
+                const spread = Math.abs(aScore - bScore);
+                const favorite =
+                  aScore > bScore
+                    ? nextGame.teamAName
+                    : bScore > aScore
+                      ? nextGame.teamBName
+                      : null;
+                return (
+                  <div className="flex flex-col gap-1 mt-1.5">
+                    <div className="flex items-center justify-center gap-2 text-[11px] font-[family-name:var(--mono)] num font-semibold text-[color:var(--text-2)]">
+                      <span className="text-[10px] tracking-[0.14em] uppercase text-[color:var(--text-3)] font-semibold">
+                        Projected
+                      </span>
+                      <span>
+                        {nextGame.teamAName} {aScore}
+                        <span className="mx-1.5 text-[color:var(--text-3)]">—</span>
+                        {bScore} {nextGame.teamBName}
+                      </span>
+                    </div>
+                    <div className="flex justify-center">
+                      <Pill tone="neutral">
+                        Spread · {favorite ? `${favorite} −${spread}` : "Pick"}
+                      </Pill>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </section>
         )}
+
+        {/* Commissioners — full width below Next Game. */}
+        <CommissionerStrip leagueId={currentLeague.id} />
 
         {/* Hero */}
         <section className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-7 pt-6 pb-5 max-sm:px-5 max-sm:pt-5 max-sm:pb-4">
@@ -516,6 +522,119 @@ export default async function Home() {
 
 function ChevRightSm() {
   return <ChevronRight size={13} />;
+}
+
+/**
+ * Profile snapshot at the top of the player dashboard. Shows the
+ * basics (name, league, position/hometown/height/weight) and — when
+ * fields are missing — a friendly nudge with a CTA to /players/{id}
+ * where the edit panel lives. Reduces the "ghost roster" problem
+ * where players join via invite and never round out their info.
+ */
+function ProfileHero({
+  player,
+  leagueName,
+}: {
+  player: Player;
+  leagueName: string;
+}) {
+  const initials = `${player.firstName[0] ?? ""}${player.lastName[0] ?? ""}`.toUpperCase();
+  const hometown = player.city
+    ? `${player.city}${player.state ? `, ${player.state}` : ""}`
+    : null;
+  const height =
+    player.heightFt !== null
+      ? `${player.heightFt}'${player.heightIn !== null && player.heightIn !== 0 ? player.heightIn : 0}"`
+      : null;
+
+  // Fields we treat as "the basics". Order matters — we surface the
+  // missing list in this order in the nudge banner.
+  const checks: Array<{ key: string; label: string; ok: boolean }> = [
+    { key: "position", label: "Position", ok: !!player.position },
+    { key: "hometown", label: "Hometown", ok: !!hometown },
+    { key: "height", label: "Height", ok: player.heightFt !== null },
+    { key: "weight", label: "Weight", ok: player.weight !== null },
+    { key: "birthday", label: "Birthday", ok: !!player.birthday },
+  ];
+  const missing = checks.filter((c) => !c.ok);
+  const completion = Math.round(
+    ((checks.length - missing.length) / checks.length) * 100,
+  );
+
+  return (
+    <section className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden">
+      <div className="flex items-start gap-5 px-7 pt-6 pb-5 max-sm:flex-col max-sm:items-start max-sm:px-5 max-sm:pt-5">
+        <PlayerAvatar
+          url={player.avatarUrl}
+          initials={initials}
+          size={72}
+        />
+        <div className="flex-1 min-w-0">
+          <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)] flex items-center gap-2 flex-wrap">
+            <span>Your Profile</span>
+            <span className="text-[color:var(--text-4)]">·</span>
+            <span className="text-[color:var(--text-2)]">{leagueName}</span>
+          </div>
+          <h1 className="text-[26px] font-extrabold tracking-[-0.03em] mt-0.5 max-sm:text-[22px]">
+            {player.firstName} {player.lastName}
+          </h1>
+          <div className="flex items-center gap-1.5 flex-wrap mt-2">
+            {player.position && <Pill tone="neutral">{player.position}</Pill>}
+            {hometown && (
+              <span className="text-[12.5px] text-[color:var(--text-3)]">
+                {hometown}
+              </span>
+            )}
+            {height && (
+              <>
+                <span className="text-[color:var(--text-4)] text-[11px]">·</span>
+                <span className="text-[12.5px] font-[family-name:var(--mono)] num text-[color:var(--text-3)]">
+                  {height}
+                </span>
+              </>
+            )}
+            {player.weight !== null && (
+              <>
+                <span className="text-[color:var(--text-4)] text-[11px]">·</span>
+                <span className="text-[12.5px] font-[family-name:var(--mono)] num text-[color:var(--text-3)]">
+                  {player.weight} lbs
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-2 max-sm:items-start max-sm:w-full">
+          <div className="text-[11px] font-semibold tracking-[0.08em] uppercase text-[color:var(--text-3)]">
+            {completion}% complete
+          </div>
+          <Link
+            href={`/players/${player.id}`}
+            className="inline-flex items-center gap-2 h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)]"
+          >
+            <Pencil size={13} /> {missing.length > 0 ? "Complete profile" : "Edit profile"}
+          </Link>
+        </div>
+      </div>
+
+      {missing.length > 0 && (
+        <div className="px-7 pt-3 pb-4 max-sm:px-5 border-t border-[color:var(--hairline)] bg-[color:var(--brand-soft)]/40">
+          <div className="text-[12.5px] text-[color:var(--text-2)]">
+            <span className="font-bold">Round out your profile</span>
+            <span className="text-[color:var(--text-3)]">
+              {" "}
+              · still missing:{" "}
+            </span>
+            {missing.map((m, i) => (
+              <span key={m.key} className="font-semibold text-[color:var(--text-2)]">
+                {m.label}
+                {i < missing.length - 1 ? ", " : ""}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  );
 }
 
 function EmptyCard({
