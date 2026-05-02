@@ -9,7 +9,7 @@ import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { getCredentialPlayers } from "@/lib/queries/credentials";
-import { getActiveLeagueId } from "@/lib/cookies/active-league";
+import { getSessionContext } from "@/lib/queries/session-context";
 import { isInviteEmailConfigured } from "@/lib/email/invite-email";
 import { CredentialsTable } from "./credentials-client";
 
@@ -30,9 +30,14 @@ export default async function CredentialsPage() {
 
   // Scope the credentials list to the active league so the
   // commissioner viewing CPA League doesn't see Hillsboro members
-  // mixed in. Header switcher updates this cookie; this page
-  // refetches accordingly.
-  const activeLeagueId = await getActiveLeagueId();
+  // mixed in. Use the session-context resolver — same logic the
+  // header switcher uses (cookie OR first viewer league) — so the
+  // displayed scope always matches what the header advertises.
+  // Reading the cookie directly here misses the case where the
+  // user has never explicitly clicked the switcher, since the
+  // header still falls back to "first league" without writing it.
+  const ctx = await getSessionContext();
+  const activeLeagueId = ctx?.activeLeagueId ?? null;
   const { rows, scope } = await getCredentialPlayers({
     leagueId: activeLeagueId,
   });
