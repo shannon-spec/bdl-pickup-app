@@ -32,7 +32,7 @@ export function ContextHeaderClient({
         <PlayerAvatar
           url={ctx.user.avatarUrl}
           initials={ctx.user.initials}
-          size={48}
+          size={60}
           className="shadow-[0_1px_0_rgba(0,0,0,0.06)]"
         />
         <div className="flex flex-col gap-1.5 min-w-0">
