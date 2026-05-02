@@ -12,6 +12,8 @@ import {
   getPlayerContactAccess,
   type ContactAccess,
 } from "@/lib/auth/contact-access";
+import { canMessage } from "@/lib/auth/messaging";
+import { MessageSquare } from "lucide-react";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
@@ -98,6 +100,7 @@ export default async function PlayerProfilePage({
   const isMe = session?.playerId === player.id;
   const caps = await getViewCaps(session);
   const canEdit = await canEditPlayer(session, player.id);
+  const canDm = !isMe && (await canMessage(session, player.id));
   // Looking at your own profile: always see your own contact info.
   // Guests get "none" — the contact card hides itself entirely.
   const contactAccess: ContactAccess = isMe
@@ -156,6 +159,14 @@ export default async function PlayerProfilePage({
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
+            {canDm && (
+              <Link
+                href={`/messages/${player.id}`}
+                className="inline-flex items-center gap-2 h-10 px-3.5 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[12px] font-bold tracking-[0.06em] uppercase hover:bg-[color:var(--surface-2)] transition-colors"
+              >
+                <MessageSquare size={13} /> Message
+              </Link>
+            )}
             {isMe && (
               <Link
                 href="/account"

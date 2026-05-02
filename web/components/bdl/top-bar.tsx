@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { eq } from "drizzle-orm";
-import { Bell, LogOut, Settings } from "lucide-react";
+import { Bell, LogOut, MessageSquare, Settings } from "lucide-react";
 import { Brand } from "./brand";
 import { ThemeToggle } from "./theme-toggle";
 import { signOut } from "@/lib/auth/actions";
@@ -8,6 +8,7 @@ import { readSession } from "@/lib/auth/session";
 import { getViewCaps, type View } from "@/lib/auth/view";
 import { db, players } from "@/lib/db";
 import { getUnreadAnnouncementCount } from "@/lib/queries/announcements";
+import { getUnreadMessageCount } from "@/lib/queries/messages";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -69,9 +70,12 @@ export async function TopBar({
 
   // Bell badge — only render the dot when there's actually unread
   // mail. Skipped for guests / unlinked admins (no playerId, no inbox).
-  const unreadCount = session?.playerId
-    ? await getUnreadAnnouncementCount(session.playerId)
-    : 0;
+  const [unreadCount, unreadMessages] = session?.playerId
+    ? await Promise.all([
+        getUnreadAnnouncementCount(session.playerId),
+        getUnreadMessageCount(session.playerId),
+      ])
+    : [0, 0];
 
   return (
     <header
@@ -127,6 +131,32 @@ export async function TopBar({
               className="relative inline-flex items-center justify-center w-[34px] h-[34px] rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[color:var(--text-2)] hover:text-[color:var(--text)] transition-colors"
             >
               <Settings size={16} />
+            </Link>
+          )}
+          {isSignedIn && session?.playerId && (
+            <Link
+              href="/messages"
+              aria-label={
+                unreadMessages > 0
+                  ? `Messages · ${unreadMessages} unread`
+                  : "Messages"
+              }
+              className={cn(
+                "relative inline-flex items-center justify-center",
+                "w-[34px] h-[34px] rounded-[var(--r-lg)]",
+                "border border-[color:var(--hairline-2)] bg-[color:var(--surface)]",
+                "text-[color:var(--text-2)] hover:text-[color:var(--text)]",
+                "transition-colors",
+              )}
+            >
+              <MessageSquare size={16} />
+              {unreadMessages > 0 && (
+                <span
+                  aria-hidden
+                  className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[color:var(--brand)]"
+                  style={{ boxShadow: "0 0 0 2px var(--badge-dot-border)" }}
+                />
+              )}
             </Link>
           )}
           <Link

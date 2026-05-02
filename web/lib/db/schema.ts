@@ -579,6 +579,65 @@ export const announcementRecipients = pgTable(
   ],
 );
 
+/* ============== DIRECT MESSAGES (1:1) ============== */
+
+// One row per ordered pair of participants. We canonicalize by storing
+// the lower UUID in `participantA` and the higher in `participantB` so
+// that `(A, B)` is always unique regardless of who sent the first
+// message — prevents two parallel threads between the same two people.
+//
+// `aClearedAt` / `bClearedAt` are per-viewer soft-clears. Setting one
+// hides the conversation from THAT viewer's list and trims their
+// thread view to messages newer than the cleared timestamp. Other
+// participant is unaffected — no destructive deletes.
+export const conversations = pgTable(
+  "conversations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    participantA: uuid("participant_a")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    participantB: uuid("participant_b")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    aClearedAt: timestamp("a_cleared_at", { withTimezone: true }),
+    bClearedAt: timestamp("b_cleared_at", { withTimezone: true }),
+    lastMessageAt: timestamp("last_message_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("conversations_pair_uq").on(t.participantA, t.participantB),
+    index("conversations_a_last_idx").on(t.participantA, t.lastMessageAt),
+    index("conversations_b_last_idx").on(t.participantB, t.lastMessageAt),
+  ],
+);
+
+export const messages = pgTable(
+  "messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    conversationId: uuid("conversation_id")
+      .notNull()
+      .references(() => conversations.id, { onDelete: "cascade" }),
+    senderId: uuid("sender_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("messages_convo_created_idx").on(t.conversationId, t.createdAt),
+    index("messages_sender_idx").on(t.senderId),
+  ],
+);
+
 /* ============== PASSWORD RESET TOKENS ============== */
 
 // One-shot reset tokens emailed to players when they hit Forgot
@@ -695,6 +754,10 @@ export type AnnouncementRecipient = typeof announcementRecipients.$inferSelect;
 export type NewAnnouncementRecipient = typeof announcementRecipients.$inferInsert;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type NewPasswordResetToken = typeof passwordResetTokens.$inferInsert;
+export type Conversation = typeof conversations.$inferSelect;
+export type NewConversation = typeof conversations.$inferInsert;
+export type Message = typeof messages.$inferSelect;
+export type NewMessage = typeof messages.$inferInsert;
 
 // Suppress an unused-symbol warning when this file is imported as types-only.
 export const __schemaSqlMarker = sql`/* schema */`;
