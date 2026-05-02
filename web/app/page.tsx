@@ -9,7 +9,6 @@ import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { CommissionerStrip } from "@/components/bdl/commissioner-strip";
 import { MembersStrip } from "@/components/bdl/members-strip";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
-import { PlayerAvatar } from "@/components/bdl/player-avatar";
 import { StatBlock, StatRow } from "@/components/bdl/stat-block";
 import { TeamBadge } from "@/components/bdl/team-badge";
 import { ProbabilityBar } from "@/components/bdl/probability-bar";
@@ -135,10 +134,11 @@ export default async function Home() {
 
         <ContextHeader />
 
-        {/* Profile snapshot — full-width hero at the top of the
-            dashboard. Quick at-a-glance "this is who BDL knows you
-            are" with a nudge to fill in missing fields. */}
-        <ProfileHero player={me} leagueName={currentLeague.name} />
+        {/* Missing-fields nudge — only renders when the player still
+            has gaps. The header above already shows the chips for
+            data that IS on file; this card just calls out what's
+            missing with a CTA. */}
+        <ProfileNudge player={me} />
 
         {/* Next Game + Commissioners — paired two-column band on
             desktop, stacked on narrow viewports. When there's no
@@ -528,30 +528,15 @@ function ChevRightSm() {
 }
 
 /**
- * Profile snapshot at the top of the player dashboard. Shows the
- * basics (name, league, position/hometown/height/weight) and — when
- * fields are missing — a friendly nudge with a CTA to /players/{id}
- * where the edit panel lives. Reduces the "ghost roster" problem
- * where players join via invite and never round out their info.
+ * Slim "round out your profile" nudge for the player home page.
+ * Only renders when the player still has gaps — the header above
+ * already shows the chips for fields that ARE on file, so we don't
+ * need to repeat them here.
  */
-function ProfileHero({
-  player,
-  leagueName,
-}: {
-  player: Player;
-  leagueName: string;
-}) {
-  const initials = `${player.firstName[0] ?? ""}${player.lastName[0] ?? ""}`.toUpperCase();
+function ProfileNudge({ player }: { player: Player }) {
   const hometown = player.city
     ? `${player.city}${player.state ? `, ${player.state}` : ""}`
     : null;
-  const height =
-    player.heightFt !== null
-      ? `${player.heightFt}'${player.heightIn !== null && player.heightIn !== 0 ? player.heightIn : 0}"`
-      : null;
-
-  // Fields we treat as "the basics". Order matters — we surface the
-  // missing list in this order in the nudge banner.
   const checks: Array<{ key: string; label: string; ok: boolean }> = [
     { key: "position", label: "Position", ok: !!player.position },
     { key: "hometown", label: "Hometown", ok: !!hometown },
@@ -559,72 +544,33 @@ function ProfileHero({
     { key: "weight", label: "Weight", ok: player.weight !== null },
   ];
   const missing = checks.filter((c) => !c.ok);
-  const completion = Math.round(
-    ((checks.length - missing.length) / checks.length) * 100,
-  );
+  if (missing.length === 0) return null;
 
   return (
-    <section className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden">
-      <div className="flex items-start gap-5 px-7 pt-6 pb-5 max-sm:flex-col max-sm:items-start max-sm:px-5 max-sm:pt-5">
-        <PlayerAvatar
-          url={player.avatarUrl}
-          initials={initials}
-          size={72}
-        />
-        <div className="flex-1 min-w-0">
-          <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)] flex items-center gap-2 flex-wrap">
-            <span>Your Profile</span>
-            <span className="text-[color:var(--text-4)]">·</span>
-            <span className="text-[color:var(--text-2)]">{leagueName}</span>
-          </div>
-          <h1 className="text-[26px] font-extrabold tracking-[-0.03em] mt-0.5 max-sm:text-[22px]">
-            {player.firstName} {player.lastName}
-          </h1>
-          <div className="flex items-center gap-1.5 flex-wrap mt-2">
-            {player.position && <Pill tone="neutral">{player.position}</Pill>}
-            {hometown && (
-              <span className="text-[12.5px] text-[color:var(--text-3)]">
-                {hometown}
-              </span>
-            )}
-            {height && (
-              <>
-                <span className="text-[color:var(--text-4)] text-[11px]">·</span>
-                <span className="text-[12.5px] font-[family-name:var(--mono)] num text-[color:var(--text-3)]">
-                  {height}
-                </span>
-              </>
-            )}
-            {player.weight !== null && (
-              <>
-                <span className="text-[color:var(--text-4)] text-[11px]">·</span>
-                <span className="text-[12.5px] font-[family-name:var(--mono)] num text-[color:var(--text-3)]">
-                  {player.weight} lbs
-                </span>
-              </>
-            )}
-          </div>
-        </div>
+    <Link
+      href={`/players/${player.id}/edit`}
+      className="rounded-[16px] border border-[color:var(--brand-soft)] bg-[color:var(--brand-soft)]/40 px-5 py-3 flex items-center justify-between gap-3 hover:bg-[color:var(--brand-soft)]/60 transition-colors"
+    >
+      <div className="text-[12.5px] text-[color:var(--text-2)]">
+        <span className="font-bold">Round out your profile</span>
+        <span className="text-[color:var(--text-3)]">
+          {" "}
+          · still missing:{" "}
+        </span>
+        {missing.map((m, i) => (
+          <span
+            key={m.key}
+            className="font-semibold text-[color:var(--text-2)]"
+          >
+            {m.label}
+            {i < missing.length - 1 ? ", " : ""}
+          </span>
+        ))}
       </div>
-
-      {missing.length > 0 && (
-        <div className="px-7 pt-3 pb-4 max-sm:px-5 border-t border-[color:var(--hairline)] bg-[color:var(--brand-soft)]/40">
-          <div className="text-[12.5px] text-[color:var(--text-2)]">
-            <span className="font-bold">Round out your profile</span>
-            <span className="text-[color:var(--text-3)]">
-              {" "}
-              · still missing:{" "}
-            </span>
-            {missing.map((m, i) => (
-              <span key={m.key} className="font-semibold text-[color:var(--text-2)]">
-                {m.label}
-                {i < missing.length - 1 ? ", " : ""}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-    </section>
+      <span className="text-[11px] font-bold tracking-[0.06em] uppercase text-[color:var(--brand-ink,var(--brand))] flex-shrink-0">
+        Edit →
+      </span>
+    </Link>
   );
 }
 

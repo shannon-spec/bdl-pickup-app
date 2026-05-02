@@ -36,6 +36,43 @@ export function ContextHeaderClient({
             </h1>
             <RoleToggle view={view} options={options} />
           </div>
+          {(ctx.user.position ||
+            ctx.user.hometown ||
+            ctx.user.height ||
+            ctx.user.weightLbs !== null) && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {ctx.user.position && (
+                <span className="inline-flex items-center h-5 px-2 rounded-full text-[10.5px] font-bold tracking-[0.05em] uppercase bg-[color:var(--surface-2)] text-[color:var(--text-2)] border border-[color:var(--hairline)]">
+                  {ctx.user.position}
+                </span>
+              )}
+              {ctx.user.hometown && (
+                <span className="text-[12px] text-[color:var(--text-3)]">
+                  {ctx.user.hometown}
+                </span>
+              )}
+              {ctx.user.height && (
+                <>
+                  <span className="text-[color:var(--text-4)] text-[11px]">
+                    ·
+                  </span>
+                  <span className="text-[12px] font-[family-name:var(--mono)] num text-[color:var(--text-3)]">
+                    {ctx.user.height}
+                  </span>
+                </>
+              )}
+              {ctx.user.weightLbs !== null && (
+                <>
+                  <span className="text-[color:var(--text-4)] text-[11px]">
+                    ·
+                  </span>
+                  <span className="text-[12px] font-[family-name:var(--mono)] num text-[color:var(--text-3)]">
+                    {ctx.user.weightLbs} lbs
+                  </span>
+                </>
+              )}
+            </div>
+          )}
           {ctx.leagues.length > 0 && ctx.activeLeagueId && (
             <LeagueSwitcher
               leagues={ctx.leagues}

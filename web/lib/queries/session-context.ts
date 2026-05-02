@@ -29,6 +29,12 @@ export type SessionContext = {
     avatarUrl: string | null;
     isSuperAdmin: boolean;
     playerId: string | null;
+    /** Profile chips surfaced in the unified header. Null when the
+     *  data isn't on file. */
+    position: string | null;
+    hometown: string | null;
+    height: string | null;
+    weightLbs: number | null;
   };
   leagues: SessionLeague[];
   activeLeagueId: string | null;
@@ -49,16 +55,26 @@ export async function getSessionContext(): Promise<SessionContext | null> {
 
   const isSuperAdmin = session.role === "owner" || session.role === "super_admin";
 
-  // displayName — prefer linked roster player; fall back to username.
+  // displayName + chips — prefer linked roster player; fall back to username.
   let displayName = session.username;
   let initials = (session.username[0] ?? "?").toUpperCase();
   let avatarUrl: string | null = null;
+  let position: string | null = null;
+  let hometown: string | null = null;
+  let height: string | null = null;
+  let weightLbs: number | null = null;
   if (session.playerId) {
     const [p] = await db
       .select({
         firstName: players.firstName,
         lastName: players.lastName,
         avatarUrl: players.avatarUrl,
+        position: players.position,
+        city: players.city,
+        state: players.state,
+        heightFt: players.heightFt,
+        heightIn: players.heightIn,
+        weight: players.weight,
       })
       .from(players)
       .where(eq(players.id, session.playerId))
@@ -67,6 +83,16 @@ export async function getSessionContext(): Promise<SessionContext | null> {
       displayName = `${p.firstName} ${p.lastName}`.trim();
       initials = `${p.firstName[0] ?? ""}${p.lastName[0] ?? ""}`.toUpperCase();
       avatarUrl = p.avatarUrl;
+      position = p.position;
+      hometown = p.city
+        ? `${p.city}${p.state ? `, ${p.state}` : ""}`
+        : null;
+      if (p.heightFt !== null) {
+        const inch =
+          p.heightIn !== null && p.heightIn !== 0 ? p.heightIn : 0;
+        height = `${p.heightFt}'${inch}"`;
+      }
+      weightLbs = p.weight;
     }
   }
 
@@ -157,6 +183,10 @@ export async function getSessionContext(): Promise<SessionContext | null> {
       avatarUrl,
       isSuperAdmin,
       playerId: session.playerId ?? null,
+      position,
+      hometown,
+      height,
+      weightLbs,
     },
     leagues: sessionLeagues,
     activeLeagueId,
