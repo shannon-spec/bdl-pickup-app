@@ -37,17 +37,45 @@ export type LeaderboardData = {
 export async function getLeaderboard(opts: {
   leagueId?: string | null;
   year?: string | null;
+  /**
+   * Restrict league options + game pool to this set of league ids.
+   * Pass null/undefined for the unrestricted case (admin view) — the
+   * leaderboard then sees every league on the platform. Empty array
+   * means "viewer has no leagues" and the leaderboard renders empty.
+   */
+  scopeLeagueIds?: string[] | null;
 }): Promise<LeaderboardData> {
-  const leagueOptions = await db
+  // League option list — when scoped, drop leagues the viewer can't
+  // see so the filter pills never reference a league they aren't in.
+  const leagueOptionsAll = await db
     .select({ id: leagues.id, name: leagues.name })
     .from(leagues)
     .orderBy(asc(leagues.name));
+  const leagueOptions = opts.scopeLeagueIds
+    ? leagueOptionsAll.filter((l) => opts.scopeLeagueIds!.includes(l.id))
+    : leagueOptionsAll;
+
+  // Coerce a stale ?league= param to null when the viewer can't see
+  // that league — happens when an admin link is shared with a player.
+  const effectiveLeagueId =
+    opts.leagueId &&
+    leagueOptions.some((l) => l.id === opts.leagueId)
+      ? opts.leagueId
+      : null;
 
   // Year filter is applied with date prefix LIKE '2026-%'
   const yearPrefix = opts.year && opts.year !== "all" ? `${opts.year}-` : null;
 
   const gameWhere = and(
-    opts.leagueId ? eq(games.leagueId, opts.leagueId) : undefined,
+    effectiveLeagueId ? eq(games.leagueId, effectiveLeagueId) : undefined,
+    // When no specific league is picked but the viewer is scoped, restrict
+    // to leagues they can see — otherwise "All leagues" silently leaks
+    // platform-wide data into a player's view.
+    !effectiveLeagueId && opts.scopeLeagueIds
+      ? opts.scopeLeagueIds.length > 0
+        ? inArray(games.leagueId, opts.scopeLeagueIds)
+        : sql`false`
+      : undefined,
     yearPrefix ? sql`${games.gameDate}::text LIKE ${yearPrefix + "%"}` : undefined,
   );
 

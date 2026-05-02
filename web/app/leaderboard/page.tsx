@@ -5,6 +5,12 @@ import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
 import { getLeaderboard, type LbPlayer } from "@/lib/queries/leaderboard";
+import { readSession } from "@/lib/auth/session";
+import { getViewCaps } from "@/lib/auth/view";
+import {
+  getMyMemberLeagueIds,
+  getMyCommissionerLeagueIds,
+} from "@/lib/auth/perms";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Leaderboard · BDL" };
@@ -15,9 +21,25 @@ export default async function LeaderboardPage({
   searchParams: Promise<{ league?: string; year?: string }>;
 }) {
   const sp = await searchParams;
+
+  // Scope the leaderboard to the viewer's leagues unless they're in
+  // admin view. Player view + commissioner view both see only the
+  // leagues they're personally connected to (member or commissioner).
+  const session = await readSession();
+  const caps = await getViewCaps(session);
+  let scopeLeagueIds: string[] | null = null;
+  if (caps.view !== "admin") {
+    const [memberIds, commishIds] = await Promise.all([
+      getMyMemberLeagueIds(session),
+      getMyCommissionerLeagueIds(session),
+    ]);
+    scopeLeagueIds = Array.from(new Set([...memberIds, ...commishIds]));
+  }
+
   const data = await getLeaderboard({
     leagueId: sp.league || null,
     year: sp.year || null,
+    scopeLeagueIds,
   });
 
   return (

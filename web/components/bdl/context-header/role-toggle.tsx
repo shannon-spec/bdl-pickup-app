@@ -66,7 +66,7 @@ export function RoleToggle({
               "transition-colors",
               selected
                 ? "bg-[color:var(--brand)] text-white border border-[color:var(--brand)]"
-                : "bg-[color:var(--surface-2)] border border-[color:var(--hairline-2)] text-[color:var(--text-3)] hover:text-[color:var(--text)] hover:bg-[color:var(--surface)]",
+                : "bg-[color:var(--brand-soft)] border border-[color:var(--brand-soft)] text-[color:var(--brand-ink,var(--brand))] opacity-70 hover:opacity-100",
               "disabled:opacity-60",
             ].join(" ")}
           >
