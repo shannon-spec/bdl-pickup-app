@@ -69,10 +69,10 @@ export default async function AdminPage() {
       desc: "Issue logins for commissioners + players.",
     },
     {
-      href: "/admin/announcements",
+      href: "/messages",
       icon: <Megaphone size={20} />,
-      label: "Announcements",
-      desc: "Send platform-wide or league announcements to player inboxes.",
+      label: "Message Center",
+      desc: "Direct messages, league broadcasts, and global announcements — one place.",
     },
     {
       href: "/settings",
