@@ -24,8 +24,8 @@ export default function AboutPage() {
         <section className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-7 py-8 max-sm:px-5 flex flex-col gap-6">
           <p className="text-[17px] leading-[1.65] text-[color:var(--text-2)]">
             <strong className="text-[color:var(--text)]">BDL — Ball Don&apos;t Lie —</strong>{" "}
-            is personal. I&apos;ve spent 30 years building products, but
-            everything that actually shaped me came from sports. The lessons,
+            is personal. I&apos;ve spent 30 years building products,
+            companies, but everything that actually shaped me came from sports. The lessons,
             the relationships, the standard. Pickup basketball strips it all
             down. No titles, no shortcuts. You earn respect or you don&apos;t.
             Every run tells the truth —{" "}
