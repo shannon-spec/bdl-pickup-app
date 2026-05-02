@@ -1,6 +1,7 @@
 "use server";
 
 import { eq, and, inArray, ne } from "drizzle-orm";
+import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import {
@@ -15,9 +16,23 @@ import {
   getMyCommissionerLeagueIds,
 } from "@/lib/auth/perms";
 import { requireManageView } from "@/lib/auth/view";
+import {
+  isInviteEmailConfigured,
+  sendTempCredentialsEmail,
+} from "@/lib/email/invite-email";
 
 export type CredsResult =
-  | { ok: true; data?: { username?: string } }
+  | {
+      ok: true;
+      data?: {
+        username?: string;
+        /** Whether the temp-credentials email was sent. Null when
+         *  email is not configured on the server (no Resend key). */
+        emailSent?: boolean | null;
+        /** Send error code if the attempt failed. */
+        emailError?: string;
+      };
+    }
   | { ok: false; error: string };
 
 /**
@@ -146,7 +161,60 @@ export async function setPlayerCredentials(
 
   revalidatePath("/admin/credentials");
   revalidatePath(`/players/${playerId}`);
-  return { ok: true, data: { username: usernameRaw } };
+
+  // Best-effort send of the temp-credentials email. Save already
+  // succeeded; a send failure (Resend down, env missing, etc.) is
+  // surfaced to the admin via the result so they can copy and
+  // share manually instead. Never throws.
+  let emailSent: boolean | null = null;
+  let emailError: string | undefined;
+  if (isInviteEmailConfigured()) {
+    const [target] = await db
+      .select({ firstName: players.firstName, lastName: players.lastName })
+      .from(players)
+      .where(eq(players.id, playerId))
+      .limit(1);
+
+    const inviterName = session?.playerId
+      ? await db
+          .select({
+            firstName: players.firstName,
+            lastName: players.lastName,
+          })
+          .from(players)
+          .where(eq(players.id, session.playerId))
+          .limit(1)
+          .then((r) =>
+            r[0] ? `${r[0].firstName} ${r[0].lastName}`.trim() : null,
+          )
+      : null;
+
+    const h = await headers();
+    const proto = h.get("x-forwarded-proto") ?? "https";
+    const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
+    const signInUrl = host ? `${proto}://${host}/login` : "/login";
+
+    try {
+      const sendRes = await sendTempCredentialsEmail({
+        to: finalEmail,
+        firstName: target?.firstName ?? "",
+        username: usernameRaw,
+        tempPassword: password,
+        signInUrl,
+        invitedByName: inviterName,
+      });
+      emailSent = sendRes.ok;
+      if (!sendRes.ok) emailError = sendRes.error;
+    } catch (e) {
+      emailSent = false;
+      emailError = e instanceof Error ? e.message : "send_failed";
+    }
+  }
+
+  return {
+    ok: true,
+    data: { username: usernameRaw, emailSent, emailError },
+  };
 }
 
 export async function clearPlayerCredentials(

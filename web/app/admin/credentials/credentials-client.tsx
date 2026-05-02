@@ -20,7 +20,16 @@ export type CredRow = {
   leagueNames: string[];
 };
 
-export function CredentialsTable({ rows }: { rows: CredRow[] }) {
+export function CredentialsTable({
+  rows,
+  emailConfigured,
+}: {
+  rows: CredRow[];
+  /** Whether RESEND_API_KEY + ADMIN_FROM_EMAIL are set in this
+   *  environment. Drives whether the modal advertises auto-send and
+   *  whether the saved-card surfaces a send status. */
+  emailConfigured: boolean;
+}) {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<"all" | "set" | "unset" | "commish">("all");
   const [editing, setEditing] = useState<CredRow | null>(null);
@@ -141,6 +150,7 @@ export function CredentialsTable({ rows }: { rows: CredRow[] }) {
       {editing && (
         <CredentialModal
           player={editing}
+          emailConfigured={emailConfigured}
           onClose={() => setEditing(null)}
         />
       )}
@@ -191,9 +201,11 @@ function generatePassword(): string {
 
 function CredentialModal({
   player,
+  emailConfigured,
   onClose,
 }: {
   player: CredRow;
+  emailConfigured: boolean;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -206,7 +218,13 @@ function CredentialModal({
   // enter one before the credentials can be saved.
   const [email, setEmail] = useState(player.email ?? "");
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState<{ username: string; password: string } | null>(null);
+  const [saved, setSaved] = useState<{
+    username: string;
+    password: string;
+    email: string;
+    emailSent: boolean | null;
+    emailError?: string;
+  } | null>(null);
   const [pending, start] = useTransition();
   const [copied, setCopied] = useState<"u" | "p" | "both" | null>(null);
 
@@ -220,7 +238,13 @@ function CredentialModal({
       try {
         const res = await setPlayerCredentials(player.id, fd);
         if (res.ok) {
-          setSaved({ username, password });
+          setSaved({
+            username,
+            password,
+            email,
+            emailSent: res.data?.emailSent ?? null,
+            emailError: res.data?.emailError,
+          });
           router.refresh();
         } else {
           setError(res.error);
@@ -379,7 +403,17 @@ function CredentialModal({
                   onClick={onSubmit}
                   className="h-10 px-5 rounded-[var(--r-md)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)] disabled:opacity-60"
                 >
-                  {pending ? "Saving…" : player.hasPassword ? "Reset login" : "Set login"}
+                  {pending
+                    ? emailConfigured
+                      ? "Saving & sending…"
+                      : "Saving…"
+                    : emailConfigured
+                      ? player.hasPassword
+                        ? "Reset & email"
+                        : "Set login & email"
+                      : player.hasPassword
+                        ? "Reset login"
+                        : "Set login"}
                 </button>
               </div>
             </div>
@@ -396,7 +430,13 @@ function SavedCard({
   copied,
   onDone,
 }: {
-  saved: { username: string; password: string };
+  saved: {
+    username: string;
+    password: string;
+    email: string;
+    emailSent: boolean | null;
+    emailError?: string;
+  };
   onCopy: (kind: "u" | "p" | "both", value: string) => void;
   copied: "u" | "p" | "both" | null;
   onDone: () => void;
@@ -404,6 +444,24 @@ function SavedCard({
   const both = `Username: ${saved.username}\nPassword: ${saved.password}`;
   return (
     <div className="flex flex-col gap-3 mt-1">
+      {saved.emailSent === true ? (
+        <div className="rounded-[var(--r-md)] border border-[color:var(--up)] bg-[color:var(--up-soft)] px-3 py-2 text-[12.5px] text-[color:var(--up)] leading-snug">
+          <span className="font-bold">Sent.</span> Login emailed to{" "}
+          <span className="font-[family-name:var(--mono)]">{saved.email}</span>.
+          You can also copy below as a backup.
+        </div>
+      ) : saved.emailSent === false ? (
+        <div className="rounded-[var(--r-md)] border border-[color:var(--down)] bg-[color:var(--down-soft)] px-3 py-2 text-[12.5px] text-[color:var(--down)] leading-snug">
+          <span className="font-bold">Email failed to send</span>
+          {saved.emailError ? ` (${saved.emailError})` : ""}. Saved successfully —
+          copy and share manually below.
+        </div>
+      ) : (
+        <div className="rounded-[var(--r-md)] border border-[color:var(--hairline-2)] bg-[color:var(--surface-2)] px-3 py-2 text-[12.5px] text-[color:var(--text-2)] leading-snug">
+          <span className="font-bold">Email not configured</span> — saved
+          successfully. Copy below and share via your channel of choice.
+        </div>
+      )}
       <div className="text-[12.5px] text-[color:var(--text-2)]">
         Copy these now — the password isn&apos;t shown again. Send it to the user via your channel of choice (text, email, in person).
       </div>

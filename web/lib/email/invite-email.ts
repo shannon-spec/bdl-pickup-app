@@ -192,6 +192,70 @@ export function sendLeagueJoinInvite(ctx: LeagueJoinEmailContext) {
   return send({ to: ctx.to, subject, text, html });
 }
 
+/**
+ * Initial-credentials email — sent when an admin or commissioner
+ * sets a player's login on /admin/credentials. Hands the player
+ * their temporary username + password and points them at the sign-in
+ * page. Plaintext-password-in-email is acceptable here only because:
+ *
+ *   - The password is explicitly temporary and the email tells the
+ *     player to change it on first login.
+ *   - The same delivery channel (email) is the recovery mechanism
+ *     for forgot-password, so the threat model is already "if the
+ *     player's inbox is compromised, the account is compromised."
+ */
+export type TempCredentialsEmailContext = {
+  to: string;
+  firstName: string;
+  username: string;
+  tempPassword: string;
+  /** Absolute URL of the sign-in page (built from request headers
+   *  by the action so preview deploys + custom domains work). */
+  signInUrl: string;
+  /** Optional sender display name ("from {commissioner}"). Falls
+   *  back to neutral copy when null. */
+  invitedByName?: string | null;
+};
+
+export function sendTempCredentialsEmail(ctx: TempCredentialsEmailContext) {
+  const subject = `Your BDL Pickup login`;
+  const fromLine = ctx.invitedByName
+    ? `${ctx.invitedByName} set up your account on BDL — Ball Don't Lie.`
+    : "Your account has been set up on BDL — Ball Don't Lie.";
+  const text =
+    `Hi ${ctx.firstName},\n\n` +
+    `${fromLine}\n\n` +
+    `Sign in here: ${ctx.signInUrl}\n\n` +
+    `Username: ${ctx.username}\n` +
+    `Temporary password: ${ctx.tempPassword}\n\n` +
+    `This password is temporary — change it after you sign in. ` +
+    `If you didn't expect this email, you can safely ignore it.\n\n— BDL`;
+  const html = wrapHtml(`
+    <h2 style="margin:0 0 6px;font-size:18px;letter-spacing:-0.01em;">Your BDL Pickup login</h2>
+    <p style="font-size:14px;line-height:1.55;margin:0 0 14px;color:#333;">
+      Hi ${escapeHtml(ctx.firstName)}, ${escapeHtml(fromLine)}
+    </p>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#f5f5f5;border-radius:10px;padding:16px 18px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13.5px;margin:8px 0 18px;">
+      <tr>
+        <td style="color:#888;padding-right:14px;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;">User</td>
+        <td style="font-weight:600;color:#0a0a0a;">${escapeHtml(ctx.username)}</td>
+      </tr>
+      <tr>
+        <td style="color:#888;padding-right:14px;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;padding-top:6px;">Pass</td>
+        <td style="font-weight:600;color:#0a0a0a;padding-top:6px;">${escapeHtml(ctx.tempPassword)}</td>
+      </tr>
+    </table>
+    <p style="margin:16px 0;">
+      <a href="${escapeHtml(ctx.signInUrl)}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;font-size:14px;">Sign in</a>
+    </p>
+    <p style="color:#666;font-size:13px;margin:0;">
+      This password is <strong>temporary</strong> — change it after you sign in.
+      If you didn&rsquo;t expect this email, you can safely ignore it.
+    </p>
+  `);
+  return send({ to: ctx.to, subject, text, html });
+}
+
 export function sendSeatsFilledNotice(ctx: Omit<InviteEmailContext, "expiresAtLabel" | "teamAName" | "teamBName">) {
   const subject = `${ctx.leagueName}: seats filled`;
   const text =

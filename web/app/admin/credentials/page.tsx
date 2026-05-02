@@ -9,6 +9,7 @@ import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { getCredentialPlayers } from "@/lib/queries/credentials";
+import { isInviteEmailConfigured } from "@/lib/email/invite-email";
 import { CredentialsTable } from "./credentials-client";
 
 export const dynamic = "force-dynamic";
@@ -57,7 +58,7 @@ export default async function CredentialsPage() {
             : "Set or reset login credentials for players in the leagues you commission."}
         </p>
 
-        <CredentialsTable rows={rows} />
+        <CredentialsTable rows={rows} emailConfigured={isInviteEmailConfigured()} />
       </PageFrame>
       <MobileBottomBar active="home" />
     </>
