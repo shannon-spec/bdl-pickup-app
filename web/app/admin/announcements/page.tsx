@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, MessageSquare } from "lucide-react";
 import { asc, inArray } from "drizzle-orm";
 import { readSession } from "@/lib/auth/session";
 import { isAdminLike, getMyCommissionerLeagueIds } from "@/lib/auth/perms";
@@ -65,11 +65,21 @@ export default async function AnnouncementsPage() {
           <ArrowLeft size={13} /> Admin
         </Link>
 
-        <SectionHead title="Announcements" />
+        <SectionHead
+          title="Announcements"
+          right={
+            <Link
+              href="/messages"
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[11px] font-semibold tracking-[0.04em] uppercase border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[color:var(--text-3)] hover:text-[color:var(--text)]"
+            >
+              <MessageSquare size={12} /> Send a direct message
+            </Link>
+          }
+        />
         <p className="text-[12.5px] text-[color:var(--text-3)] -mt-1">
           {isAdmin
-            ? "Send to every player on the platform or to a specific league. Lands in each recipient's in-app inbox."
-            : "Send announcements to your league members. Lands in each member's in-app inbox."}
+            ? "Broadcast to every player or a specific league — lands in each recipient's inbox. For 1:1 conversations, use Messages."
+            : "Broadcast to your league members — lands in each member's inbox. For 1:1 conversations with a specific player, use Messages."}
         </p>
 
         <ComposerClient

@@ -35,14 +35,14 @@ export function ContextHeaderClient({
               {ctx.user.displayName}
             </h1>
             {hasPlayer && (
-              <div className="inline-flex items-center gap-1 ml-1">
+              <div className="inline-flex items-center gap-2 ml-2 max-sm:ml-0 max-sm:mt-1 max-sm:w-full">
                 <Link
                   href={`/players/${ctx.user.playerId}`}
                   aria-label="My profile"
                   title="My profile"
-                  className="inline-flex items-center justify-center w-8 h-8 rounded-full text-[color:var(--text-3)] hover:text-[color:var(--brand)] hover:bg-[color:var(--surface-2)] transition-colors flex-shrink-0"
+                  className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[11.5px] font-bold tracking-[0.04em] uppercase text-[color:var(--text-2)] hover:text-[color:var(--text)] hover:bg-[color:var(--surface-2)] transition-colors flex-shrink-0"
                 >
-                  <UserRound size={17} strokeWidth={1.75} />
+                  <UserRound size={13} strokeWidth={2} /> Profile
                 </Link>
                 <Link
                   href="/messages"
@@ -56,14 +56,17 @@ export function ContextHeaderClient({
                       ? `Messages · ${unreadMessages} unread`
                       : "Messages"
                   }
-                  className="relative inline-flex items-center justify-center w-8 h-8 rounded-full text-[color:var(--text-3)] hover:text-[color:var(--brand)] hover:bg-[color:var(--surface-2)] transition-colors flex-shrink-0"
+                  className={`relative inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[11.5px] font-bold tracking-[0.04em] uppercase transition-colors flex-shrink-0 ${
+                    unreadMessages > 0
+                      ? "bg-[color:var(--brand)] text-white border border-[color:var(--brand)] hover:bg-[color:var(--brand-hover)]"
+                      : "border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[color:var(--text-2)] hover:text-[color:var(--text)] hover:bg-[color:var(--surface-2)]"
+                  }`}
                 >
-                  <MessageSquare size={17} strokeWidth={1.75} />
+                  <MessageSquare size={13} strokeWidth={2} /> Message
                   {unreadMessages > 0 && (
                     <span
                       aria-hidden
-                      className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[color:var(--brand)] text-white text-[9.5px] font-extrabold leading-[16px] text-center"
-                      style={{ boxShadow: "0 0 0 2px var(--badge-dot-border)" }}
+                      className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-white text-[color:var(--brand)] text-[10px] font-extrabold leading-[18px] -mr-1"
                     >
                       {unreadMessages > 9 ? "9+" : unreadMessages}
                     </span>
