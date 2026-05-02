@@ -507,7 +507,8 @@ function ContactPrivacyCard({
         Get in touch
       </div>
       <p className="text-[12.5px] text-[color:var(--text-3)] leading-relaxed">
-        Cell and email are kept private and encrypted on BDL.
+        Cell and email are kept private and encrypted on BDL. Use the open
+        message center to contact a player or commissioner.
       </p>
 
       <div className="grid grid-cols-2 gap-x-6 gap-y-5 max-sm:grid-cols-1">
