@@ -36,9 +36,10 @@ export default function AboutPage() {
           </p>
 
           <p className="text-[15.5px] leading-[1.7] text-[color:var(--text-2)]">
-            I built BDL to hold onto that. To track the games and the stats,
-            yes — but more importantly to keep the connection. The guys you
-            run with. The courts you show up to. The relationships that stick.
+            I built BDL to hold onto that. To track the games, leagues,
+            tournaments, and the stats we play — or our kids play — but more
+            importantly to keep the connection. The guys you run with. The
+            courts you show up to. The relationships that stick.
           </p>
 
           <p className="text-[15.5px] leading-[1.7] text-[color:var(--text-2)]">
