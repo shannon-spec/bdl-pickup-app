@@ -506,24 +506,25 @@ export function InviteManager({
             >
               <Mail size={13} /> Email
             </button>
+            {/* Text/SMS is parked behind a "soon" treatment until
+                Twilio is wired up. Visibly faded + non-interactive
+                so commissioners don't waste a click thinking it
+                works, but still visible so the option is on the
+                roadmap-in-the-UI. Re-enable by removing
+                aria-disabled / opacity / pointer-events-none. */}
             <button
               type="button"
-              onClick={() => toggleChannel("sms")}
-              className={`flex-1 h-9 rounded-[var(--r-md)] border text-[11.5px] font-bold tracking-[0.06em] uppercase inline-flex items-center justify-center gap-1.5 transition-colors ${
-                channels.has("sms")
-                  ? "bg-[color:var(--brand-soft)] border-[color:var(--brand)] text-[color:var(--brand)]"
-                  : "border-[color:var(--hairline-2)] text-[color:var(--text-3)] hover:text-[color:var(--text-2)]"
-              }`}
+              aria-disabled="true"
+              tabIndex={-1}
+              title="Text invites coming soon — not yet wired up"
+              className="flex-1 h-9 rounded-[var(--r-md)] border text-[11.5px] font-bold tracking-[0.06em] uppercase inline-flex items-center justify-center gap-1.5 border-[color:var(--hairline-2)] text-[color:var(--text-4)] opacity-50 pointer-events-none cursor-not-allowed"
             >
               <MessageSquare size={13} /> Text
+              <span className="text-[9px] font-semibold tracking-[0.08em] uppercase px-1.5 py-0.5 rounded-full bg-[color:var(--surface-2)] text-[color:var(--text-3)] ml-1">
+                Soon
+              </span>
             </button>
           </div>
-          {channels.has("sms") && (
-            <p className="text-[11px] text-[color:var(--text-3)] leading-snug">
-              SMS dispatch is logged but not yet sent over Twilio. Recipients
-              must have a cell on file.
-            </p>
-          )}
           {smsMissing.length > 0 && (
             <p className="text-[11px] text-[color:var(--warn)] bg-[color:var(--warn-soft)] rounded-[var(--r-md)] px-2.5 py-1.5">
               {smsMissing.length} selected player
