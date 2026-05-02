@@ -606,17 +606,6 @@ function ProfileHero({
             )}
           </div>
         </div>
-        <div className="flex flex-col items-end gap-2 max-sm:items-start max-sm:w-full">
-          <div className="text-[11px] font-semibold tracking-[0.08em] uppercase text-[color:var(--text-3)]">
-            {completion}% complete
-          </div>
-          <Link
-            href={`/players/${player.id}`}
-            className="inline-flex items-center gap-2 h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)]"
-          >
-            <Pencil size={13} /> {missing.length > 0 ? "Complete profile" : "Edit profile"}
-          </Link>
-        </div>
       </div>
 
       {missing.length > 0 && (
