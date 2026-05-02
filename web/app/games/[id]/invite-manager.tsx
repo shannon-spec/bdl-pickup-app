@@ -201,6 +201,54 @@ export function InviteManager({
     // No-op: keep the user's edits unless they reset manually.
   }, [compose]);
 
+  // Auto-refresh while invites are in flight. Recipients accept,
+  // decline, or let invites expire on their own clock — without
+  // polling the In Flight column shows stale "Pending" until the
+  // commissioner manually refreshes. We re-fetch via router.refresh
+  // every 60s as long as there's at least one pending/queued invite,
+  // and pause while the tab is hidden so backgrounded sessions don't
+  // burn requests.
+  const hasInFlight = activeInvites.length > 0;
+  useEffect(() => {
+    if (!hasInFlight) return;
+
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    const tick = () => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      router.refresh();
+    };
+    const start = () => {
+      if (intervalId) return;
+      intervalId = setInterval(tick, 60_000);
+    };
+    const stop = () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    // Run immediately on focus changes — if the user comes back
+    // to the tab after a while, they get fresh state without
+    // waiting up to a minute.
+    const onVisibility = () => {
+      if (typeof document !== "undefined" && !document.hidden) {
+        router.refresh();
+        start();
+      } else {
+        stop();
+      }
+    };
+
+    if (typeof document === "undefined" || !document.hidden) start();
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [hasInFlight, router]);
+
   const confirmSend = () => {
     if (!compose) return;
     setError(null);
