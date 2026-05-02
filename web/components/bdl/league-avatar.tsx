@@ -100,6 +100,57 @@ export const AVATAR_COLORS: AvatarColor[] = [
       "linear-gradient(135deg, var(--surface-2) 0%, var(--surface-3, var(--hairline-2)) 100%)",
     text: "var(--text)",
   },
+
+  // Lighter pastel shades — softer, more contact-poster.
+  // Foreground stays dark for readability against the lift.
+  {
+    key: "sky",
+    label: "Sky",
+    background: "linear-gradient(135deg, #BCE0FF 0%, #7FB6E8 100%)",
+    text: "#0a3052",
+  },
+  {
+    key: "mint",
+    label: "Mint",
+    background: "linear-gradient(135deg, #C7EBD0 0%, #8BCFA0 100%)",
+    text: "#0d3a23",
+  },
+  {
+    key: "seafoam",
+    label: "Seafoam",
+    background: "linear-gradient(135deg, #C0EDE3 0%, #7BCBBC 100%)",
+    text: "#0e3b34",
+  },
+  {
+    key: "lavender",
+    label: "Lavender",
+    background: "linear-gradient(135deg, #DCD0F5 0%, #B19DDC 100%)",
+    text: "#2a1d4a",
+  },
+  {
+    key: "blush",
+    label: "Blush",
+    background: "linear-gradient(135deg, #F8D2DC 0%, #E89DAE 100%)",
+    text: "#4d1929",
+  },
+  {
+    key: "peach",
+    label: "Peach",
+    background: "linear-gradient(135deg, #FDD9B7 0%, #F4A87A 100%)",
+    text: "#522612",
+  },
+  {
+    key: "buttercream",
+    label: "Buttercream",
+    background: "linear-gradient(135deg, #FCE8AB 0%, #F1C76C 100%)",
+    text: "#4a3409",
+  },
+  {
+    key: "linen",
+    label: "Linen",
+    background: "linear-gradient(135deg, #F4ECDD 0%, #DCC9A1 100%)",
+    text: "#3a2e15",
+  },
 ];
 
 export function getAvatarColor(key: string | null | undefined): AvatarColor {

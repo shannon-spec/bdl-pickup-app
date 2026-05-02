@@ -45,6 +45,14 @@ const AVATAR_COLORS = [
   "violet",
   "slate",
   "graphite",
+  "sky",
+  "mint",
+  "seafoam",
+  "lavender",
+  "blush",
+  "peach",
+  "buttercream",
+  "linen",
 ] as const;
 
 const leagueSchema = z.object({
