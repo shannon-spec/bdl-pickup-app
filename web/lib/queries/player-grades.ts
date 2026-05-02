@@ -124,7 +124,13 @@ export async function getPlayerGradeAggregate(
   for (const v of votes) {
     const num = GRADE_VALUE[v.grade as GradeKey];
     if (num === null) continue;
-    if (commissionerIds.has(v.voterId)) {
+    // Commissioner authority is for grading OTHER players. A
+    // commissioner self-vote drops to the peer bucket so they
+    // can't single-handedly swing 50% of their own grade by
+    // checking a tier on their own profile.
+    const isSelfVote = v.voterId === targetId;
+    const isCommish = commissionerIds.has(v.voterId) && !isSelfVote;
+    if (isCommish) {
       commSum += num;
       commCount++;
     } else {
@@ -249,7 +255,11 @@ export async function getCrowdGradesForPlayers(
         commSum: 0,
         commCount: 0,
       };
-    if (commissionerIds.has(v.voterId)) {
+    // Commissioner self-vote falls to the peer bucket — see
+    // getPlayerGradeAggregate for the rationale.
+    const isSelfVote = v.voterId === v.targetId;
+    const isCommish = commissionerIds.has(v.voterId) && !isSelfVote;
+    if (isCommish) {
       acc.commSum += num;
       acc.commCount++;
     } else {
@@ -343,7 +353,11 @@ export async function getPlayerGradesByLeague(
         commSum: 0,
         commCount: 0,
       };
-    const isComm = commByLeague.get(v.leagueId)?.has(v.voterId) ?? false;
+    // Commissioner self-vote falls to the peer bucket — see
+    // getPlayerGradeAggregate for the rationale.
+    const isSelfVote = v.voterId === targetId;
+    const isComm =
+      (commByLeague.get(v.leagueId)?.has(v.voterId) ?? false) && !isSelfVote;
     if (isComm) {
       acc.commSum += num;
       acc.commCount++;
