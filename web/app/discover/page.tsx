@@ -135,6 +135,11 @@ function LeagueCard({
           {l.season ? `${l.season} · ` : ""}
           {l.schedule || l.location || "Open league"}
         </div>
+        {l.description && (
+          <div className="text-[12.5px] leading-[1.5] text-[color:var(--text-2)] mt-2 line-clamp-3">
+            {l.description}
+          </div>
+        )}
       </div>
       <div className="flex items-center justify-between mt-auto pt-1 gap-2 flex-wrap">
         <div className="flex gap-1.5 flex-wrap">
