@@ -48,8 +48,8 @@ export function MessageCenterClient({
   conversations,
   messageable,
   viewerId,
-  isAdmin,
-  isCommissioner,
+  canGlobal,
+  canLeague,
   leagueOptions,
   emailConfigured,
   broadcastHistory,
@@ -57,8 +57,10 @@ export function MessageCenterClient({
   conversations: ConversationListItem[];
   messageable: MessageablePlayer[];
   viewerId: string;
-  isAdmin: boolean;
-  isCommissioner: boolean;
+  /** Active-view gated: admin view → true; otherwise false. */
+  canGlobal: boolean;
+  /** Active-view gated: admin or commissioner view → true; player → false. */
+  canLeague: boolean;
   leagueOptions: { id: string; name: string }[];
   emailConfigured: boolean;
   broadcastHistory: AuthoredAnnouncement[];
@@ -66,8 +68,8 @@ export function MessageCenterClient({
   const router = useRouter();
   const [pending, start] = useTransition();
 
-  const canBroadcastLeague = isAdmin || isCommissioner;
-  const canBroadcastGlobal = isAdmin;
+  const canBroadcastLeague = canLeague;
+  const canBroadcastGlobal = canGlobal;
 
   const [audience, setAudience] = useState<Audience>("single");
   const [recipient, setRecipient] = useState<MessageablePlayer | null>(null);
@@ -603,7 +605,7 @@ export function MessageCenterClient({
       )}
 
       {/* Recent broadcasts (admin / commissioner only) */}
-      {(isAdmin || isCommissioner) && broadcastHistory.length > 0 && (
+      {canBroadcastLeague && broadcastHistory.length > 0 && (
         <>
           <div className="flex items-center gap-2.5 mt-2">
             <span
