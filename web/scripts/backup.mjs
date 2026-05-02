@@ -36,7 +36,17 @@ const TABLES = [
   "league_commissioners",
   "games",
   "game_roster",
+  "game_subgames",
+  "game_invites",
+  "game_invite_batches",
+  "game_invite_events",
   "invites",
+  "announcements",
+  "announcement_recipients",
+  "conversations",
+  "messages",
+  "player_grades",
+  "password_reset_tokens",
 ];
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
