@@ -11,6 +11,12 @@ const LABELS: Record<View, string> = {
   admin: "Admin",
 };
 
+/**
+ * Inline persona/role pills shown next to the user's name. Active role
+ * is a solid brand-filled pill; the rest are ghost pills with a hairline
+ * border. Single-option case (player-only) renders as a plain label
+ * since there's nothing to switch.
+ */
 export function RoleToggle({
   view,
   options,
@@ -21,7 +27,13 @@ export function RoleToggle({
   const router = useRouter();
   const [pending, start] = useTransition();
 
-  if (options.length <= 1) return null;
+  if (options.length === 1) {
+    return (
+      <span className="inline-flex items-center h-7 px-1 text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-3)] flex-shrink-0">
+        {LABELS[options[0]]}
+      </span>
+    );
+  }
 
   const onSelect = (next: View) => {
     if (next === view) return;
@@ -36,12 +48,7 @@ export function RoleToggle({
       role="tablist"
       aria-label="View as"
       aria-busy={pending}
-      className={[
-        "inline-flex items-center gap-1 p-1 rounded-full",
-        "bg-[color:var(--surface)] border border-[color:var(--hairline-2)]",
-        "shadow-sm",
-        "max-sm:w-full",
-      ].join(" ")}
+      className="inline-flex items-center gap-1.5 flex-wrap"
     >
       {options.map((o) => {
         const selected = o === view;
@@ -54,14 +61,13 @@ export function RoleToggle({
             onClick={() => onSelect(o)}
             disabled={pending}
             className={[
-              "h-9 px-4 rounded-full",
-              "font-semibold text-[12.5px] tracking-[0.04em]",
+              "h-7 px-3 rounded-full",
+              "text-[10.5px] font-bold tracking-[0.06em] uppercase",
               "transition-colors",
               selected
-                ? "bg-[color:var(--surface-2)] text-[color:var(--text)] shadow-[inset_0_0_0_1px_var(--hairline),0_1px_2px_rgba(0,0,0,0.10)]"
-                : "text-[color:var(--text-3)] hover:text-[color:var(--text)]",
+                ? "bg-[color:var(--brand)] text-white border border-[color:var(--brand)]"
+                : "bg-transparent border border-[color:var(--hairline-2)] text-[color:var(--text-3)] hover:text-[color:var(--text)] hover:border-[color:var(--hairline)]",
               "disabled:opacity-60",
-              "max-sm:flex-1 max-sm:px-0",
             ].join(" ")}
           >
             {LABELS[o]}
