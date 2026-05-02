@@ -8,6 +8,7 @@ import { readSession } from "@/lib/auth/session";
 import { getViewCaps, type View } from "@/lib/auth/view";
 import { db, players } from "@/lib/db";
 import { getUnreadAnnouncementCount } from "@/lib/queries/announcements";
+import { getUnreadMessageCount } from "@/lib/queries/messages";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -67,10 +68,11 @@ export async function TopBar({
     }
   }
 
-  // Bell badge — only render the dot when there's actually unread
-  // mail. Skipped for guests / unlinked admins (no playerId, no inbox).
+  // Bell badge — combined unread count across announcements and DMs.
+  // Skipped for guests / unlinked admins (no playerId, no inbox).
   const unreadCount = session?.playerId
-    ? await getUnreadAnnouncementCount(session.playerId)
+    ? (await getUnreadAnnouncementCount(session.playerId)) +
+      (await getUnreadMessageCount(session.playerId))
     : 0;
 
   return (
@@ -130,11 +132,16 @@ export async function TopBar({
             </Link>
           )}
           <Link
-            href="/inbox"
+            href="/messages"
             aria-label={
               unreadCount > 0
-                ? `Inbox · ${unreadCount} unread`
-                : "Inbox"
+                ? `Message Center · ${unreadCount} unread`
+                : "Message Center"
+            }
+            title={
+              unreadCount > 0
+                ? `Message Center · ${unreadCount} unread`
+                : "Message Center"
             }
             className={cn(
               "relative inline-flex items-center justify-center",

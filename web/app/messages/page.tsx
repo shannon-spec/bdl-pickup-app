@@ -12,7 +12,10 @@ import {
   getConversationsForPlayer,
   getMessageablePlayers,
 } from "@/lib/queries/messages";
-import { getAuthoredAnnouncements } from "@/lib/queries/announcements";
+import {
+  getAuthoredAnnouncements,
+  getInboxForPlayer,
+} from "@/lib/queries/announcements";
 import { isInviteEmailConfigured } from "@/lib/email/invite-email";
 import { MessageCenterClient } from "./list-client";
 
@@ -67,14 +70,18 @@ export default async function MessagesPage() {
         : [];
   }
 
-  const [conversations, messageable, broadcastHistory] = await Promise.all([
-    getConversationsForPlayer(session.playerId),
-    getMessageablePlayers(session),
-    canLeague
-      ? getAuthoredAnnouncements(session.playerId, 10)
-      : Promise.resolve([]),
-  ]);
-  const totalUnread = conversations.reduce((s, c) => s + c.unreadCount, 0);
+  const [conversations, messageable, broadcastHistory, inbox] =
+    await Promise.all([
+      getConversationsForPlayer(session.playerId),
+      getMessageablePlayers(session),
+      canLeague
+        ? getAuthoredAnnouncements(session.playerId, 10)
+        : Promise.resolve([]),
+      getInboxForPlayer(session.playerId),
+    ]);
+  const dmUnread = conversations.reduce((s, c) => s + c.unreadCount, 0);
+  const inboxUnread = inbox.filter((i) => !i.readAt).length;
+  const totalUnread = dmUnread + inboxUnread;
 
   return (
     <>
@@ -89,16 +96,19 @@ export default async function MessagesPage() {
                 {totalUnread} unread
               </span>
             ) : (
-              <span>{conversations.length}</span>
+              <span>
+                {inbox.length + conversations.length} item
+                {inbox.length + conversations.length === 1 ? "" : "s"}
+              </span>
             )
           }
         />
         <p className="text-[12.5px] text-[color:var(--text-3)] -mt-1">
           {canGlobal
-            ? "Send a 1:1 message to anyone, broadcast to a league, or post a global announcement. Channel availability adapts to the audience."
+            ? "One place for inbox, conversations, and broadcasts. Channel availability adapts to the audience."
             : canLeague
-              ? "Send a 1:1 message to any player, or broadcast an announcement to one of your leagues."
-              : "Send a 1:1 message to any other BDL player — lands in their in-app inbox."}
+              ? "One place for inbox, conversations, and league broadcasts."
+              : "One place for inbox and 1:1 conversations with other BDL players."}
         </p>
         <MessageCenterClient
           conversations={conversations}
@@ -109,6 +119,7 @@ export default async function MessagesPage() {
           leagueOptions={leagueOptions}
           emailConfigured={isInviteEmailConfigured()}
           broadcastHistory={broadcastHistory}
+          inbox={inbox}
         />
       </PageFrame>
       <MobileBottomBar active="home" />

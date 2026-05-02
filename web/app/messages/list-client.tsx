@@ -4,6 +4,9 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  Bell,
+  Check,
+  CheckCheck,
   Eraser,
   Send,
   Search,
@@ -20,12 +23,19 @@ import {
   clearAllConversations,
   sendMessage,
 } from "@/lib/actions/messages";
-import { createAnnouncement } from "@/lib/actions/announcements";
+import {
+  createAnnouncement,
+  markAnnouncementRead,
+  markAllAnnouncementsRead,
+} from "@/lib/actions/announcements";
 import type {
   ConversationListItem,
   MessageablePlayer,
 } from "@/lib/queries/messages";
-import type { AuthoredAnnouncement } from "@/lib/queries/announcements";
+import type {
+  AuthoredAnnouncement,
+  InboxItem,
+} from "@/lib/queries/announcements";
 
 type Audience = "single" | "league" | "global";
 
@@ -53,6 +63,7 @@ export function MessageCenterClient({
   leagueOptions,
   emailConfigured,
   broadcastHistory,
+  inbox,
 }: {
   conversations: ConversationListItem[];
   messageable: MessageablePlayer[];
@@ -64,6 +75,7 @@ export function MessageCenterClient({
   leagueOptions: { id: string; name: string }[];
   emailConfigured: boolean;
   broadcastHistory: AuthoredAnnouncement[];
+  inbox: InboxItem[];
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -84,6 +96,29 @@ export function MessageCenterClient({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  // Optimistic read state for inbox — flips immediately on click.
+  const [inboxReadLocal, setInboxReadLocal] = useState<Set<string>>(
+    new Set(inbox.filter((i) => i.readAt).map((i) => i.id)),
+  );
+  const inboxUnread = inbox.filter((i) => !inboxReadLocal.has(i.id)).length;
+
+  const onMarkInboxRead = (id: string) => {
+    if (inboxReadLocal.has(id)) return;
+    setInboxReadLocal((prev) => new Set(prev).add(id));
+    start(async () => {
+      await markAnnouncementRead(id);
+      router.refresh();
+    });
+  };
+
+  const onMarkAllInboxRead = () => {
+    if (inboxUnread === 0) return;
+    setInboxReadLocal(new Set(inbox.map((i) => i.id)));
+    start(async () => {
+      await markAllAnnouncementsRead();
+      router.refresh();
+    });
+  };
 
   const resetForm = () => {
     setBody("");
@@ -543,6 +578,111 @@ export function MessageCenterClient({
           </button>
         </div>
       </div>
+
+      {/* Inbox — announcements + alerts the viewer received */}
+      <div className="flex items-center justify-between gap-3 mt-2">
+        <div className="inline-flex items-center gap-2.5">
+          <span
+            aria-hidden
+            className="w-[3px] h-[12px] rounded-sm bg-[color:var(--brand)]"
+          />
+          <span className="text-[11.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)]">
+            Inbox
+          </span>
+          <span className="text-[12px] font-medium text-[color:var(--text-4)] num">
+            {inboxUnread > 0 ? `${inboxUnread} unread` : inbox.length}
+          </span>
+        </div>
+        {inboxUnread > 0 && (
+          <button
+            type="button"
+            onClick={onMarkAllInboxRead}
+            disabled={pending}
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[11px] font-semibold tracking-[0.04em] uppercase border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[color:var(--text-3)] hover:text-[color:var(--text)] disabled:opacity-60"
+          >
+            <CheckCheck size={11} /> Mark all read
+          </button>
+        )}
+      </div>
+
+      {inbox.length === 0 ? (
+        <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-8 text-center text-[color:var(--text-3)] text-[13px]">
+          <Bell
+            size={20}
+            className="mx-auto mb-2 text-[color:var(--text-4)]"
+          />
+          No announcements yet. League broadcasts and global updates will
+          land here.
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {inbox.map((item) => {
+            const isRead = inboxReadLocal.has(item.id);
+            return (
+              <article
+                key={item.id}
+                onClick={() => onMarkInboxRead(item.id)}
+                className={`relative rounded-[14px] border p-4 cursor-pointer transition-colors ${
+                  isRead
+                    ? "border-[color:var(--hairline-2)] bg-[color:var(--surface)]"
+                    : "border-[color:var(--brand-soft)] bg-[color:var(--brand-soft)]/30"
+                }`}
+              >
+                {!isRead && (
+                  <span
+                    aria-hidden
+                    className="absolute top-4 left-4 w-2 h-2 rounded-full bg-[color:var(--brand)]"
+                  />
+                )}
+                <div className={!isRead ? "pl-5" : ""}>
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span
+                      className={`inline-flex items-center h-5 px-2 rounded-full text-[10px] font-bold tracking-[0.05em] uppercase ${
+                        item.scope === "global"
+                          ? "bg-[color:var(--brand)] text-white"
+                          : "bg-[color:var(--surface-2)] text-[color:var(--text-2)] border border-[color:var(--hairline)]"
+                      }`}
+                    >
+                      {item.scope === "global"
+                        ? "Global"
+                        : item.leagueName ?? "League"}
+                    </span>
+                    <span className="text-[11px] text-[color:var(--text-4)] font-[family-name:var(--mono)] num">
+                      {fmtRelative(item.createdAt)}
+                    </span>
+                    {item.authorName && (
+                      <span className="text-[11px] text-[color:var(--text-3)]">
+                        · {item.authorName}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="font-bold text-[15px] text-[color:var(--text)] mb-1.5">
+                    {item.headline}
+                  </h3>
+                  <p className="text-[13px] text-[color:var(--text-2)] leading-relaxed whitespace-pre-wrap">
+                    {item.body}
+                  </p>
+                  {item.ctaLabel && item.ctaUrl && (
+                    <div className="mt-3" onClick={(e) => e.stopPropagation()}>
+                      <Link
+                        href={item.ctaUrl}
+                        className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--r-md)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[11.5px] tracking-[0.05em] uppercase"
+                      >
+                        {item.ctaLabel}
+                      </Link>
+                    </div>
+                  )}
+                  {isRead && item.readAt && (
+                    <div className="text-[10.5px] text-[color:var(--text-4)] mt-2 inline-flex items-center gap-1">
+                      <Check size={11} /> Read
+                    </div>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
 
       {/* Conversations list */}
       <div className="flex items-center justify-between gap-3 mt-2">
