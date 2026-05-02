@@ -11,6 +11,7 @@ import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { db, leagues } from "@/lib/db";
 import { getAuthoredAnnouncements } from "@/lib/queries/announcements";
+import { isInviteEmailConfigured } from "@/lib/email/invite-email";
 import { ComposerClient } from "./composer-client";
 
 export const dynamic = "force-dynamic";
@@ -74,6 +75,7 @@ export default async function AnnouncementsPage() {
         <ComposerClient
           isAdmin={isAdmin}
           leagueOptions={leagueOptions}
+          emailConfigured={isInviteEmailConfigured()}
         />
 
         {history.length > 0 && (
@@ -96,6 +98,11 @@ export default async function AnnouncementsPage() {
                       >
                         {a.scope === "global" ? "Global" : a.leagueName ?? "League"}
                       </span>
+                      {a.channels.includes("email") && (
+                        <span className="inline-flex items-center h-5 px-2 rounded-full text-[10px] font-bold tracking-[0.05em] uppercase bg-[color:var(--surface-2)] text-[color:var(--text-2)] border border-[color:var(--hairline)]">
+                          Email
+                        </span>
+                      )}
                       <span className="font-bold text-[14px] truncate">
                         {a.headline}
                       </span>

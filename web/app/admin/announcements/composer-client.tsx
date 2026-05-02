@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Send } from "lucide-react";
+import { Mail, MessageSquare, Send } from "lucide-react";
 import { createAnnouncement } from "@/lib/actions/announcements";
 
 type Scope = "global" | "league";
@@ -10,9 +10,14 @@ type Scope = "global" | "league";
 export function ComposerClient({
   isAdmin,
   leagueOptions,
+  emailConfigured,
 }: {
   isAdmin: boolean;
   leagueOptions: { id: string; name: string }[];
+  /** Whether RESEND_API_KEY + ADMIN_FROM_EMAIL are set on the
+   *  server. Drives whether the Email channel toggle is interactive
+   *  or shows the "soon"-style disabled treatment. */
+  emailConfigured: boolean;
 }) {
   const router = useRouter();
   const [scope, setScope] = useState<Scope>(isAdmin ? "global" : "league");
@@ -21,6 +26,9 @@ export function ComposerClient({
   const [body, setBody] = useState("");
   const [ctaLabel, setCtaLabel] = useState("");
   const [ctaUrl, setCtaUrl] = useState("");
+  // Inbox is always on. Email is opt-in and only available when the
+  // server reports Resend is configured.
+  const [emailOn, setEmailOn] = useState(false);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -35,13 +43,21 @@ export function ComposerClient({
     fd.set("body", body);
     fd.set("ctaLabel", ctaLabel);
     fd.set("ctaUrl", ctaUrl);
+    const channels = ["inbox"];
+    if (emailOn && emailConfigured) channels.push("email");
+    fd.set("channels", channels.join(","));
     start(async () => {
       const res = await createAnnouncement(fd);
       if (!res.ok) {
         setError(res.error);
         return;
       }
-      setSuccess(`Sent to ${res.data.recipientCount} player${res.data.recipientCount === 1 ? "" : "s"}.`);
+      const base = `Sent to ${res.data.recipientCount} player${res.data.recipientCount === 1 ? "" : "s"}'s inbox.`;
+      const emailLine =
+        res.data.emailSent !== null
+          ? ` Emailed ${res.data.emailSent}/${res.data.emailAttempted}.`
+          : "";
+      setSuccess(base + emailLine);
       setHeadline("");
       setBody("");
       setCtaLabel("");
@@ -155,6 +171,43 @@ export function ComposerClient({
             placeholder="/leagues/abc123 or https://…"
             className="h-10 rounded-[var(--r-md)] border border-[color:var(--hairline-2)] bg-[color:var(--surface-2)] px-3 text-[14px] outline-none focus:border-[color:var(--brand)]"
           />
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <span className="text-[11px] font-semibold tracking-[0.12em] uppercase text-[color:var(--text-3)]">
+          Channels
+        </span>
+        <div className="grid grid-cols-2 gap-2 max-sm:grid-cols-1">
+          {/* Inbox is implicit and always on. Render as a static
+              indicator so the UI tells the truth about behavior. */}
+          <div className="h-10 rounded-[var(--r-md)] border border-[color:var(--brand)] bg-[color:var(--brand-soft)] text-[color:var(--brand-ink,var(--brand))] inline-flex items-center justify-center gap-1.5 text-[12px] font-bold tracking-[0.04em] uppercase">
+            <MessageSquare size={13} /> In-app inbox · Always
+          </div>
+          <button
+            type="button"
+            onClick={() => emailConfigured && setEmailOn((v) => !v)}
+            disabled={!emailConfigured}
+            title={
+              emailConfigured
+                ? undefined
+                : "Email isn't configured — set RESEND_API_KEY + ADMIN_FROM_EMAIL"
+            }
+            className={`h-10 rounded-[var(--r-md)] border text-[12px] font-bold tracking-[0.04em] uppercase inline-flex items-center justify-center gap-1.5 transition-colors ${
+              !emailConfigured
+                ? "border-[color:var(--hairline-2)] text-[color:var(--text-4)] opacity-50 cursor-not-allowed"
+                : emailOn
+                  ? "bg-[color:var(--brand-soft)] border-[color:var(--brand)] text-[color:var(--brand-ink,var(--brand))]"
+                  : "border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[color:var(--text-2)] hover:text-[color:var(--text)]"
+            }`}
+          >
+            <Mail size={13} /> Email
+            {!emailConfigured && (
+              <span className="text-[9px] font-semibold tracking-[0.08em] uppercase px-1.5 py-0.5 rounded-full bg-[color:var(--surface-2)] text-[color:var(--text-3)] ml-1">
+                Off
+              </span>
+            )}
+          </button>
         </div>
       </div>
 

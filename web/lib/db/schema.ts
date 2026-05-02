@@ -536,6 +536,14 @@ export const announcements = pgTable(
     body: text("body").notNull(),
     ctaLabel: text("cta_label"),
     ctaUrl: text("cta_url"),
+    // text[] subset of {inbox,email}. 'inbox' is implicit and always
+    // included (an announcement without an inbox row would be invisible
+    // post-send). Adding 'email' triggers a Resend broadcast at create
+    // time; future channels (push, sms) plug in here.
+    channels: text("channels")
+      .array()
+      .notNull()
+      .default(sql`ARRAY['inbox']::text[]`),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

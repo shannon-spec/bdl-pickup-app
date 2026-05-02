@@ -98,6 +98,7 @@ export type AuthoredAnnouncement = {
   leagueName: string | null;
   headline: string;
   body: string;
+  channels: string[];
   createdAt: string;
   recipientCount: number;
   readCount: number;
@@ -115,6 +116,7 @@ export async function getAuthoredAnnouncements(
       leagueName: leagues.name,
       headline: announcements.headline,
       body: announcements.body,
+      channels: announcements.channels,
       createdAt: announcements.createdAt,
       recipientCount: drSql<number>`(
         SELECT count(*)::int FROM announcement_recipients ar
@@ -138,6 +140,7 @@ export async function getAuthoredAnnouncements(
     leagueName: r.leagueName,
     headline: r.headline,
     body: r.body,
+    channels: r.channels ?? ["inbox"],
     createdAt: r.createdAt.toISOString(),
     recipientCount: r.recipientCount,
     readCount: r.readCount,

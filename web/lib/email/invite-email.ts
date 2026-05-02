@@ -121,6 +121,72 @@ export function sendInviteInitial(ctx: InviteEmailContext) {
 }
 
 /**
+ * Announcement broadcast email. One copy per recipient. Subject is
+ * the announcement headline (with the league name prefixed for
+ * scope=league sends, so inboxes can sort by sender). CTA renders as
+ * a button and gracefully degrades to a paste-this-URL line.
+ *
+ * Plain-text and HTML are kept symmetrical so the message reads in
+ * either rendering.
+ */
+export type AnnouncementEmailContext = {
+  to: string;
+  /** Recipient's first name when known — used for the salutation.
+   *  Falls back to a neutral greeting when null. */
+  firstName: string | null;
+  scope: "global" | "league";
+  /** League name when scope=league. Drives the subject prefix and
+   *  the eyebrow inside the email body. */
+  leagueName: string | null;
+  authorName: string | null;
+  headline: string;
+  body: string;
+  ctaLabel: string | null;
+  /** Already-absolute URL when present. The action resolves
+   *  relative paths against the request host before calling. */
+  ctaUrl: string | null;
+};
+
+export function sendAnnouncementEmail(ctx: AnnouncementEmailContext) {
+  const subject =
+    ctx.scope === "league" && ctx.leagueName
+      ? `${ctx.leagueName}: ${ctx.headline}`
+      : ctx.headline;
+  const greeting = ctx.firstName ? `Hi ${ctx.firstName},` : "Hi,";
+  const fromLine = ctx.authorName
+    ? `From ${ctx.authorName} on BDL — Ball Don't Lie.`
+    : "From the BDL team — Ball Don't Lie.";
+  const eyebrow =
+    ctx.scope === "league" && ctx.leagueName
+      ? ctx.leagueName.toUpperCase()
+      : "BDL · ANNOUNCEMENT";
+
+  const text =
+    `${greeting}\n\n` +
+    `${ctx.body}\n\n` +
+    (ctx.ctaLabel && ctx.ctaUrl ? `${ctx.ctaLabel}: ${ctx.ctaUrl}\n\n` : "") +
+    `${fromLine}\n\n— BDL`;
+
+  const html = wrapHtml(`
+    <p style="font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#666;margin:0 0 8px;">${escapeHtml(eyebrow)}</p>
+    <h2 style="margin:0 0 14px;font-size:20px;letter-spacing:-0.01em;line-height:1.25;">${escapeHtml(ctx.headline)}</h2>
+    <p style="font-size:14px;line-height:1.55;margin:0 0 6px;color:#333;">${escapeHtml(greeting)}</p>
+    <div style="font-size:14px;line-height:1.6;color:#333;white-space:pre-wrap;margin:0 0 16px;">${escapeHtml(ctx.body)}</div>
+    ${
+      ctx.ctaLabel && ctx.ctaUrl
+        ? `<p style="margin:18px 0;">
+             <a href="${escapeHtml(ctx.ctaUrl)}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;font-size:14px;">${escapeHtml(ctx.ctaLabel)}</a>
+           </p>
+           <p style="color:#666;font-size:13px;margin:0 0 12px;">Or paste this URL: <a href="${escapeHtml(ctx.ctaUrl)}">${escapeHtml(ctx.ctaUrl)}</a></p>`
+        : ""
+    }
+    <p style="color:#666;font-size:12px;margin:18px 0 0;">${escapeHtml(fromLine)}</p>
+  `);
+
+  return send({ to: ctx.to, subject, text, html });
+}
+
+/**
  * SMS stub. Real Twilio wiring is deferred; for now we log so the
  * invite still gets recorded with `sms` in its channels[] and we can
  * backfill once credentials are configured.

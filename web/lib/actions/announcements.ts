@@ -1,7 +1,8 @@
 "use server";
 
+import { headers } from "next/headers";
 import { z } from "zod";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import {
   db,
@@ -17,6 +18,10 @@ import {
   getMyCommissionerLeagueIds,
 } from "@/lib/auth/perms";
 import { requireManageView } from "@/lib/auth/view";
+import {
+  isInviteEmailConfigured,
+  sendAnnouncementEmail,
+} from "@/lib/email/invite-email";
 
 export type ActionResult<T = unknown> =
   | { ok: true; data: T }
@@ -29,6 +34,9 @@ const createSchema = z.object({
   body: z.string().trim().min(1, "Body required.").max(2000),
   ctaLabel: z.string().trim().max(40).optional().or(z.literal("")),
   ctaUrl: z.string().trim().max(500).optional().or(z.literal("")),
+  /** Comma-separated list. 'inbox' is implicit; 'email' triggers
+   *  Resend broadcast. Validated against known values below. */
+  channels: z.string().optional(),
 });
 
 const readForm = (fd: FormData) => {
@@ -56,7 +64,17 @@ const nullable = (s?: string | null) => {
  */
 export async function createAnnouncement(
   formData: FormData,
-): Promise<ActionResult<{ id: string; recipientCount: number }>> {
+): Promise<
+  ActionResult<{
+    id: string;
+    recipientCount: number;
+    /** When the email channel is selected: how many recipients we
+     *  attempted (had an email on file) and how many actually
+     *  succeeded. null when email wasn't a selected channel. */
+    emailAttempted: number | null;
+    emailSent: number | null;
+  }>
+> {
   const session = await readSession();
   if (!session?.playerId) {
     return { ok: false, error: "Sign in to send announcements." };
@@ -81,6 +99,24 @@ export async function createAnnouncement(
     return {
       ok: false,
       error: "CTA needs both a label and a URL — or leave both blank.",
+    };
+  }
+
+  // Channels — 'inbox' is always included even if not passed (it's
+  // the default behavior and doesn't need consent). 'email' is the
+  // only other accepted value in v1; gated on Resend config.
+  const requestedChannels = (v.channels ?? "inbox")
+    .split(",")
+    .map((c) => c.trim())
+    .filter(Boolean);
+  const channels = Array.from(
+    new Set(["inbox", ...requestedChannels.filter((c) => c === "email")]),
+  );
+  if (channels.includes("email") && !isInviteEmailConfigured()) {
+    return {
+      ok: false,
+      error:
+        "Email isn't configured for this project — set RESEND_API_KEY and ADMIN_FROM_EMAIL in Vercel, or send via Inbox only.",
     };
   }
 
@@ -148,6 +184,7 @@ export async function createAnnouncement(
       body: v.body,
       ctaLabel,
       ctaUrl,
+      channels,
     })
     .returning({ id: announcements.id });
 
@@ -165,11 +202,101 @@ export async function createAnnouncement(
     )
     .onConflictDoNothing();
 
+  // Email broadcast — best-effort. Save already succeeded; a Resend
+  // failure on any individual address doesn't undo the inbox row.
+  let emailAttempted: number | null = null;
+  let emailSent: number | null = null;
+  if (channels.includes("email")) {
+    // Look up emails + names for everyone we're broadcasting to.
+    const recipients = await db
+      .select({
+        id: players.id,
+        firstName: players.firstName,
+        email: players.email,
+      })
+      .from(players)
+      .where(inArray(players.id, recipientPlayerIds));
+
+    const haveEmail = recipients.filter(
+      (r): r is { id: string; firstName: string; email: string } =>
+        !!r.email,
+    );
+    emailAttempted = haveEmail.length;
+
+    // Resolve a sender display name + league name + absolute CTA url.
+    const author = session.playerId
+      ? await db
+          .select({
+            firstName: players.firstName,
+            lastName: players.lastName,
+          })
+          .from(players)
+          .where(eq(players.id, session.playerId))
+          .limit(1)
+          .then((r) =>
+            r[0] ? `${r[0].firstName} ${r[0].lastName}`.trim() : null,
+          )
+      : null;
+
+    let leagueName: string | null = null;
+    if (leagueId) {
+      const [lg] = await db
+        .select({ name: leagues.name })
+        .from(leagues)
+        .where(eq(leagues.id, leagueId))
+        .limit(1);
+      leagueName = lg?.name ?? null;
+    }
+
+    let absoluteCtaUrl: string | null = null;
+    if (ctaUrl) {
+      if (/^https?:\/\//i.test(ctaUrl)) {
+        absoluteCtaUrl = ctaUrl;
+      } else {
+        const h = await headers();
+        const proto = h.get("x-forwarded-proto") ?? "https";
+        const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
+        absoluteCtaUrl = host
+          ? `${proto}://${host}${ctaUrl.startsWith("/") ? "" : "/"}${ctaUrl}`
+          : ctaUrl;
+      }
+    }
+
+    // Send sequentially to avoid hammering Resend's rate limit. For
+    // big sends (>200 recipients) we'd want to push this onto a
+    // background worker / queue; deferring that until we hit it.
+    let sent = 0;
+    for (const r of haveEmail) {
+      try {
+        const res = await sendAnnouncementEmail({
+          to: r.email,
+          firstName: r.firstName,
+          scope: v.scope,
+          leagueName,
+          authorName: author,
+          headline: v.headline,
+          body: v.body,
+          ctaLabel,
+          ctaUrl: absoluteCtaUrl,
+        });
+        if (res.ok) sent++;
+      } catch {
+        // swallow — best-effort; inbox row already exists
+      }
+    }
+    emailSent = sent;
+  }
+
   revalidatePath("/admin/announcements");
   revalidatePath("/inbox");
   return {
     ok: true,
-    data: { id: announcementId, recipientCount: recipientPlayerIds.length },
+    data: {
+      id: announcementId,
+      recipientCount: recipientPlayerIds.length,
+      emailAttempted,
+      emailSent,
+    },
   };
 }
 
