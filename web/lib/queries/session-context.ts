@@ -25,6 +25,8 @@ export type SessionContext = {
   user: {
     id: string;
     displayName: string;
+    initials: string;
+    avatarUrl: string | null;
     isSuperAdmin: boolean;
     playerId: string | null;
   };
@@ -49,13 +51,23 @@ export async function getSessionContext(): Promise<SessionContext | null> {
 
   // displayName — prefer linked roster player; fall back to username.
   let displayName = session.username;
+  let initials = (session.username[0] ?? "?").toUpperCase();
+  let avatarUrl: string | null = null;
   if (session.playerId) {
     const [p] = await db
-      .select({ firstName: players.firstName, lastName: players.lastName })
+      .select({
+        firstName: players.firstName,
+        lastName: players.lastName,
+        avatarUrl: players.avatarUrl,
+      })
       .from(players)
       .where(eq(players.id, session.playerId))
       .limit(1);
-    if (p) displayName = `${p.firstName} ${p.lastName}`.trim();
+    if (p) {
+      displayName = `${p.firstName} ${p.lastName}`.trim();
+      initials = `${p.firstName[0] ?? ""}${p.lastName[0] ?? ""}`.toUpperCase();
+      avatarUrl = p.avatarUrl;
+    }
   }
 
   // League memberships + commissioner roles for the linked player
@@ -141,6 +153,8 @@ export async function getSessionContext(): Promise<SessionContext | null> {
     user: {
       id: session.adminId,
       displayName,
+      initials,
+      avatarUrl,
       isSuperAdmin,
       playerId: session.playerId ?? null,
     },

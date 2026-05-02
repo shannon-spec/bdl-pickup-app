@@ -1,6 +1,7 @@
 import { readSession } from "@/lib/auth/session";
 import { getViewCaps } from "@/lib/auth/view";
 import { getSessionContext } from "@/lib/queries/session-context";
+import { getUnreadMessageCount } from "@/lib/queries/messages";
 import { ContextHeaderClient } from "./context-header-client";
 
 /**
@@ -15,5 +16,15 @@ export async function ContextHeader() {
   if (!ctx) return null;
   const session = await readSession();
   const caps = await getViewCaps(session);
-  return <ContextHeaderClient ctx={ctx} view={caps.view} options={caps.options} />;
+  const unreadMessages = ctx.user.playerId
+    ? await getUnreadMessageCount(ctx.user.playerId)
+    : 0;
+  return (
+    <ContextHeaderClient
+      ctx={ctx}
+      view={caps.view}
+      options={caps.options}
+      unreadMessages={unreadMessages}
+    />
+  );
 }
