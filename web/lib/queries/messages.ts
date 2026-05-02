@@ -12,9 +12,8 @@ import {
   messages,
   players,
   leaguePlayers,
-  leagueCommissioners,
 } from "@/lib/db";
-import { isAdminLike, getMyCommissionerLeagueIds } from "@/lib/auth/perms";
+import { getMyCommissionerLeagueIds } from "@/lib/auth/perms";
 import type { Session } from "@/lib/auth/session";
 
 export type ConversationListItem = {
@@ -279,76 +278,47 @@ export type MessageablePlayer = {
   firstName: string;
   lastName: string;
   avatarUrl: string | null;
-  /** Comma-joined league names for picker context — truncate in UI. */
-  context: string;
+  /** True when this player overlaps any of the viewer's leagues
+   *  (via membership or commissioner role). Drives the "Your Leagues"
+   *  vs "BDL Universe" sectioning in the picker. */
+  inMyLeague: boolean;
 };
 
 /**
- * Set of players the viewer is allowed to start a NEW thread with —
- * used by the "New message" picker. Mirrors canMessage rules.
+ * Every BDL player except the viewer, with an `inMyLeague` flag so the
+ * UI can surface league-mates first and the rest of the universe below.
+ * Permission to actually send is checked in canMessage at action time —
+ * this query is for picker rendering only.
  */
 export async function getMessageablePlayers(
   session: Session,
 ): Promise<MessageablePlayer[]> {
   if (!session.playerId) return [];
-  const isAdmin = isAdminLike(session);
-
-  // Admin → everyone except self.
-  if (isAdmin) {
-    const rows = await db
-      .select({
-        id: players.id,
-        firstName: players.firstName,
-        lastName: players.lastName,
-        avatarUrl: players.avatarUrl,
-      })
-      .from(players)
-      .where(ne(players.id, session.playerId))
-      .orderBy(asc(players.firstName), asc(players.lastName));
-    // Skip league context for admins — too many leagues, too much noise.
-    return rows.map((r) => ({ ...r, context: "" }));
-  }
 
   const myCommissioned = await getMyCommissionerLeagueIds(session);
   const myMemberRows = await db
     .select({ leagueId: leaguePlayers.leagueId })
     .from(leaguePlayers)
     .where(eq(leaguePlayers.playerId, session.playerId));
-  const myLeagueIds = myMemberRows.map((r) => r.leagueId);
+  const myLeagueIds = Array.from(
+    new Set([
+      ...myMemberRows.map((r) => r.leagueId),
+      ...myCommissioned,
+    ]),
+  );
 
-  // Build a candidate set (player ids) we're allowed to message.
-  const candidateIds = new Set<string>();
-
-  // Players who share any of the viewer's leagues (via leaguePlayers).
+  // Players I share a league with — either as fellow members or as
+  // commissioner-of-the-league, target-is-member.
+  const inLeagueIds = new Set<string>();
   if (myLeagueIds.length > 0) {
     const sharers = await db
       .select({ playerId: leaguePlayers.playerId })
       .from(leaguePlayers)
       .where(inArray(leaguePlayers.leagueId, myLeagueIds));
     for (const r of sharers) {
-      if (r.playerId !== session.playerId) candidateIds.add(r.playerId);
+      if (r.playerId !== session.playerId) inLeagueIds.add(r.playerId);
     }
   }
-
-  // Commissioner add-ons: any commissioner (anywhere) + every player
-  // in leagues we commission.
-  if (myCommissioned.length > 0) {
-    const otherCommissioners = await db
-      .select({ playerId: leagueCommissioners.playerId })
-      .from(leagueCommissioners);
-    for (const r of otherCommissioners) {
-      if (r.playerId !== session.playerId) candidateIds.add(r.playerId);
-    }
-    const myLeagueRosters = await db
-      .select({ playerId: leaguePlayers.playerId })
-      .from(leaguePlayers)
-      .where(inArray(leaguePlayers.leagueId, myCommissioned));
-    for (const r of myLeagueRosters) {
-      if (r.playerId !== session.playerId) candidateIds.add(r.playerId);
-    }
-  }
-
-  if (candidateIds.size === 0) return [];
 
   const rows = await db
     .select({
@@ -358,8 +328,11 @@ export async function getMessageablePlayers(
       avatarUrl: players.avatarUrl,
     })
     .from(players)
-    .where(inArray(players.id, Array.from(candidateIds)))
+    .where(ne(players.id, session.playerId))
     .orderBy(asc(players.firstName), asc(players.lastName));
 
-  return rows.map((r) => ({ ...r, context: "" }));
+  return rows.map((r) => ({
+    ...r,
+    inMyLeague: inLeagueIds.has(r.id),
+  }));
 }

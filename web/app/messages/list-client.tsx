@@ -3,9 +3,12 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eraser, MessageSquarePlus, Search, X } from "lucide-react";
+import { Eraser, Send, Search, X, MessageSquare, User } from "lucide-react";
 import { PlayerAvatar } from "@/components/bdl/player-avatar";
-import { clearAllConversations } from "@/lib/actions/messages";
+import {
+  clearAllConversations,
+  sendMessage,
+} from "@/lib/actions/messages";
 import type {
   ConversationListItem,
   MessageablePlayer,
@@ -37,9 +40,34 @@ export function MessagesListClient({
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [recipient, setRecipient] = useState<MessageablePlayer | null>(null);
   const [pickerQuery, setPickerQuery] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [body, setBody] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+
+  const submit = () => {
+    if (!recipient || !body.trim()) return;
+    setError(null);
+    setSuccess(null);
+    const recipientName = `${recipient.firstName} ${recipient.lastName}`;
+    const recipientId = recipient.id;
+    const trimmed = body.trim();
+    start(async () => {
+      const res = await sendMessage({ toPlayerId: recipientId, body: trimmed });
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      setSuccess(`Message sent to ${recipientName}.`);
+      setBody("");
+      setRecipient(null);
+      setPickerQuery("");
+      router.refresh();
+    });
+  };
 
   const onClearAll = () => {
     setConfirmClear(false);
@@ -49,53 +77,207 @@ export function MessagesListClient({
     });
   };
 
-  const filteredPicker = useMemo(() => {
+  // Picker results — sectioned: My Leagues first, then BDL Universe.
+  const { mine, universe } = useMemo(() => {
     const q = pickerQuery.trim().toLowerCase();
-    // Hide players who already have an active conversation in the list
-    // — picker is for starting NEW threads. Existing ones are right
-    // there in the list.
-    const existingIds = new Set(conversations.map((c) => c.otherPlayerId));
-    let pool = messageable.filter((p) => !existingIds.has(p.id));
-    if (q) {
-      pool = pool.filter(
-        (p) =>
-          p.firstName.toLowerCase().includes(q) ||
-          p.lastName.toLowerCase().includes(q) ||
-          `${p.firstName} ${p.lastName}`.toLowerCase().includes(q),
+    const filter = (p: MessageablePlayer): boolean => {
+      if (!q) return true;
+      return (
+        p.firstName.toLowerCase().includes(q) ||
+        p.lastName.toLowerCase().includes(q) ||
+        `${p.firstName} ${p.lastName}`.toLowerCase().includes(q)
       );
-    }
-    return pool.slice(0, 60);
-  }, [pickerQuery, messageable, conversations]);
+    };
+    const mineList = messageable.filter((p) => p.inMyLeague && filter(p));
+    const universeList = messageable.filter((p) => !p.inMyLeague && filter(p));
+    return {
+      mine: mineList.slice(0, 80),
+      universe: universeList.slice(0, q ? 80 : 25),
+    };
+  }, [pickerQuery, messageable]);
 
   return (
     <>
-      <div className="flex justify-end gap-2 -mt-1">
+      {/* Compose card — mirrors /admin/announcements styling. */}
+      <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-5 flex flex-col gap-3.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)]">
+            Compose
+          </div>
+          <div className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full bg-[color:var(--brand-soft)] text-[color:var(--brand-ink,var(--brand))] text-[10px] font-bold tracking-[0.06em] uppercase">
+            <User size={11} /> Single Player
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[11px] font-semibold tracking-[0.12em] uppercase text-[color:var(--text-3)]">
+            Recipient
+          </span>
+          {recipient ? (
+            <div className="flex items-center justify-between gap-3 h-12 px-3 rounded-[var(--r-md)] border border-[color:var(--brand)] bg-[color:var(--brand-soft)]">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <PlayerAvatar
+                  url={recipient.avatarUrl}
+                  initials={initials(recipient.firstName, recipient.lastName)}
+                  size={32}
+                />
+                <div className="min-w-0">
+                  <div className="font-bold text-[14px] truncate text-[color:var(--text)]">
+                    {recipient.firstName} {recipient.lastName}
+                  </div>
+                  <div className="text-[10.5px] tracking-[0.06em] uppercase font-semibold text-[color:var(--brand-ink,var(--brand))]">
+                    {recipient.inMyLeague ? "Your Leagues" : "BDL Universe"}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                aria-label="Change recipient"
+                onClick={() => {
+                  setRecipient(null);
+                  setPickerQuery("");
+                  setPickerOpen(true);
+                }}
+                className="inline-flex items-center justify-center w-8 h-8 rounded-full text-[color:var(--text-3)] hover:text-[color:var(--text)] hover:bg-[color:var(--surface)] transition-colors"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          ) : (
+            <div className="relative">
+              <div className="relative">
+                <Search
+                  size={14}
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[color:var(--text-4)] pointer-events-none"
+                />
+                <input
+                  value={pickerQuery}
+                  onChange={(e) => {
+                    setPickerQuery(e.target.value);
+                    setPickerOpen(true);
+                  }}
+                  onFocus={() => setPickerOpen(true)}
+                  placeholder="Search your leagues or BDL Universe…"
+                  className="w-full h-12 pl-8 pr-3 rounded-[var(--r-md)] border border-[color:var(--hairline-2)] bg-[color:var(--surface-2)] text-[14px] outline-none focus:border-[color:var(--brand)]"
+                />
+              </div>
+              {pickerOpen && (
+                <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-30 max-h-[340px] overflow-y-auto rounded-[var(--r-md)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] shadow-lg">
+                  {mine.length === 0 && universe.length === 0 ? (
+                    <div className="px-3 py-6 text-center text-[12.5px] text-[color:var(--text-3)]">
+                      No matches.
+                    </div>
+                  ) : (
+                    <>
+                      {mine.length > 0 && (
+                        <SectionLabel>Your Leagues</SectionLabel>
+                      )}
+                      {mine.map((p) => (
+                        <PickerRow
+                          key={`mine-${p.id}`}
+                          player={p}
+                          onSelect={() => {
+                            setRecipient(p);
+                            setPickerOpen(false);
+                          }}
+                        />
+                      ))}
+                      {universe.length > 0 && (
+                        <SectionLabel>BDL Universe</SectionLabel>
+                      )}
+                      {universe.map((p) => (
+                        <PickerRow
+                          key={`uni-${p.id}`}
+                          player={p}
+                          onSelect={() => {
+                            setRecipient(p);
+                            setPickerOpen(false);
+                          }}
+                        />
+                      ))}
+                      {!pickerQuery && universe.length === 25 && (
+                        <div className="px-3 py-2 text-[11px] text-[color:var(--text-4)] text-center border-t border-[color:var(--hairline)]">
+                          Showing 25 — type to search the full universe.
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[11px] font-semibold tracking-[0.12em] uppercase text-[color:var(--text-3)]">
+            Message
+          </span>
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            maxLength={4000}
+            rows={4}
+            placeholder={
+              recipient
+                ? `Write a direct message to ${recipient.firstName}…`
+                : "Write your message…"
+            }
+            className="rounded-[var(--r-md)] border border-[color:var(--hairline-2)] bg-[color:var(--surface-2)] px-3 py-2 text-[14px] outline-none focus:border-[color:var(--brand)] resize-y"
+          />
+        </div>
+
+        {error && (
+          <div className="text-[12px] text-[color:var(--down)] bg-[color:var(--down-soft)] rounded-[var(--r-md)] px-3 py-2">
+            {error}
+          </div>
+        )}
+        {success && (
+          <div className="text-[12px] text-[color:var(--up)] bg-[color:var(--up-soft)] rounded-[var(--r-md)] px-3 py-2">
+            {success}
+          </div>
+        )}
+
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={submit}
+            disabled={pending || !recipient || !body.trim()}
+            className="inline-flex items-center gap-2 h-10 px-5 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)] disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <Send size={13} /> {pending ? "Sending…" : "Send direct message"}
+          </button>
+        </div>
+      </div>
+
+      {/* Conversations list */}
+      <div className="flex items-center justify-between gap-3 mt-2">
+        <div className="inline-flex items-center gap-2.5">
+          <span
+            aria-hidden
+            className="w-[3px] h-[12px] rounded-sm bg-[color:var(--brand)]"
+          />
+          <span className="text-[11.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)]">
+            Conversations
+          </span>
+          <span className="text-[12px] font-medium text-[color:var(--text-4)] num">
+            {conversations.length}
+          </span>
+        </div>
         {conversations.length > 0 && (
           <button
             type="button"
             onClick={() => setConfirmClear(true)}
             disabled={pending}
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[11.5px] font-semibold tracking-[0.04em] uppercase border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[color:var(--text-3)] hover:text-[color:var(--text)] disabled:opacity-60"
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[11px] font-semibold tracking-[0.04em] uppercase border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[color:var(--text-3)] hover:text-[color:var(--text)] disabled:opacity-60"
           >
-            <Eraser size={12} /> Clear recent
+            <Eraser size={11} /> Clear recent
           </button>
         )}
-        <button
-          type="button"
-          onClick={() => setPickerOpen(true)}
-          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[11.5px] font-semibold tracking-[0.04em] uppercase bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white"
-        >
-          <MessageSquarePlus size={12} /> New message
-        </button>
       </div>
 
       {conversations.length === 0 ? (
-        <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-12 text-center text-[color:var(--text-3)] text-[14px]">
-          No conversations yet. Tap{" "}
-          <span className="font-semibold text-[color:var(--text-2)]">
-            New message
-          </span>{" "}
-          to start one.
+        <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-10 text-center text-[color:var(--text-3)] text-[13.5px]">
+          No conversations yet — pick someone above and say hi.
         </div>
       ) : (
         <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden">
@@ -154,7 +336,6 @@ export function MessagesListClient({
         </div>
       )}
 
-      {/* Confirm "clear recent" — quick inline modal-ish overlay. */}
       {confirmClear && (
         <div
           className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4"
@@ -190,77 +371,42 @@ export function MessagesListClient({
           </div>
         </div>
       )}
-
-      {/* New-message picker. */}
-      {pickerOpen && (
-        <div
-          className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4"
-          onClick={() => setPickerOpen(false)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md rounded-[16px] bg-[color:var(--surface)] border border-[color:var(--hairline-2)] shadow-xl flex flex-col max-h-[80vh]"
-          >
-            <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-2">
-              <div className="font-bold text-[15px]">New message</div>
-              <button
-                type="button"
-                aria-label="Close"
-                onClick={() => setPickerOpen(false)}
-                className="text-[color:var(--text-3)] hover:text-[color:var(--text)]"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div className="px-4 pb-2">
-              <div className="relative">
-                <Search
-                  size={14}
-                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[color:var(--text-4)]"
-                />
-                <input
-                  autoFocus
-                  value={pickerQuery}
-                  onChange={(e) => setPickerQuery(e.target.value)}
-                  placeholder="Search players…"
-                  className="w-full h-10 pl-8 pr-3 rounded-[var(--r-md)] border border-[color:var(--hairline-2)] bg-[color:var(--surface-2)] text-[14px] outline-none focus:border-[color:var(--brand)]"
-                />
-              </div>
-            </div>
-            <div className="overflow-y-auto px-2 pb-3">
-              {filteredPicker.length === 0 ? (
-                <div className="text-center text-[12.5px] text-[color:var(--text-3)] py-8">
-                  {messageable.length === 0
-                    ? "You aren't in any leagues yet — join one to message other players."
-                    : pickerQuery
-                      ? "No matches."
-                      : "Everyone you can message already has an open thread."}
-                </div>
-              ) : (
-                filteredPicker.map((p) => (
-                  <Link
-                    key={p.id}
-                    href={`/messages/${p.id}`}
-                    onClick={() => setPickerOpen(false)}
-                    className="grid grid-cols-[auto_1fr] items-center gap-3 px-2 py-2 rounded-[var(--r-md)] hover:bg-[color:var(--surface-2)]"
-                  >
-                    <PlayerAvatar
-                      url={p.avatarUrl}
-                      initials={initials(p.firstName, p.lastName)}
-                      size={32}
-                    />
-                    <div className="min-w-0">
-                      <div className="truncate text-[13.5px] font-semibold">
-                        {p.firstName} {p.lastName}
-                      </div>
-                    </div>
-                  </Link>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="px-3 pt-2.5 pb-1 text-[10px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-4)] sticky top-0 bg-[color:var(--surface)] border-b border-[color:var(--hairline)]">
+      {children}
+    </div>
+  );
+}
+
+function PickerRow({
+  player,
+  onSelect,
+}: {
+  player: MessageablePlayer;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className="w-full grid grid-cols-[auto_1fr_auto] items-center gap-3 px-3 py-2 hover:bg-[color:var(--surface-2)] text-left"
+    >
+      <PlayerAvatar
+        url={player.avatarUrl}
+        initials={initials(player.firstName, player.lastName)}
+        size={28}
+      />
+      <div className="min-w-0">
+        <div className="truncate text-[13.5px] font-semibold">
+          {player.firstName} {player.lastName}
+        </div>
+      </div>
+      <MessageSquare size={13} className="text-[color:var(--text-4)]" />
+    </button>
   );
 }
