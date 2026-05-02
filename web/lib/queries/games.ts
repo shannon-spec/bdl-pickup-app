@@ -509,10 +509,14 @@ export async function getMatchupOdds(
 
   // 6. Predicted final score. Gated on rosters so we don't imply
   // precision from team-color noise alone. Two models:
-  //   playTo set → race-to-N: winner = N, loser = N − avgMargin·(1+probMargin).
-  //     The league's empirical avg winning margin self-calibrates the
-  //     spread; toss-ups predict ~avgMargin, lopsided games predict up
-  //     to 2·avgMargin. Falls back to 0.20·N when no margin history.
+  //   playTo set → race-to-N: winner = N, loser = N − (probMargin·2·avgMargin).
+  //     Spread is now PROPORTIONAL to the probability lead — a true
+  //     toss-up (probA == 50) predicts a 0 spread (the existing
+  //     equal-score path renders this as "Pick"), and a 100% pick
+  //     predicts up to 2·avgMargin. Previous formula baked an extra
+  //     +avgMargin into every projection, which was too aggressive
+  //     for moderate favorites (e.g. 64% read as ~15 in a typical
+  //     150 game when 7 was more honest).
   //   else → average-total: spread capped at ~20% of total.
   let predictedScore: { a: number; b: number } | null = null;
   if (hasRosterData && showProjections) {
@@ -520,7 +524,7 @@ export async function getMatchupOdds(
     if (playTo && playTo > 0) {
       const avgMargin =
         marginN > 0 ? marginSum / marginN : playTo * 0.2;
-      const expectedMargin = avgMargin * (1 + probMargin);
+      const expectedMargin = avgMargin * 2 * probMargin;
       const winner = playTo;
       const loser = Math.max(0, Math.round(playTo - expectedMargin));
       predictedScore =
