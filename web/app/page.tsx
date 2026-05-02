@@ -477,7 +477,9 @@ export default async function Home() {
           </div>
         </div>
 
-        {/* Discover */}
+        <MembersStrip leagueId={currentLeague.id} />
+
+        {/* Discover — bottom-of-page wayfinding to other leagues. */}
         <div>
           <SectionHead
             title="Discover"
@@ -510,8 +512,6 @@ export default async function Home() {
             ))}
           </div>
         </div>
-
-        <MembersStrip leagueId={currentLeague.id} />
       </PageFrame>
       <MobileBottomBar active="home" />
     </>
