@@ -148,7 +148,7 @@ export async function TopBar({
             {unreadCount > 0 && (
               <span
                 aria-hidden
-                className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[color:var(--brand)]"
+                className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[color:var(--warn)]"
                 style={{ boxShadow: "0 0 0 2px var(--badge-dot-border)" }}
               />
             )}
