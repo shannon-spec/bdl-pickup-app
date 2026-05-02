@@ -371,10 +371,10 @@ export async function getMatchupOdds(
   const lookback = opts.lookback ?? 8;
   // Team-color base rate uses a tighter window than the margin /
   // total averages: White-vs-Dark balance shifts run-to-run with
-  // who shows up, so 4 games is a fresher signal than 8. Margin /
+  // who shows up, so 3 games is a fresher signal than 8. Margin /
   // total averages still use the broader `lookback` since those
   // are league-wide pace stats that benefit from more samples.
-  const teamRateLookback = 4;
+  const teamRateLookback = 3;
   const wTeam = opts.teamWeight ?? 0.3;
   const wRoster = 1 - wTeam;
 
