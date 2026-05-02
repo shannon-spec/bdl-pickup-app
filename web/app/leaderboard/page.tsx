@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { eq } from "drizzle-orm";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
@@ -11,6 +12,18 @@ import {
   getMyMemberLeagueIds,
   getMyCommissionerLeagueIds,
 } from "@/lib/auth/perms";
+import { db, leagues } from "@/lib/db";
+
+const EXAMPLE_LEAGUE_NAME = "CPA League";
+
+async function getExampleLeagueId(): Promise<string | null> {
+  const [row] = await db
+    .select({ id: leagues.id })
+    .from(leagues)
+    .where(eq(leagues.name, EXAMPLE_LEAGUE_NAME))
+    .limit(1);
+  return row?.id ?? null;
+}
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Leaderboard · BDL" };
@@ -25,15 +38,25 @@ export default async function LeaderboardPage({
   // Scope the leaderboard to the viewer's leagues unless they're in
   // admin view. Player view + commissioner view both see only the
   // leagues they're personally connected to (member or commissioner).
+  // For unsigned-in viewers or signed-in users without league access,
+  // fall back to the CPA League as the public example.
   const session = await readSession();
   const caps = await getViewCaps(session);
   let scopeLeagueIds: string[] | null = null;
+  let isExample = false;
   if (caps.view !== "admin") {
     const [memberIds, commishIds] = await Promise.all([
       getMyMemberLeagueIds(session),
       getMyCommissionerLeagueIds(session),
     ]);
     scopeLeagueIds = Array.from(new Set([...memberIds, ...commishIds]));
+    if (scopeLeagueIds.length === 0) {
+      const exampleId = await getExampleLeagueId();
+      if (exampleId) {
+        scopeLeagueIds = [exampleId];
+        isExample = true;
+      }
+    }
   }
 
   const data = await getLeaderboard({
@@ -57,6 +80,35 @@ export default async function LeaderboardPage({
             </span>
           }
         />
+
+        {isExample && (
+          <div
+            className="rounded-[12px] border border-[color:var(--hairline-2)] px-4 py-3 flex items-center justify-between gap-3 flex-wrap"
+            style={{
+              background:
+                "linear-gradient(135deg, var(--brand-soft) 0%, transparent 65%), var(--surface)",
+            }}
+          >
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <span className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--brand-ink)]">
+                Example Leaderboard
+              </span>
+              <span className="text-[13px] text-[color:var(--text-2)]">
+                Showing <strong>CPA League</strong> — a sample of how BDL
+                tracks runs.
+                {!session && " Sign in to see your own leagues."}
+              </span>
+            </div>
+            {!session && (
+              <Link
+                href="/login"
+                className="inline-flex items-center h-8 px-3.5 rounded-full bg-[color:var(--brand)] text-white text-[11.5px] font-bold tracking-[0.04em] uppercase hover:bg-[color:var(--brand-hover)]"
+              >
+                Sign in
+              </Link>
+            )}
+          </div>
+        )}
 
         <FilterBar
           leagueId={sp.league || null}
