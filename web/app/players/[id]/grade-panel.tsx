@@ -103,7 +103,7 @@ export function GradePanel({
         <div className="flex flex-col gap-0.5">
           <span className="text-[12px] text-[color:var(--text-2)] font-semibold">
             {totalVotes > 0
-              ? `${agg.peerCount} player ${agg.peerCount === 1 ? "vote" : "votes"} · ${agg.commissionerCount} commissioner ${agg.commissionerCount === 1 ? "vote" : "votes"}`
+              ? `${totalVotes} ${totalVotes === 1 ? "vote" : "votes"}`
               : adminLevel
                 ? "Set by admin · No peer votes yet"
                 : "No votes yet"}

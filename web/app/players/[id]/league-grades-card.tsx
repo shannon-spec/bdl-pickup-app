@@ -38,7 +38,7 @@ export function LeagueGradesCard({ rows }: { rows: LeagueGradeRow[] }) {
                   </span>
                   <span className="text-[11px] text-[color:var(--text-3)]">
                     {totalVotes > 0
-                      ? `${r.peerCount} player ${r.peerCount === 1 ? "vote" : "votes"} · ${r.commissionerCount} commissioner ${r.commissionerCount === 1 ? "vote" : "votes"}`
+                      ? `${totalVotes} ${totalVotes === 1 ? "vote" : "votes"}`
                       : r.adminLevel
                         ? "Set by admin · No peer votes yet"
                         : "Not yet rated"}
