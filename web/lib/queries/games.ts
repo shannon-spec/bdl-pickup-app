@@ -369,6 +369,12 @@ export async function getMatchupOdds(
   predictedScore: { a: number; b: number } | null;
 } | null> {
   const lookback = opts.lookback ?? 8;
+  // Team-color base rate uses a tighter window than the margin /
+  // total averages: White-vs-Dark balance shifts run-to-run with
+  // who shows up, so 4 games is a fresher signal than 8. Margin /
+  // total averages still use the broader `lookback` since those
+  // are league-wide pace stats that benefit from more samples.
+  const teamRateLookback = 4;
   const wTeam = opts.teamWeight ?? 0.3;
   const wRoster = 1 - wTeam;
 
@@ -410,8 +416,12 @@ export async function getMatchupOdds(
   let totalPointsN = 0;
   let marginSum = 0;
   let marginN = 0;
+  // Loop bounds: process up to `lookback` decided games for the
+  // margin/total averages, but only count the first `teamRateLookback`
+  // toward the White-vs-Dark base rate. One pass, two caps.
+  let decidedSeen = 0;
   for (const g of last) {
-    if (teamGames >= lookback) break;
+    if (decidedSeen >= lookback) break;
     const decided =
       g.winTeam ??
       (g.scoreA !== null && g.scoreB !== null
@@ -422,7 +432,7 @@ export async function getMatchupOdds(
             : "Tie"
         : null);
     if (!decided) continue;
-    teamGames++;
+    decidedSeen++;
     if (g.scoreA !== null && g.scoreB !== null) {
       totalPointsSum += g.scoreA + g.scoreB;
       totalPointsN++;
@@ -432,14 +442,17 @@ export async function getMatchupOdds(
       }
     }
     if (decided === "Tie") continue;
-    if (decided === "A") {
-      aW++;
-      aTot++;
-      bTot++;
-    } else {
-      bW++;
-      bTot++;
-      aTot++;
+    if (teamGames < teamRateLookback) {
+      teamGames++;
+      if (decided === "A") {
+        aW++;
+        aTot++;
+        bTot++;
+      } else {
+        bW++;
+        bTot++;
+        aTot++;
+      }
     }
   }
   const hasTeamData = aTot > 0 && bTot > 0;
