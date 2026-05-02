@@ -1,5 +1,5 @@
-import { asc, eq } from "drizzle-orm";
-import { db, games, gameRoster, players } from "@/lib/db";
+import { asc, eq, sql } from "drizzle-orm";
+import { db, games, gameRoster, players, leaguePlayers, leagues } from "@/lib/db";
 
 type Tone = "neutral" | "brand" | "win" | "loss" | "warn" | "info";
 
@@ -216,6 +216,75 @@ export async function getActivityEvents(): Promise<ActivityEvent[]> {
           text: `${fullName} hit ${cur.games} career games${g.leagueName ? ` · ${g.leagueName}` : ""}`,
           pill: { tone: "brand", label: `${cur.games} GP` },
           sortKey: dt(g, `4_ms:${p.playerId}`),
+        });
+      }
+    }
+  }
+
+  // ---- Birthday wishes (today only, scoped to each player's leagues) ----
+  // We never display the underlying date — just a "Happy Birthday, X!"
+  // entry on each league activity feed where they're rostered. Fires
+  // for every player whose birthday matches today's MM-DD, regardless
+  // of birth year.
+  const today = new Date();
+  const mm = String(today.getMonth() + 1).padStart(2, "0");
+  const dd = String(today.getDate()).padStart(2, "0");
+  const todayMmDd = `${mm}-${dd}`;
+  const isoToday = today.toISOString().slice(0, 10);
+
+  const birthdayPlayers = await db
+    .select({
+      id: players.id,
+      firstName: players.firstName,
+      lastName: players.lastName,
+      birthday: players.birthday,
+    })
+    .from(players)
+    .where(
+      sql`${players.birthday} IS NOT NULL AND to_char(${players.birthday}::date, 'MM-DD') = ${todayMmDd}`,
+    );
+
+  if (birthdayPlayers.length > 0) {
+    const ids = birthdayPlayers.map((p) => p.id);
+    const memberRows = await db
+      .select({
+        playerId: leaguePlayers.playerId,
+        leagueId: leaguePlayers.leagueId,
+        leagueName: leagues.name,
+      })
+      .from(leaguePlayers)
+      .leftJoin(leagues, eq(leagues.id, leaguePlayers.leagueId))
+      .where(
+        sql`${leaguePlayers.playerId} IN (${sql.join(
+          ids.map((id) => sql`${id}::uuid`),
+          sql`, `,
+        )})`,
+      );
+
+    const leaguesByPlayer = new Map<
+      string,
+      Array<{ id: string; name: string | null }>
+    >();
+    for (const m of memberRows) {
+      const arr = leaguesByPlayer.get(m.playerId) ?? [];
+      arr.push({ id: m.leagueId, name: m.leagueName });
+      leaguesByPlayer.set(m.playerId, arr);
+    }
+
+    for (const p of birthdayPlayers) {
+      const myLeagues = leaguesByPlayer.get(p.id) ?? [];
+      const fullName = `${p.firstName} ${p.lastName}`;
+      // One event per league so it lands on each league's feed. If the
+      // player has no league memberships we skip — birthday wishes are
+      // explicitly a league-only signal.
+      for (const lg of myLeagues) {
+        events.push({
+          id: `bd:${isoToday}:${p.id}:${lg.id}`,
+          date: isoToday,
+          href: `/players/${p.id}`,
+          text: `Happy birthday, ${fullName}! 🎉${lg.name ? ` · ${lg.name}` : ""}`,
+          pill: { tone: "brand", label: "Birthday" },
+          sortKey: `${isoToday}::99:bd:${p.id}:${lg.id}`,
         });
       }
     }

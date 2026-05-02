@@ -113,7 +113,10 @@ function valuesFor(v: PlayerInput) {
     position: toNullable(v.position),
     level: v.level,
     status: v.status,
-    birthday: toNullable(v.birthday),
+    // Birthday is not editable from the player edit form anymore — we
+    // intentionally don't touch the column here, preserving any
+    // existing date so the league activity feed can fire happy-birthday
+    // events. Admins can still set it via direct DB / future admin UI.
     heightFt: intOrNull(v.heightFt),
     heightIn: floatOrNull(v.heightIn),
     weight: intOrNull(v.weight),

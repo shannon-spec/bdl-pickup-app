@@ -2,16 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ChevronUp } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
-import { getViewCaps } from "@/lib/auth/view";
 import {
   canEditPlayer,
   getMyCommissionerLeagueIds,
   getMyMemberLeagueIds,
 } from "@/lib/auth/perms";
-import {
-  getPlayerContactAccess,
-  type ContactAccess,
-} from "@/lib/auth/contact-access";
 import { canMessage } from "@/lib/auth/messaging";
 import { MessageSquare } from "lucide-react";
 import { TopBar } from "@/components/bdl/top-bar";
@@ -98,16 +93,8 @@ export default async function PlayerProfilePage({
       : null;
   const initials = `${player.firstName[0] ?? ""}${player.lastName[0] ?? ""}`.toUpperCase();
   const isMe = session?.playerId === player.id;
-  const caps = await getViewCaps(session);
   const canEdit = await canEditPlayer(session, player.id);
   const canDm = !isMe && (await canMessage(session, player.id));
-  // Looking at your own profile: always see your own contact info.
-  // Guests get "none" — the contact card hides itself entirely.
-  const contactAccess: ContactAccess = isMe
-    ? "all"
-    : session
-    ? await getPlayerContactAccess(session, player.id, caps.view)
-    : "none";
 
   return (
     <>
@@ -388,29 +375,25 @@ export default async function PlayerProfilePage({
           </div>
         )}
 
-        {/* Contact card honors per-league membership: outside viewers see no contact info,
-            league members see non-private fields, admins in admin view see everything. */}
+        {/* Cell + email are NEVER displayed publicly. The viewing player
+            can confirm their own data; everyone else gets a Message Center
+            entry point so we don't leak phone/email outside the app. */}
         <div className="grid grid-cols-2 gap-4 max-[1100px]:grid-cols-1">
           <PlayerInfoCard player={player} />
-          {contactAccess !== "none" && (
-            <ContactCard player={player} access={contactAccess} />
-          )}
+          {isMe ? (
+            <SelfContactCard player={player} />
+          ) : canDm ? (
+            <MessageCtaCard
+              firstName={player.firstName}
+              playerId={player.id}
+            />
+          ) : null}
         </div>
       </PageFrame>
       <MobileBottomBar active="profile" />
     </>
   );
 }
-
-const fmtBirthday = (d: string | null) => {
-  if (!d) return null;
-  const dt = new Date(d + "T00:00:00");
-  const months = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
-  ];
-  return `${months[dt.getMonth()]} ${dt.getDate()}, ${dt.getFullYear()}`;
-};
 
 const ageFromBirthday = (d: string | null): number | null => {
   if (!d) return null;
@@ -433,7 +416,6 @@ const fmtHeight = (ft: number | null, inch: number | null): string | null => {
 };
 
 function PlayerInfoCard({ player }: { player: PlayerType }) {
-  const birthday = fmtBirthday(player.birthday);
   const age = ageFromBirthday(player.birthday);
   const height = fmtHeight(player.heightFt, player.heightIn);
   const hometown = player.city
@@ -443,7 +425,6 @@ function PlayerInfoCard({ player }: { player: PlayerType }) {
 
   // Hide the whole card if there's nothing to show.
   const hasAny =
-    birthday ||
     age !== null ||
     height ||
     player.weight !== null ||
@@ -461,7 +442,9 @@ function PlayerInfoCard({ player }: { player: PlayerType }) {
         Player Info
       </div>
       <div className="grid grid-cols-2 gap-x-6 gap-y-5 max-sm:grid-cols-1">
-        {birthday && <Field label="Birthday" value={birthday} />}
+        {/* Birthday is never displayed publicly — used only to fire a
+            league-only happy-birthday entry in the activity feed. Age
+            stays since it's a single number, not a date. */}
         {age !== null && <Field label="Age" value={String(age)} />}
         {height && <Field label="Height" value={height} />}
         {player.weight !== null && (
@@ -479,43 +462,82 @@ function PlayerInfoCard({ player }: { player: PlayerType }) {
   );
 }
 
-function ContactCard({
-  player,
-  access,
+/**
+ * Replaces the old phone/email contact card for everyone except the
+ * viewing player themselves. Cell + email are private-by-policy — we
+ * don't display them, period — so the public profile gets a Message
+ * Center CTA instead.
+ */
+function MessageCtaCard({
+  firstName,
+  playerId,
 }: {
-  player: PlayerType;
-  access: ContactAccess;
+  firstName: string;
+  playerId: string;
 }) {
-  if (!player.cell && !player.email) return null;
-  // Don't reveal that contact info exists at all to viewers who can't
-  // see any of it (no shared league, not admin, not commissioner).
-  if (access === "none") return null;
+  return (
+    <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6 flex flex-col gap-4">
+      <div className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)] flex items-center gap-2">
+        <span aria-hidden className="w-[3px] h-[12px] rounded-sm bg-[color:var(--brand)]" />
+        Get in touch
+      </div>
+      <p className="text-[13px] text-[color:var(--text-3)] leading-relaxed">
+        Cell and email aren&apos;t shown publicly on BDL. Reach{" "}
+        <span className="font-semibold text-[color:var(--text-2)]">
+          {firstName}
+        </span>{" "}
+        through the in-app Message Center — they&apos;ll see it in their
+        inbox.
+      </p>
+      <div>
+        <Link
+          href={`/messages/${playerId}`}
+          className="inline-flex items-center gap-2 h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)]"
+        >
+          <MessageSquare size={13} /> Message {firstName}
+        </Link>
+      </div>
+    </div>
+  );
+}
 
+/**
+ * Self-view of contact data — the player can confirm what's on file
+ * even though the public profile hides it. Each row carries a privacy
+ * note so they understand the data is for internal contact only.
+ */
+function SelfContactCard({ player }: { player: PlayerType }) {
+  if (!player.cell && !player.email) {
+    return (
+      <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6 flex flex-col gap-3">
+        <div className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)] flex items-center gap-2">
+          <span
+            aria-hidden
+            className="w-[3px] h-[12px] rounded-sm bg-[color:var(--brand)]"
+          />
+          Your Contact Info
+        </div>
+        <p className="text-[13px] text-[color:var(--text-3)] leading-relaxed">
+          No cell or email on file. Add them in Edit Profile so we can email
+          you league updates — they&apos;ll never appear on your public
+          profile.
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6">
-      <div className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)] flex items-center gap-2 mb-5">
+      <div className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)] flex items-center gap-2 mb-3">
         <span aria-hidden className="w-[3px] h-[12px] rounded-sm bg-[color:var(--brand)]" />
-        Contact
+        Your Contact Info
       </div>
+      <p className="text-[12px] text-[color:var(--text-3)] mb-5 leading-relaxed">
+        Used privately to send league updates. Never displayed on your
+        public profile.
+      </p>
       <div className="grid grid-cols-2 gap-x-6 gap-y-5 max-sm:grid-cols-1">
-        {player.cell && (
-          <ContactField
-            label="Cell"
-            value={player.cell}
-            isPrivate={player.cellPrivate}
-            access={access}
-            href={`tel:${player.cell}`}
-          />
-        )}
-        {player.email && (
-          <ContactField
-            label="Email"
-            value={player.email}
-            isPrivate={player.emailPrivate}
-            access={access}
-            href={`mailto:${player.email}`}
-          />
-        )}
+        {player.cell && <Field label="Cell" value={player.cell} />}
+        {player.email && <Field label="Email" value={player.email} />}
       </div>
     </div>
   );
@@ -544,43 +566,3 @@ function Field({
   );
 }
 
-function ContactField({
-  label,
-  value,
-  isPrivate,
-  access,
-  href,
-}: {
-  label: string;
-  value: string | null;
-  isPrivate: boolean;
-  access: ContactAccess;
-  href?: string;
-}) {
-  const showValue =
-    !!value && (access === "all" || (access === "non-private" && !isPrivate));
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-[10.5px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)] flex items-center gap-2">
-        <span>{label}</span>
-        {isPrivate && (
-          <span className="text-[9.5px] font-bold tracking-[0.08em] uppercase px-1.5 py-0.5 rounded-full bg-[color:var(--brand-soft)] text-[color:var(--brand-ink)]">
-            Private
-          </span>
-        )}
-      </span>
-      {showValue ? (
-        <a
-          href={href}
-          className="font-bold text-[15.5px] text-[color:var(--text)] hover:text-[color:var(--brand)]"
-        >
-          {value}
-        </a>
-      ) : (
-        <span className="font-medium text-[14px] text-[color:var(--text-3)]">
-          {value ? "Hidden" : "—"}
-        </span>
-      )}
-    </div>
-  );
-}

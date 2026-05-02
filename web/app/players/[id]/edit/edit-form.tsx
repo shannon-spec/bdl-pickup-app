@@ -67,17 +67,15 @@ export function EditPlayerForm({ player }: { player: Player }) {
               />
             </Field>
           </Row>
-          <Field label="Birthday" hint="YYYY-MM-DD" error={fieldErrors.birthday?.[0]}>
-            <input
-              name="birthday"
-              type="date"
-              defaultValue={player.birthday ?? ""}
-              className={inputCx}
-            />
-          </Field>
         </Section>
 
         <Section title="Contact">
+          <PrivacyNote>
+            Your cell and email are stored privately. They&apos;re only used
+            for league-related contact (game invites, password resets, etc.)
+            and will <strong>never</strong> appear on your public profile or
+            be shared with other players.
+          </PrivacyNote>
           <Field label="Email" error={fieldErrors.email?.[0]}>
             <input
               name="email"
@@ -356,4 +354,12 @@ function Field({
 
 function Row({ children }: { children: React.ReactNode }) {
   return <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">{children}</div>;
+}
+
+function PrivacyNote({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-[var(--r-md)] border border-[color:var(--hairline)] bg-[color:var(--brand-soft)]/40 px-3 py-2.5 text-[12px] text-[color:var(--text-2)] leading-relaxed">
+      {children}
+    </div>
+  );
 }
