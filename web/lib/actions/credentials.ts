@@ -17,6 +17,11 @@ import {
 } from "@/lib/auth/perms";
 import { requireManageView } from "@/lib/auth/view";
 import {
+  encryptOptional,
+  decryptOptional,
+  emailHash,
+} from "@/lib/crypto/secrets";
+import {
   isInviteEmailConfigured,
   sendTempCredentialsEmail,
 } from "@/lib/email/invite-email";
@@ -105,7 +110,8 @@ export async function setPlayerCredentials(
   if (!current) {
     return { ok: false, error: "Player not found." };
   }
-  const finalEmail = emailRaw || current.email || "";
+  const currentEmailPlain = decryptOptional(current.email);
+  const finalEmail = emailRaw || currentEmailPlain || "";
   if (!finalEmail) {
     return {
       ok: false,
@@ -136,14 +142,17 @@ export async function setPlayerCredentials(
     return { ok: false, error: "That username is reserved for an admin account." };
   }
 
-  // Email uniqueness — enforced at DB level by players_email_uq, but
-  // pre-check so we can return a friendly error instead of letting the
-  // unique-violation bubble up as a 500.
-  if (finalEmail !== current.email) {
+  // Email uniqueness — enforced at DB level by players_email_hash_uq,
+  // but pre-check so we can return a friendly error instead of letting
+  // the unique-violation bubble up as a 500.
+  const finalEmailHash = emailHash(finalEmail);
+  if (finalEmail !== currentEmailPlain) {
     const [emailClash] = await db
       .select({ id: players.id })
       .from(players)
-      .where(and(eq(players.email, finalEmail), ne(players.id, playerId)))
+      .where(
+        and(eq(players.emailHash, finalEmailHash), ne(players.id, playerId)),
+      )
       .limit(1);
     if (emailClash) {
       return {
@@ -156,7 +165,12 @@ export async function setPlayerCredentials(
   const passwordHash = await bcrypt.hash(password, 10);
   await db
     .update(players)
-    .set({ username: usernameRaw, passwordHash, email: finalEmail })
+    .set({
+      username: usernameRaw,
+      passwordHash,
+      email: encryptOptional(finalEmail),
+      emailHash: finalEmailHash,
+    })
     .where(eq(players.id, playerId));
 
   revalidatePath("/admin/credentials");

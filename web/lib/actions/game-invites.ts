@@ -16,6 +16,7 @@ import {
 } from "@/lib/db";
 import { readSession } from "@/lib/auth/session";
 import { canManageGame } from "@/lib/auth/perms";
+import { decryptOptional } from "@/lib/crypto/secrets";
 import {
   getEffectiveInviteSettings,
   getConfirmedCounts,
@@ -109,10 +110,11 @@ async function inviteEmailContext(
     .innerJoin(players, eq(players.id, gameInvites.playerId))
     .where(eq(gameInvites.id, invite.id))
     .limit(1);
-  if (!row?.player.email) return null;
+  const decryptedEmail = decryptOptional(row?.player.email);
+  if (!row || !decryptedEmail) return null;
   const base = await getBaseUrl();
   return {
-    to: row.player.email,
+    to: decryptedEmail,
     firstName: row.player.firstName,
     leagueName: row.league?.name ?? row.game.leagueName ?? "BDL game",
     gameDateLabel: fmtGameDate(row.game.gameDate, row.game.gameTime),
@@ -147,7 +149,8 @@ async function inviteSMSContext(
     .innerJoin(players, eq(players.id, gameInvites.playerId))
     .where(eq(gameInvites.id, invite.id))
     .limit(1);
-  if (!row?.player.cell) return null;
+  const decryptedCell = decryptOptional(row?.player.cell);
+  if (!row || !decryptedCell) return null;
   const base = await getBaseUrl();
   const claimUrl = `${base}/i/${invite.claimToken}`;
   const filled = (customMessage ?? "")
@@ -160,7 +163,7 @@ async function inviteSMSContext(
   const body = filled
     ? `${filled}\n${claimUrl}`
     : `BDL: ${row.league?.name ?? "Pickup"} — ${fmtGameDate(row.game.gameDate, row.game.gameTime)}. Claim or pass: ${claimUrl}`;
-  return { to: row.player.cell, body };
+  return { to: decryptedCell, body };
 }
 
 /**

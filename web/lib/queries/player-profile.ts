@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { decryptPlayerPii } from "@/lib/crypto/player";
 import {
   db,
   players,
@@ -61,12 +62,15 @@ export type PlayerProfile = {
 };
 
 export async function getPlayerProfile(playerId: string): Promise<PlayerProfile | null> {
-  const [player] = await db
+  const [raw] = await db
     .select()
     .from(players)
     .where(eq(players.id, playerId))
     .limit(1);
-  if (!player) return null;
+  if (!raw) return null;
+  // Decrypt PII fields (cell, email, birthday) once at the read
+  // boundary so the rest of the app can use plain values.
+  const player = decryptPlayerPii(raw);
 
   // All games where the player was on side A or B
   const rosterRows = await db

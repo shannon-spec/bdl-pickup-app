@@ -6,6 +6,7 @@ import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { readSession } from "@/lib/auth/session";
 import { db, players } from "@/lib/db";
+import { decryptOptional } from "@/lib/crypto/secrets";
 import { AvatarUploader } from "@/components/bdl/avatar-uploader";
 import { ChangePasswordForm } from "./change-password-form";
 
@@ -35,6 +36,7 @@ export default async function AccountPage() {
     .limit(1);
 
   if (!me) redirect("/");
+  const myEmail = decryptOptional(me.email);
 
   const initials = `${me.firstName[0] ?? ""}${me.lastName[0] ?? ""}`.toUpperCase();
 
@@ -54,7 +56,7 @@ export default async function AccountPage() {
           </div>
           <div className="text-[13px] text-[color:var(--text-3)]">
             {me.username ? `@${me.username}` : "No username set"}
-            {me.email ? ` · ${me.email}` : ""}
+            {myEmail ? ` · ${myEmail}` : ""}
           </div>
         </div>
 

@@ -8,6 +8,7 @@ import {
 } from "@/lib/db";
 import { readSession } from "@/lib/auth/session";
 import { isAdminLike, getMyCommissionerLeagueIds } from "@/lib/auth/perms";
+import { decryptOptional } from "@/lib/crypto/secrets";
 
 export type CredentialRow = {
   id: string;
@@ -152,8 +153,10 @@ export async function getCredentialPlayers(
       lastName: p.lastName,
       // Private-emails policy: only admins ever see them. Blanking
       // the value here means the credentials page never renders it
-      // and search can't match against it for non-admins.
-      email: p.emailPrivate && !isAdmin ? null : p.email,
+      // and search can't match against it for non-admins. Decrypted
+      // at the boundary so the UI gets a plain string.
+      email:
+        p.emailPrivate && !isAdmin ? null : decryptOptional(p.email),
       username: p.username,
       hasPassword: !!p.passwordHash,
       isCommissioner: commishSet.has(p.id),

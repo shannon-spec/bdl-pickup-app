@@ -96,7 +96,16 @@ export const players = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     firstName: text("first_name").notNull(),
     lastName: text("last_name").notNull(),
+    /**
+     * AES-256-GCM ciphertext (v1: prefix). Use `decryptOptional` from
+     * lib/crypto/secrets when reading; `encryptOptional` when writing.
+     * Plaintext rows pre-migration pass through transparently.
+     */
     email: text("email"),
+    /** Deterministic HMAC of the lowercased email — used for unique
+     *  login lookup since the encrypted email column has random IVs. */
+    emailHash: text("email_hash"),
+    /** Encrypted (see email). */
     cell: text("cell"),
     address: text("address"),
     city: text("city"),
@@ -105,7 +114,9 @@ export const players = pgTable(
     college: text("college"),
     sport: text("sport"),
     position: text("position"),
-    birthday: date("birthday"),
+    /** Encrypted ISO date string (YYYY-MM-DD). Was `date`; now `text`
+     *  so we can store ciphertext. Decrypt with `decryptOptional`. */
+    birthday: text("birthday"),
     heightFt: integer("height_ft"),
     heightIn: real("height_in"),
     heightNoShoes: boolean("height_no_shoes").notNull().default(false),
@@ -135,13 +146,13 @@ export const players = pgTable(
   },
   (t) => [
     index("players_last_first_idx").on(t.lastName, t.firstName),
-    // Email is unique among non-null values. Multiple players can
-    // legitimately have null email (legacy/imported names) so the
-    // index is partial. Enforces single-account-per-email and makes
-    // login-by-email unambiguous by construction.
-    uniqueIndex("players_email_uq")
-      .on(t.email)
-      .where(sql`email IS NOT NULL`),
+    // Email uniqueness is enforced on the deterministic emailHash, not
+    // the encrypted ciphertext (which has random IVs and can't be
+    // queried by equality). Partial index so multiple null emails are
+    // allowed (legacy / no-email accounts).
+    uniqueIndex("players_email_hash_uq")
+      .on(t.emailHash)
+      .where(sql`email_hash IS NOT NULL`),
     uniqueIndex("players_username_idx").on(t.username),
   ],
 );

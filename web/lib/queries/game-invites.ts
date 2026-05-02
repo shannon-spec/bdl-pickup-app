@@ -14,6 +14,7 @@ import {
   players,
   type GameInvite,
 } from "@/lib/db";
+import { decryptOptional } from "@/lib/crypto/secrets";
 
 /**
  * Lazy expiry: flip any past-due pending invites to expired before
@@ -148,7 +149,10 @@ export async function getInvitesForGame(gameId: string): Promise<InviteRow[]> {
     .innerJoin(players, eq(players.id, gameInvites.playerId))
     .where(eq(gameInvites.gameId, gameId))
     .orderBy(desc(gameInvites.createdAt));
-  return rows.map((r) => ({ ...r.invite, player: r.player }));
+  return rows.map((r) => ({
+    ...r.invite,
+    player: { ...r.player, email: decryptOptional(r.player.email) },
+  }));
 }
 
 /**
@@ -231,7 +235,12 @@ export async function getInvitePool(gameId: string): Promise<PoolPlayer[]> {
     else if (side === "B") availability = "roster_b";
     else if (side === "invited") availability = "roster_invited";
     else if (activeIds.has(p.id)) availability = "pending";
-    return { ...p, availability };
+    return {
+      ...p,
+      email: decryptOptional(p.email),
+      cell: decryptOptional(p.cell),
+      availability,
+    };
   });
 }
 

@@ -1,5 +1,6 @@
 import { asc, eq, sql } from "drizzle-orm";
 import { db, games, gameRoster, players, leaguePlayers, leagues } from "@/lib/db";
+import { decryptOptional } from "@/lib/crypto/secrets";
 
 type Tone = "neutral" | "brand" | "win" | "loss" | "warn" | "info";
 
@@ -222,17 +223,16 @@ export async function getActivityEvents(): Promise<ActivityEvent[]> {
   }
 
   // ---- Birthday wishes (today only, scoped to each player's leagues) ----
-  // We never display the underlying date — just a "Happy Birthday, X!"
-  // entry on each league activity feed where they're rostered. Fires
-  // for every player whose birthday matches today's MM-DD, regardless
-  // of birth year.
+  // Birthday is stored encrypted, so we can't filter by SQL. Pull the
+  // ciphertext for everyone with a value, decrypt in JS, and match by
+  // MM-DD. The underlying date is never exposed — only the wish.
   const today = new Date();
   const mm = String(today.getMonth() + 1).padStart(2, "0");
   const dd = String(today.getDate()).padStart(2, "0");
   const todayMmDd = `${mm}-${dd}`;
   const isoToday = today.toISOString().slice(0, 10);
 
-  const birthdayPlayers = await db
+  const playersWithBirthday = await db
     .select({
       id: players.id,
       firstName: players.firstName,
@@ -240,9 +240,15 @@ export async function getActivityEvents(): Promise<ActivityEvent[]> {
       birthday: players.birthday,
     })
     .from(players)
-    .where(
-      sql`${players.birthday} IS NOT NULL AND to_char(${players.birthday}::date, 'MM-DD') = ${todayMmDd}`,
-    );
+    .where(sql`${players.birthday} IS NOT NULL`);
+
+  const birthdayPlayers = playersWithBirthday.flatMap((p) => {
+    const decrypted = decryptOptional(p.birthday);
+    if (!decrypted) return [];
+    // Stored as YYYY-MM-DD; the MM-DD slice is positions 5..10.
+    const mmdd = decrypted.slice(5, 10);
+    return mmdd === todayMmDd ? [p] : [];
+  });
 
   if (birthdayPlayers.length > 0) {
     const ids = birthdayPlayers.map((p) => p.id);

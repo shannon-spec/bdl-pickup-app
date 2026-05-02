@@ -557,7 +557,6 @@ function ProfileHero({
     { key: "hometown", label: "Hometown", ok: !!hometown },
     { key: "height", label: "Height", ok: player.heightFt !== null },
     { key: "weight", label: "Weight", ok: player.weight !== null },
-    { key: "birthday", label: "Birthday", ok: !!player.birthday },
   ];
   const missing = checks.filter((c) => !c.ok);
   const completion = Math.round(

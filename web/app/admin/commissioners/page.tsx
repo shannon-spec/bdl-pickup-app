@@ -5,6 +5,7 @@ import { asc } from "drizzle-orm";
 import { readSession } from "@/lib/auth/session";
 import { isAdminLike } from "@/lib/auth/perms";
 import { getViewCaps } from "@/lib/auth/view";
+import { decryptOptional } from "@/lib/crypto/secrets";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
@@ -53,7 +54,12 @@ export default async function CommissionersAdminPage() {
       .orderBy(asc(players.lastName), asc(players.firstName)),
   ]);
 
-  const playerById = new Map(playerRows.map((p) => [p.id, p]));
+  const playerById = new Map(
+    playerRows.map((p) => [
+      p.id,
+      { ...p, email: decryptOptional(p.email) },
+    ]),
+  );
   // Collapse the join table into one entry per league with hydrated
   // commissioner records (already sorted by player last/first name).
   const byLeague = new Map<string, typeof playerRows>();

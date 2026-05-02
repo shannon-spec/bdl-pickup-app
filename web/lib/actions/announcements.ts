@@ -18,6 +18,7 @@ import {
   getMyCommissionerLeagueIds,
 } from "@/lib/auth/perms";
 import { requireManageView } from "@/lib/auth/view";
+import { decryptOptional } from "@/lib/crypto/secrets";
 import {
   isInviteEmailConfigured,
   sendAnnouncementEmail,
@@ -208,7 +209,8 @@ export async function createAnnouncement(
   let emailSent: number | null = null;
   if (channels.includes("email")) {
     // Look up emails + names for everyone we're broadcasting to.
-    const recipients = await db
+    // The email column is encrypted; decrypt at the boundary.
+    const recipientsRaw = await db
       .select({
         id: players.id,
         firstName: players.firstName,
@@ -216,6 +218,10 @@ export async function createAnnouncement(
       })
       .from(players)
       .where(inArray(players.id, recipientPlayerIds));
+    const recipients = recipientsRaw.map((r) => ({
+      ...r,
+      email: decryptOptional(r.email),
+    }));
 
     const haveEmail = recipients.filter(
       (r): r is { id: string; firstName: string; email: string } =>

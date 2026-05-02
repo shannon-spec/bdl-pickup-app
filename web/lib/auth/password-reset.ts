@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { headers } from "next/headers";
 import { db, players, passwordResetTokens } from "@/lib/db";
 import { readSession } from "./session";
+import { decryptOptional, emailHash } from "@/lib/crypto/secrets";
 
 const TOKEN_TTL_MIN = 30;
 const MIN_PASSWORD_LEN = 8;
@@ -97,10 +98,13 @@ export async function requestPasswordReset(
       email: players.email,
     })
     .from(players)
-    .where(and(eq(players.email, email), isNotNull(players.username)))
+    .where(
+      and(eq(players.emailHash, emailHash(email)), isNotNull(players.username)),
+    )
     .limit(1);
 
-  if (player && player.email) {
+  const decryptedEmail = decryptOptional(player?.email);
+  if (player && decryptedEmail) {
     const token = randomBytes(32).toString("base64url");
     const expiresAt = new Date(Date.now() + TOKEN_TTL_MIN * 60 * 1000);
     await db
@@ -110,7 +114,7 @@ export async function requestPasswordReset(
     const baseUrl = await getBaseUrl();
     const resetUrl = `${baseUrl}/reset/${token}`;
     await sendResetEmail({
-      to: player.email,
+      to: decryptedEmail,
       firstName: player.firstName,
       resetUrl,
     });

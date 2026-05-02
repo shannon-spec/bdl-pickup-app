@@ -4,6 +4,7 @@ import { eq, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import { db, superAdmins, players } from "@/lib/db";
+import { emailHash } from "@/lib/crypto/secrets";
 import {
   createSession,
   writeSessionCookie,
@@ -80,7 +81,8 @@ export async function signInAdmin(formData: FormData): Promise<SignInResult> {
   }
 
   // Fall back to player credentials. Players store a per-account bcrypt
-  // hash; no shared password.
+  // hash; no shared password. Email lookups go through email_hash since
+  // the email column itself is encrypted (random IV per row).
   const playerMatches = await db
     .select({
       id: players.id,
@@ -90,7 +92,7 @@ export async function signInAdmin(formData: FormData): Promise<SignInResult> {
     .from(players)
     .where(
       isEmail
-        ? sql`lower(${players.email}) = ${identifier}`
+        ? eq(players.emailHash, emailHash(identifier))
         : eq(players.username, identifier),
     )
     .limit(2);

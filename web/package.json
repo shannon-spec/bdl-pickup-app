@@ -20,7 +20,8 @@
     "db:migrate:unique-email": "dotenv -e .env.local -- tsx scripts/migrate-unique-email.ts",
     "db:migrate:announcements": "dotenv -e .env.local -- tsx scripts/migrate-announcements.ts",
     "db:migrate:announcements:email": "dotenv -e .env.local -- tsx scripts/migrate-announcements-email.ts",
-    "db:migrate:messages": "dotenv -e .env.local -- tsx scripts/migrate-messages.ts"
+    "db:migrate:messages": "dotenv -e .env.local -- tsx scripts/migrate-messages.ts",
+    "db:migrate:encrypt-pii": "dotenv -e .env.local -- tsx scripts/migrate-encrypt-pii.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

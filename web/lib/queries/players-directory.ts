@@ -1,5 +1,6 @@
 import { asc, eq, inArray } from "drizzle-orm";
 import { db, players, leagues, leaguePlayers } from "@/lib/db";
+import { decryptOptional } from "@/lib/crypto/secrets";
 
 export type DirectoryPlayer = {
   id: string;
@@ -109,7 +110,10 @@ export async function getPlayersDirectory(opts: {
     const { emailPrivate, ...rest } = r;
     return {
       ...rest,
-      email: emailPrivate && !opts.viewerIsAdmin ? null : r.email,
+      email:
+        emailPrivate && !opts.viewerIsAdmin
+          ? null
+          : decryptOptional(r.email),
       leagueIds: byPlayer.get(r.id)?.leagueIds ?? [],
       leagueNames: byPlayer.get(r.id)?.leagueNames ?? [],
     };

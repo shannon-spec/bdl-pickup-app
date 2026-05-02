@@ -5,6 +5,7 @@ import {
   leagueCommissioners,
 } from "@/lib/db";
 import type { Session } from "@/lib/auth/session";
+import { decryptOptional } from "@/lib/crypto/secrets";
 
 export type CommissionerContact = {
   id: string;
@@ -41,5 +42,9 @@ export async function getLeagueCommissionerContacts(
     .where(eq(leagueCommissioners.leagueId, leagueId))
     .orderBy(asc(players.lastName), asc(players.firstName));
 
-  return rows;
+  return rows.map((r) => ({
+    ...r,
+    email: decryptOptional(r.email),
+    cell: decryptOptional(r.cell),
+  }));
 }

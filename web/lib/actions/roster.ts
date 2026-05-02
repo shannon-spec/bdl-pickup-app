@@ -7,6 +7,7 @@ import { db, players, leaguePlayers } from "@/lib/db";
 import { readSession, requireAdmin } from "@/lib/auth/session";
 import { requireAdminView } from "@/lib/auth/view";
 import { canEditPlayer } from "@/lib/auth/perms";
+import { encryptOptional, emailHashOptional } from "@/lib/crypto/secrets";
 
 const PLAYER_LEVELS = [
   "Not Rated",
@@ -102,11 +103,16 @@ function floatOrNull(v: string | undefined | null): number | null {
 }
 
 function valuesFor(v: PlayerInput) {
+  const emailPlain = toNullable(v.email);
+  const cellPlain = toNullable(v.cell);
   return {
     firstName: v.firstName,
     lastName: v.lastName,
-    email: toNullable(v.email),
-    cell: toNullable(v.cell),
+    // PII columns are encrypted at rest; the deterministic emailHash
+    // mirrors the unique constraint that used to live on email itself.
+    email: encryptOptional(emailPlain),
+    emailHash: emailHashOptional(emailPlain),
+    cell: encryptOptional(cellPlain),
     city: toNullable(v.city),
     state: toNullable(v.state)?.toUpperCase() ?? null,
     zip: toNullable(v.zip),

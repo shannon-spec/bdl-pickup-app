@@ -13,6 +13,7 @@ import {
 } from "@/lib/db";
 import { requireLeagueManager } from "@/lib/auth/perms";
 import { requireManageView } from "@/lib/auth/view";
+import { encryptOptional, emailHashOptional } from "@/lib/crypto/secrets";
 import {
   isInviteEmailConfigured,
   sendLeagueJoinInvite,
@@ -255,13 +256,16 @@ export async function acceptInvite(
   }
 
   // Create the player. If a player with the same email already exists,
-  // re-use it instead of creating a duplicate.
+  // re-use it instead of creating a duplicate. Lookup uses email_hash
+  // because the email column itself is encrypted.
   let playerId: string | null = null;
-  if (inv.email) {
+  const inviteEmailPlain = nullable(inv.email);
+  const inviteEmailHash = emailHashOptional(inviteEmailPlain);
+  if (inviteEmailHash) {
     const [existing] = await db
       .select({ id: players.id })
       .from(players)
-      .where(eq(players.email, inv.email))
+      .where(eq(players.emailHash, inviteEmailHash))
       .limit(1);
     if (existing) playerId = existing.id;
   }
@@ -272,8 +276,9 @@ export async function acceptInvite(
       .values({
         firstName: inv.firstName,
         lastName: inv.lastName,
-        email: nullable(inv.email),
-        cell: nullable(inv.cell),
+        email: encryptOptional(inviteEmailPlain),
+        emailHash: inviteEmailHash,
+        cell: encryptOptional(nullable(inv.cell)),
         city: nullable(v.city),
         state: nullable(v.state)?.toUpperCase() ?? null,
         position: nullable(v.position),
