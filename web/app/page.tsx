@@ -145,7 +145,7 @@ export default async function Home() {
             upcoming game, the Commissioner strip stretches to full
             width by itself instead of leaving an awkward empty col. */}
         {nextGame ? (
-          <div className="grid grid-cols-2 gap-4 max-[1100px]:grid-cols-1 items-stretch">
+          <div className="grid grid-cols-2 gap-4 max-[900px]:grid-cols-1 items-stretch">
           <section
             className="group relative rounded-[16px] border border-[color:var(--hairline-2)] overflow-hidden hover:border-[color:var(--hairline-2)]"
             style={{
