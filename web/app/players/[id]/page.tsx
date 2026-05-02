@@ -482,12 +482,11 @@ function ContactPrivacyCard({
             aria-hidden
             className="w-[3px] h-[12px] rounded-sm bg-[color:var(--brand)]"
           />
-          Your Contact Info
+          Get in touch
         </div>
         <p className="text-[13px] text-[color:var(--text-3)] leading-relaxed">
-          No cell or email on file. Add them in Edit Profile so we can
-          email you league updates — they&apos;ll never appear on your
-          public profile.
+          No cell or email on file. Add them in Edit Profile so we can email
+          you league updates — kept private and encrypted on BDL.
         </p>
       </div>
     );
@@ -505,12 +504,10 @@ function ContactPrivacyCard({
           aria-hidden
           className="w-[3px] h-[12px] rounded-sm bg-[color:var(--brand)]"
         />
-        {isMe ? "Your Contact Info" : "Get in touch"}
+        Get in touch
       </div>
       <p className="text-[12.5px] text-[color:var(--text-3)] leading-relaxed">
-        {isMe
-          ? "Stored privately. Never displayed publicly — even other players see it locked."
-          : `Cell and email are kept private on BDL. Reach ${player.firstName} through the in-app Message Center.`}
+        Cell and email are kept private and encrypted on BDL.
       </p>
 
       <div className="grid grid-cols-2 gap-x-6 gap-y-5 max-sm:grid-cols-1">
