@@ -51,7 +51,7 @@ export default function AboutPage() {
           <div className="h-px bg-[color:var(--hairline)] my-1" />
 
           <p className="text-[12.5px] leading-[1.5] text-[color:var(--text-3)]">
-            Designed by{" "}
+            Designed and created by{" "}
             <a
               href="https://aurumco.ai"
               target="_blank"
@@ -59,8 +59,8 @@ export default function AboutPage() {
               className="font-semibold text-[color:var(--text-2)] underline decoration-[color:var(--brand)] underline-offset-[3px] hover:text-[color:var(--brand)]"
             >
               Shannon Terry of AurumCo.AI
-            </a>{" "}
-            · Currently in beta (v{VERSION}).
+            </a>
+            , founder of On3 and Rivals · Currently in beta (v{VERSION}).
           </p>
 
           <p className="text-[20px] font-extrabold tracking-[-0.015em] text-[color:var(--text)]">
