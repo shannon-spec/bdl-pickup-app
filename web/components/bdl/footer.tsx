@@ -23,6 +23,8 @@ export function Footer() {
             <h4>Product</h4>
             <Link href="/about">About</Link>
             <Link href="/grades">Grades</Link>
+            <Link href="/terms">Terms of Service</Link>
+            <Link href="/privacy">Privacy</Link>
           </div>
 
           <div className="ftr-ai">
