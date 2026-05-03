@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>BDL Score Hero — Concept</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0A0A0A; font-family: 'Inter', sans-serif; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+
+const C = {
+  bg:      "#0A0A0A",
+  surface: "#131313",
+  surf2:   "#1A1A1A",
+  border:  "#232323",
+  chalk:   "#FAFAFA",
+  gray:    "#777777",
+  orange:  "#E87722",
+};
+
+const TIERS = [
+  { name:"POOR",   min:0,  max:29,  color:"#ef4444", bg:"rgba(239,68,68,0.12)",   w:30 },
+  { name:"BELOW",  min:30, max:44,  color:"#f97316", bg:"rgba(249,115,22,0.12)",  w:15 },
+  { name:"AVG",    min:45, max:64,  color:"#888888", bg:"rgba(136,136,136,0.12)", w:20 },
+  { name:"STRONG", min:65, max:79,  color:"#3b82f6", bg:"rgba(59,130,246,0.12)",  w:15 },
+  { name:"ELITE",  min:80, max:100, color:"#22c55e", bg:"rgba(34,197,94,0.12)",   w:20 },
+];
+
+function tierOf(s) { return TIERS.find(t => s >= t.min && s <= t.max) ?? TIERS[2]; }
+
+/* ── Scale bar ─────────────────────────────────────────────────── */
+function ScaleBar({ score }) {
+  const tier = tierOf(score);
+  return (
+    <div style={{ width:"100%", userSelect:"none" }}>
+      {/* tier name labels */}
+      <div style={{ display:"flex", marginBottom:8 }}>
+        {TIERS.map(t => (
+          <div key={t.name} style={{
+            flex: t.w, textAlign:"center",
+            fontFamily:"'Inter',sans-serif", fontWeight:700, fontSize:10,
+            letterSpacing:"0.13em", textTransform:"uppercase",
+            color: t.name === tier.name ? t.color : "#3a3a3a",
+          }}>{t.name}</div>
+        ))}
+      </div>
+
+      {/* needle + bar */}
+      <div style={{ position:"relative", paddingTop:34 }}>
+        {/* needle */}
+        <div style={{
+          position:"absolute", top:0, left:`${score}%`,
+          transform:"translateX(-50%)",
+          display:"flex", flexDirection:"column", alignItems:"center", gap:3, zIndex:2,
+        }}>
+          <div style={{
+            fontFamily:"'JetBrains Mono',monospace", fontWeight:800, fontSize:11,
+            color: tier.color, background: C.surface,
+            border:`1px solid ${tier.color}`, borderRadius:4,
+            padding:"2px 8px", lineHeight:1.5, whiteSpace:"nowrap",
+          }}>{score}</div>
+          <div style={{
+            width:0, height:0,
+            borderLeft:"5px solid transparent", borderRight:"5px solid transparent",
+            borderTop:`7px solid ${tier.color}`,
+          }}/>
+        </div>
+
+        {/* segments */}
+        <div style={{
+          display:"flex", height:22, borderRadius:6, overflow:"hidden",
+          border:`1px solid #2a2a2a`,
+        }}>
+          {TIERS.map(t => (
+            <div key={t.name} style={{
+              flex: t.w,
+              background: t.name === tier.name ? t.color : `${t.color}44`,
+            }}/>
+          ))}
+        </div>
+      </div>
+
+      {/* range labels */}
+      <div style={{ display:"flex", marginTop:7 }}>
+        {TIERS.map(t => (
+          <div key={t.name+"r"} style={{
+            flex: t.w, textAlign:"center",
+            fontFamily:"'Inter',sans-serif", fontWeight:500, fontSize:9,
+            color: t.name === tier.name ? t.color : "#333",
+            letterSpacing:"0.04em",
+          }}>{t.min}–{t.max}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Stat block ────────────────────────────────────────────────── */
+function StatBlock({ label, value, sub }) {
+  return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:6, padding:"0 8px" }}>
+      <span style={{
+        fontFamily:"'Inter',sans-serif", fontWeight:600, fontSize:9,
+        letterSpacing:"0.14em", color:C.gray, textTransform:"uppercase", textAlign:"center", lineHeight:1.3,
+      }}>{label}</span>
+      <span style={{ fontFamily:"'JetBrains Mono',monospace", fontWeight:800, fontSize:20, color:C.chalk, lineHeight:1 }}>
+        {value}
+        {sub && <span style={{ fontSize:11, fontWeight:600, color:C.gray, marginLeft:3 }}>{sub}</span>}
+      </span>
+    </div>
+  );
+}
+
+/* ── Tab group ─────────────────────────────────────────────────── */
+function Tabs({ values, current, onChange, fmt }) {
+  return (
+    <div style={{ display:"flex", background:C.surf2, borderRadius:20, padding:2, border:`1px solid ${C.border}` }}>
+      {values.map(v => {
+        const active = current === v;
+        return (
+          <button key={v} onClick={() => onChange(v)} style={{
+            padding:"4px 12px", borderRadius:18, border:"none",
+            background: active ? C.surface : "transparent",
+            color: active ? C.chalk : C.gray,
+            fontFamily:"'Inter',sans-serif", fontWeight:700, fontSize:9,
+            letterSpacing:"0.1em", cursor:"pointer", textTransform:"uppercase",
+            boxShadow: active ? "0 1px 4px rgba(0,0,0,0.5)" : "none",
+            transition:"all 0.15s",
+          }}>{fmt ? fmt(v) : v.toUpperCase()}</button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── Main ──────────────────────────────────────────────────────── */
+function App() {
+  const [scope, setScope] = useState("league");
+  const [range, setRange] = useState("ytd");
+
+  // Mock data — matches what's live on bdlpickup.com today
+  const d = { avgScore:51, lastScore:67, bestScore:89, scoredGames:36 };
+  const avgTier = tierOf(d.avgScore);
+
+  return (
+    <div style={{ padding:24, background:C.bg, minHeight:"100vh" }}>
+      <div style={{
+        background:C.surface, border:`1px solid ${C.border}`,
+        borderRadius:16, overflow:"hidden",
+        maxWidth:900, margin:"0 auto",
+        boxShadow:"0 24px 60px rgba(0,0,0,0.8)",
+      }}>
+
+        {/* ── Header ── */}
+        <div style={{
+          display:"flex", justifyContent:"space-between", alignItems:"center",
+          padding:"13px 24px", borderBottom:`1px solid ${C.border}`,
+          background:C.bg, flexWrap:"wrap", gap:10,
+        }}>
+          <div style={{ display:"flex", alignItems:"center", gap:9 }}>
+            <div style={{ width:3, height:13, background:C.orange, borderRadius:2 }}/>
+            <span style={{
+              fontFamily:"'Inter',sans-serif", fontWeight:700, fontSize:10,
+              letterSpacing:"0.14em", color:C.chalk, textTransform:"uppercase",
+            }}>WHOOP · BDL GAMES</span>
+            <div style={{
+              display:"flex", alignItems:"center", gap:5,
+              padding:"4px 10px",
+              background:"rgba(34,197,94,0.1)", border:"1px solid rgba(34,197,94,0.28)",
+              borderRadius:20, fontSize:10, fontWeight:700, color:"#22c55e", letterSpacing:"0.08em",
+            }}>
+              <span style={{ fontSize:7 }}>●</span> CONNECTED
+            </div>
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:9 }}>
+            <Tabs values={["league","other"]} current={scope} onChange={setScope} fmt={v => v==="league" ? "By League" : "All Other"}/>
+            <Tabs values={["mtd","ytd"]} current={range} onChange={setRange}/>
+            <button style={{
+              padding:"6px 13px", background:C.orange, border:"none", borderRadius:7,
+              color:C.chalk, fontFamily:"'Inter',sans-serif", fontWeight:700,
+              fontSize:9, letterSpacing:"0.1em", cursor:"pointer", textTransform:"uppercase",
+            }}>↻ SYNC NOW</button>
+          </div>
+        </div>
+
+        {/* ── Hero ── */}
+        <div style={{
+          position:"relative", padding:"52px 44px 48px",
+          textAlign:"center", overflow:"hidden",
+          background:"linear-gradient(180deg,#141414 0%,#111 100%)",
+        }}>
+          {/* radial glow */}
+          <div style={{
+            position:"absolute", top:"42%", left:"50%",
+            transform:"translate(-50%,-50%)",
+            width:520, height:520,
+            background:`radial-gradient(circle,${avgTier.color}1c 0%,transparent 60%)`,
+            pointerEvents:"none", zIndex:0,
+          }}/>
+
+          <div style={{ position:"relative", zIndex:1 }}>
+            {/* AVG / LAST / BEST */}
+            <div style={{
+              fontFamily:"'Inter',sans-serif", fontWeight:800, fontSize:14,
+              letterSpacing:"0.08em", color:C.chalk, textTransform:"uppercase",
+              marginBottom:14,
+            }}>BDL Max Effort <span style={{ color:C.gray, fontWeight:500, fontSize:13, letterSpacing:"0.04em", textTransform:"none" }}>(Personal Scale)</span></div>
+            <div style={{
+              display:"inline-flex", alignItems:"stretch",
+              background:"#161616", border:`1px solid ${C.border}`,
+              borderRadius:14, overflow:"hidden", marginBottom:48,
+            }}>
+              {[
+                { label:"Season Avg",  score:d.avgScore  },
+                { label:"Last Game",   score:d.lastScore  },
+                { label:"All Time Best", score:d.bestScore  },
+              ].map((item, i) => {
+                const t = tierOf(item.score);
+                return (
+                  <div key={item.label} style={{ display:"flex" }}>
+                    {i > 0 && <div style={{ width:1, background:C.border, alignSelf:"stretch" }}/>}
+                    <div style={{
+                      display:"flex", flexDirection:"column",
+                      alignItems:"center", gap:9, padding:"18px 36px",
+                    }}>
+                      <span style={{
+                        fontFamily:"'Inter',sans-serif", fontWeight:600, fontSize:9,
+                        letterSpacing:"0.14em", color:C.gray, textTransform:"uppercase",
+                      }}>{item.label}</span>
+                      <span style={{
+                        fontFamily:"'JetBrains Mono',monospace", fontWeight:800,
+                        fontSize:34, color:t.color, lineHeight:1,
+                      }}>{item.score}</span>
+                      <span style={{
+                        fontFamily:"'Inter',sans-serif", fontWeight:700, fontSize:8,
+                        letterSpacing:"0.1em", color:t.color,
+                        background:t.bg, padding:"2px 10px", borderRadius:10,
+                        textTransform:"uppercase",
+                      }}>{t.name}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* scale */}
+            <ScaleBar score={d.avgScore}/>
+          </div>
+        </div>
+
+        {/* ── Supporting stats ── */}
+        <div style={{ display:"flex", borderTop:`1px solid ${C.border}`, padding:"26px 0" }}>
+          <StatBlock label="Avg Strain"     value="15.4"/>
+          <div style={{ width:1, background:C.border }}/>
+          <StatBlock label="Avg HR"         value="144"  sub="bpm"/>
+          <div style={{ width:1, background:C.border }}/>
+          <StatBlock label="Avg Cal"        value="967"/>
+          <div style={{ width:1, background:C.border }}/>
+          <StatBlock label="Max Effort Z4+5" value="13m" sub="/ 17%"/>
+        </div>
+
+        {/* ── W/L strain pills ── */}
+        <div style={{ display:"flex", gap:10, justifyContent:"center", padding:"0 24px 22px" }}>
+          {[
+            { lbl:"STRAIN W", val:"15.3", col:"#22c55e", g:"23" },
+            { lbl:"STRAIN L", val:"15.5", col:"#ef4444", g:"13" },
+          ].map(p => (
+            <div key={p.lbl} style={{
+              display:"flex", alignItems:"center", gap:10,
+              padding:"8px 20px", background:C.surf2,
+              border:`1px solid ${C.border}`, borderRadius:24,
+            }}>
+              <span style={{
+                fontFamily:"'Inter',sans-serif", fontWeight:700, fontSize:9,
+                letterSpacing:"0.12em", color:p.col, textTransform:"uppercase",
+              }}>{p.lbl}</span>
+              <span style={{ fontFamily:"'JetBrains Mono',monospace", fontWeight:800, fontSize:16, color:C.chalk }}>{p.val}</span>
+              <span style={{ fontFamily:"'Inter',sans-serif", fontSize:10, color:"#444" }}>· {p.g} games</span>
+            </div>
+          ))}
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
