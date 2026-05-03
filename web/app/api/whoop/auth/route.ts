@@ -8,7 +8,8 @@ import { readSession } from "@/lib/auth/session";
 export const runtime = "nodejs";
 
 const WHOOP_AUTH_URL = "https://api.prod.whoop.com/oauth/oauth2/auth";
-const SCOPES = "read:workout read:profile read:body_measurement offline";
+const SCOPES =
+  "read:workout read:cycles read:recovery read:profile read:body_measurement offline";
 
 export async function GET() {
   const session = await readSession();

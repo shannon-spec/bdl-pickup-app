@@ -196,12 +196,22 @@ export async function backfillWhoopWorkouts(
   );
   if ("error" in workoutPages) return { ok: false, error: workoutPages.error };
 
+  // Cycles are best-effort: if the access token was issued before we
+  // added read:cycles scope, the endpoint will 401. Don't lose the
+  // workouts we already fetched — fall through with an empty array
+  // and let the player reconnect to grant the new scope.
   const cyclePages = await fetchAllPages<WhoopCycleRecord>(
     CYCLE_LIST_PATH,
     accessToken,
     refreshFn,
   );
-  if ("error" in cyclePages) return { ok: false, error: cyclePages.error };
+  const cycleRecords =
+    "error" in cyclePages ? [] : cyclePages.records;
+  const cyclePagesFetched = "error" in cyclePages ? 0 : cyclePages.pages;
+  const cycleError = "error" in cyclePages ? cyclePages.error : null;
+  if (cycleError) {
+    console.warn(`[whoop] cycle backfill skipped: ${cycleError}`);
+  }
 
   let workoutsInserted = 0;
   if (workoutPages.records.length > 0) {
@@ -242,8 +252,8 @@ export async function backfillWhoopWorkouts(
   }
 
   let cyclesInserted = 0;
-  if (cyclePages.records.length > 0) {
-    const rows = cyclePages.records.map((c) => {
+  if (cycleRecords.length > 0) {
+    const rows = cycleRecords.map((c) => {
       const start = new Date(c.start);
       const end = c.end ? new Date(c.end) : null;
       // The cycle's "day" is the calendar date it ended (or started, if
@@ -285,7 +295,7 @@ export async function backfillWhoopWorkouts(
 
   return {
     ok: true,
-    pagesFetched: workoutPages.pages + cyclePages.pages,
+    pagesFetched: workoutPages.pages + cyclePagesFetched,
     workoutsInserted,
     cyclesInserted,
     lastSyncAt: now,
