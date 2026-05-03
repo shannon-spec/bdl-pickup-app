@@ -81,7 +81,7 @@ export function WhoopConsoleBody({
       avgStrain: avg(filtered.map((m) => m.strain)),
       avgHr: avg(filtered.map((m) => m.avgHr)),
       maxHr: filtered.reduce((m, w) => Math.max(m, w.maxHr ?? 0), 0),
-      totalCal: filtered.reduce((s, m) => s + (m.calories ?? 0), 0),
+      avgCal: avg(filtered.map((m) => m.calories)),
       strainW: avg(wins.map((m) => m.strain)),
       strainL: avg(losses.map((m) => m.strain)),
       hrW: avg(wins.map((m) => m.avgHr)),
@@ -157,9 +157,11 @@ export function WhoopConsoleBody({
               unit="bpm"
             />
             <SummaryBlock
-              label="Total Cal"
+              label="Avg Cal"
               value={
-                summary.totalCal > 0 ? summary.totalCal.toLocaleString() : "—"
+                summary.avgCal !== null
+                  ? Math.round(summary.avgCal).toLocaleString()
+                  : "—"
               }
             />
           </div>
