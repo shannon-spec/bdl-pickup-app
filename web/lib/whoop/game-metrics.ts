@@ -20,8 +20,20 @@ import {
   whoopWorkouts,
 } from "@/lib/db";
 
-const MATCH_WINDOW_MS = 90 * 60 * 1000;
-const ASSUMED_GAME_MIN = 90;
+/** Bounding window for the workout fetch, on top of the game date
+ *  range. Generous so we don't miss workouts that span midnight in
+ *  any reasonable timezone interpretation. */
+const FETCH_BUFFER_MS = 24 * 60 * 60 * 1000;
+
+/** Default IANA timezone for game/workout date alignment. BDL is
+ *  Nashville-based, so Central is a safe default; future leagues
+ *  can override via leagues.timezone if/when we add that column. */
+const DEFAULT_TZ = "America/Chicago";
+
+function localDateString(d: Date, tz: string): string {
+  // en-CA emits ISO YYYY-MM-DD which matches games.gameDate exactly.
+  return d.toLocaleDateString("en-CA", { timeZone: tz });
+}
 
 export type WhoopGameMetric = {
   gameId: string;
@@ -44,11 +56,10 @@ export type WhoopGameMetric = {
 };
 
 function combineDateTime(dateStr: string, timeStr: string | null): Date {
-  // gameDate is YYYY-MM-DD, gameTime is HH:MM:SS (or null). Treat as
-  // local-naive — Whoop ISO timestamps include offset, so as long as
-  // both sides anchor to the player's wall clock the overlap math
-  // holds. JS Date constructor on "YYYY-MM-DDTHH:MM:SS" parses as
-  // local time, which matches how the user thinks about game time.
+  // gameDate is YYYY-MM-DD, gameTime is HH:MM:SS (or null). Used only
+  // for sort ordering and the bounding query; per-game *matching*
+  // happens on calendar-date equality below, which dodges the
+  // server-runs-in-UTC vs game-time-is-local mismatch.
   const t = timeStr ?? "12:00:00";
   return new Date(`${dateStr}T${t}`);
 }
@@ -88,24 +99,25 @@ export async function getPlayerWhoopGameMetrics(
 
   if (rosterRows.length === 0) return [];
 
-  // Compute the game window for each row. Drop games without a date.
+  // Compute a sortable timestamp for each row. Drop games without a
+  // date. The actual workout-to-game match below uses calendar dates
+  // in DEFAULT_TZ rather than these timestamps.
   const gamesWithWindow = rosterRows
     .filter((r): r is typeof r & { gameDate: string } => !!r.gameDate)
     .map((r) => {
       const start = combineDateTime(r.gameDate, r.gameTime);
-      const end = new Date(start.getTime() + ASSUMED_GAME_MIN * 60_000);
-      return { ...r, gameStart: start, gameEnd: end };
+      return { ...r, gameStart: start };
     });
 
   if (gamesWithWindow.length === 0) return [];
 
   const earliest = new Date(
     Math.min(...gamesWithWindow.map((g) => g.gameStart.getTime())) -
-      MATCH_WINDOW_MS,
+      FETCH_BUFFER_MS,
   );
   const latest = new Date(
-    Math.max(...gamesWithWindow.map((g) => g.gameEnd.getTime())) +
-      MATCH_WINDOW_MS,
+    Math.max(...gamesWithWindow.map((g) => g.gameStart.getTime())) +
+      FETCH_BUFFER_MS,
   );
 
   // 2) Pull all workouts in the bounding window, plus all cycles by date.
@@ -155,14 +167,14 @@ export async function getPlayerWhoopGameMetrics(
 
   // 3) For each game, find the best-matching workout.
   return gamesWithWindow.map((g): WhoopGameMetric => {
-    const winStart = g.gameStart.getTime() - MATCH_WINDOW_MS;
-    const winEnd = g.gameEnd.getTime() + MATCH_WINDOW_MS;
-
+    // Match by calendar date in the league's local timezone. Server
+    // typically runs in UTC, gameTime is wall-clock without an
+    // offset, and Whoop returns UTC timestamps — direct Date math
+    // skews matches by 5+ hours. Date-string equality dodges that.
     const candidates = workouts.filter((w) => {
-      const wStart = w.date.getTime();
-      const wEnd = (w.endDate ?? w.date).getTime();
-      // Overlap test: workout's [start, end] intersects the game window.
-      return wStart <= winEnd && wEnd >= winStart;
+      const startStr = localDateString(w.date, DEFAULT_TZ);
+      const endStr = localDateString(w.endDate ?? w.date, DEFAULT_TZ);
+      return startStr === g.gameDate || endStr === g.gameDate;
     });
 
     const outcome: "W" | "L" | "T" | null =
