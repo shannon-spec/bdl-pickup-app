@@ -133,6 +133,14 @@ export function WhoopConsoleBody({
       hrL: avg(losses.map((m) => m.avgHr)),
       winCount: wins.length,
       lossCount: losses.length,
+      avgScore: avg(scorable.map((m) => m.performanceScore)),
+      bestScore: scorable.reduce(
+        (best, m) =>
+          m.performanceScore !== null && m.performanceScore > (best ?? -1)
+            ? m.performanceScore
+            : best,
+        null as number | null,
+      ),
     };
   }, [filtered]);
 
@@ -201,7 +209,7 @@ export function WhoopConsoleBody({
 
       {connected && sourceMetrics.length > 0 && (
         <>
-          <div className="grid grid-cols-5 gap-3 max-md:grid-cols-3 max-sm:grid-cols-2">
+          <div className="grid grid-cols-6 gap-3 max-md:grid-cols-3 max-sm:grid-cols-2">
             <SummaryBlock
               label={
                 summary.scoredCount < summary.total
@@ -209,6 +217,16 @@ export function WhoopConsoleBody({
                   : `${scope === "league" ? "Games" : "Sessions"} · ${summary.total}`
               }
               value={`${summary.total}`}
+            />
+            <SummaryBlock
+              label="BDL Score"
+              hint="avg"
+              value={
+                summary.avgScore !== null
+                  ? Math.round(summary.avgScore).toString()
+                  : "—"
+              }
+              scoreColor={scoreColor(summary.avgScore)}
             />
             <SummaryBlock
               label="Avg Strain"
@@ -290,10 +308,11 @@ export function WhoopConsoleBody({
             </p>
           ) : (
             <div className="flex flex-col divide-y divide-[color:var(--hairline)]">
-              <div className="grid grid-cols-[1fr_44px_56px_64px_60px_60px_60px_92px] gap-3 pb-2 text-[10px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
+              <div className="grid grid-cols-[1fr_44px_56px_48px_64px_60px_60px_60px_92px] gap-3 pb-2 text-[10px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
                 <span>Game</span>
                 <span className="text-right">W/L</span>
                 <span className="text-right">Source</span>
+                <span className="text-right">Score</span>
                 <span className="text-right">Strain</span>
                 <span className="text-right">Avg HR</span>
                 <span className="text-right">Max HR</span>
@@ -305,7 +324,7 @@ export function WhoopConsoleBody({
                 return (
                   <div
                     key={m.gameId}
-                    className="grid grid-cols-[1fr_44px_56px_64px_60px_60px_60px_92px] gap-3 items-center py-3"
+                    className="grid grid-cols-[1fr_44px_56px_48px_64px_60px_60px_60px_92px] gap-3 items-center py-3"
                   >
                     <div className="flex flex-col gap-0.5 min-w-0">
                       <span className="text-[13px] font-semibold truncate">
@@ -318,7 +337,7 @@ export function WhoopConsoleBody({
                     </div>
                     {isUpcoming ? (
                       <div
-                        className="col-span-7 flex justify-end"
+                        className="col-span-8 flex justify-end"
                         aria-label="Upcoming game"
                       >
                         <UpcomingPill />
@@ -331,6 +350,7 @@ export function WhoopConsoleBody({
                         <div className="flex justify-end">
                           <SourceBadge source={m.source} />
                         </div>
+                        <PerformanceScoreCell score={m.performanceScore} />
                         <div className="flex justify-end">
                           {m.strain !== null ? (
                             <span
@@ -550,6 +570,39 @@ function OutcomeBadge({ outcome }: { outcome: "W" | "L" | "T" | null }) {
   );
 }
 
+/** Maps a 0–100 BDL Performance Score to a display color.
+ *  Green = exceptional, blue = strong, neutral = average, orange = below, red = well below. */
+function scoreColor(score: number | null | undefined): string | undefined {
+  if (score === null || score === undefined) return undefined;
+  if (score >= 80) return "var(--up)";
+  if (score >= 65) return "#3b82f6";
+  if (score >= 45) return "var(--text-2)";
+  if (score >= 30) return "#f97316";
+  return "var(--down)";
+}
+
+function PerformanceScoreCell({ score }: { score: number | null }) {
+  if (score === null) {
+    return (
+      <div className="flex justify-end">
+        <span className="text-[color:var(--text-4)] text-[12px]">—</span>
+      </div>
+    );
+  }
+  const color = scoreColor(score);
+  return (
+    <div className="flex justify-end">
+      <span
+        className="font-[family-name:var(--mono)] font-extrabold text-[13px] num"
+        style={{ color }}
+        title="BDL Performance Score — player-relative composite of intensity (Z4+Z5%), output (steps), and load (strain). 50 = your average game."
+      >
+        {score}
+      </span>
+    </div>
+  );
+}
+
 function aboveAvg(
   value: number | null | undefined,
   average: number | null | undefined,
@@ -664,11 +717,13 @@ function SummaryBlock({
   hint,
   value,
   unit,
+  scoreColor: color,
 }: {
   label: string;
   hint?: string;
   value: string;
   unit?: string;
+  scoreColor?: string;
 }) {
   return (
     <div className="flex flex-col gap-1">
@@ -680,7 +735,10 @@ function SummaryBlock({
           </span>
         )}
       </span>
-      <span className="font-[family-name:var(--mono)] font-extrabold text-[22px] num text-[color:var(--text)]">
+      <span
+        className="font-[family-name:var(--mono)] font-extrabold text-[22px] num"
+        style={{ color: color ?? "var(--text)" }}
+      >
         {value}
         {unit && (
           <span className="text-[12px] font-semibold text-[color:var(--text-3)] ml-1">

@@ -76,6 +76,25 @@ export type WhoopGameMetric = {
   /** Total steps on the game day as reported by Whoop — raw value
    *  before baseline subtraction. Null when no cycle data exists. */
   totalStepsOnDay: number | null;
+  /**
+   * BDL Performance Score — 0 to 100, player-relative composite.
+   *
+   * Measures how hard you worked *for you*, normalized against your own
+   * historical games so fitness level doesn't skew the result:
+   *
+   *   40% Intensity  — Z4+Z5 minutes ÷ game duration
+   *                    (already fitness-neutral: Whoop zones are % of YOUR max HR)
+   *   35% Output     — estimated basketball steps
+   *                    (physics-based movement; a fit and unfit player
+   *                    who run the same amount score identically)
+   *   25% Load       — Whoop strain
+   *                    (lowest weight because it IS fitness-biased)
+   *
+   * Each component is z-scored against the player's own game history
+   * (min 3 games required). 50 = your average game, 70 = strong game,
+   * 85+ = exceptional. Null when there isn't enough history to score.
+   */
+  performanceScore: number | null;
 };
 
 function combineDateTime(dateStr: string, timeStr: string | null): Date {
@@ -219,7 +238,7 @@ export async function getPlayerWhoopGameMetrics(
       : null;
 
   // 3) For each game, find the best-matching workout.
-  return gamesWithWindow.map((g): WhoopGameMetric => {
+  const rawMetrics = gamesWithWindow.map((g): WhoopGameMetric => {
     // Match by calendar date in the league's local timezone. Server
     // typically runs in UTC, gameTime is wall-clock without an
     // offset, and Whoop returns UTC timestamps — direct Date math
@@ -272,6 +291,7 @@ export async function getPlayerWhoopGameMetrics(
         highZoneMin: zones ? zones[4] + zones[5] : null,
         estSteps,
         totalStepsOnDay,
+        performanceScore: null,
       };
     }
 
@@ -298,6 +318,7 @@ export async function getPlayerWhoopGameMetrics(
         highZoneMin: null,
         estSteps,
         totalStepsOnDay,
+        performanceScore: null,
       };
     }
 
@@ -322,8 +343,11 @@ export async function getPlayerWhoopGameMetrics(
       highZoneMin: null,
       estSteps: null,
       totalStepsOnDay: null,
+      performanceScore: null,
     };
   });
+
+  return computePerformanceScores(rawMetrics);
 }
 
 /**
@@ -412,7 +436,7 @@ export async function getPlayerOtherBasketballWorkouts(
       ? Math.round(nonBballStepsOther.reduce((s, n) => s + n, 0) / nonBballStepsOther.length)
       : null;
 
-  return workouts
+  const otherRaw = workouts
     .filter((w) => {
       const dateStr = localDateString(w.date, DEFAULT_TZ);
       return !leagueDatesSet.has(dateStr);
@@ -446,8 +470,11 @@ export async function getPlayerOtherBasketballWorkouts(
         highZoneMin: zones ? zones[4] + zones[5] : null,
         estSteps,
         totalStepsOnDay,
+        performanceScore: null,
       };
     });
+
+  return computePerformanceScores(otherRaw);
 }
 
 function zoneMinutesFrom(w: {
@@ -470,4 +497,138 @@ function zoneMinutesFrom(w: {
   // breakdown — return null so the UI can render a dash.
   if (cells.every((c) => c === null)) return null;
   return cells.map((c) => Math.round((c ?? 0) / 60)) as WhoopGameMetric["zoneMin"];
+}
+
+/**
+ * BDL Performance Score — player-relative composite, 0–100.
+ *
+ * Solves the fitness-bias problem: an out-of-shape player registers high
+ * strain from moderate exertion. By z-scoring each metric against the
+ * player's own historical average, we measure "how hard did YOU work"
+ * rather than "how does your physiology compare to an ideal athlete."
+ *
+ * Components & weights
+ * ────────────────────
+ *  40% Intensity ratio  (Z4+Z5 minutes ÷ game duration)
+ *      Already fitness-neutral: Whoop zones are % of YOUR personal max HR.
+ *      A deconditioned and elite player both at Z4 are each at 80-90% of
+ *      their own ceiling. More Z4/Z5 relative to time = more peak effort.
+ *
+ *  35% Output / steps   (estimated basketball steps)
+ *      Physics-based movement volume. Whether fit or unfit, running 7,000
+ *      steps is 7,000 steps. Captures the "did you actually move" question
+ *      and anchors the score against real output.
+ *
+ *  25% Load / strain    (Whoop strain, 0–21)
+ *      Useful context for overall cardiovascular demand but deliberately
+ *      down-weighted because it IS fitness-biased.
+ *
+ * Normalization
+ * ─────────────
+ *  For each component, z = (value − player_mean) / player_stdev, clamped
+ *  to [−3, +3]. The composite z is mapped linearly to [0, 100] with 50 as
+ *  the center (= your average game). Components with null data are dropped
+ *  and the remaining weights are renormalized. Requires ≥ 3 games with any
+ *  Whoop data to produce a score; returns null otherwise.
+ *
+ *  50  = your typical game
+ *  65  = strong game (~1 stdev above your average)
+ *  80  = great game (~2 stdev above)
+ *  95+ = exceptional
+ */
+function computePerformanceScores(
+  metrics: WhoopGameMetric[],
+): WhoopGameMetric[] {
+  // Only games with actual sensor data count toward the baseline.
+  const dataGames = metrics.filter((m) => m.source !== "none");
+  if (dataGames.length < 3) return metrics; // not enough history
+
+  // ── helpers ────────────────────────────────────────────────────────
+  function meanAndStd(vals: number[]): { mean: number; std: number } {
+    const n = vals.length;
+    const mean = vals.reduce((s, v) => s + v, 0) / n;
+    const variance = vals.reduce((s, v) => s + (v - mean) ** 2, 0) / n;
+    return { mean, std: Math.sqrt(variance) };
+  }
+
+  function clampedZ(
+    val: number,
+    mean: number,
+    std: number,
+  ): number {
+    // Epsilon avoids division by zero when all historical values are
+    // identical (e.g., the player always plays exactly 60-min games).
+    const eps = 1e-4;
+    return Math.max(-3, Math.min(3, (val - mean) / Math.max(std, eps)));
+  }
+
+  // ── per-component stats ─────────────────────────────────────────────
+  // Intensity: Z4+Z5 fraction of game time. Only meaningful when we have
+  // both zone data AND a valid duration from a workout (not a cycle).
+  const intensityPairs = dataGames
+    .filter(
+      (m) =>
+        m.highZoneMin !== null &&
+        m.durationMin !== null &&
+        m.durationMin > 0,
+    )
+    .map((m) => ({
+      gameId: m.gameId,
+      ratio: m.highZoneMin! / m.durationMin!,
+    }));
+  const intensityStats =
+    intensityPairs.length >= 3
+      ? meanAndStd(intensityPairs.map((p) => p.ratio))
+      : null;
+  const intensityByGame = new Map(intensityPairs.map((p) => [p.gameId, p.ratio]));
+
+  // Strain
+  const strainVals = dataGames
+    .filter((m) => m.strain !== null)
+    .map((m) => m.strain as number);
+  const strainStats = strainVals.length >= 3 ? meanAndStd(strainVals) : null;
+
+  // Steps
+  const stepsVals = dataGames
+    .filter((m) => m.estSteps !== null)
+    .map((m) => m.estSteps as number);
+  const stepsStats = stepsVals.length >= 3 ? meanAndStd(stepsVals) : null;
+
+  // ── score each game ─────────────────────────────────────────────────
+  const scoreMap = new Map<string, number>();
+
+  for (const m of dataGames) {
+    // Collect available components with their nominal weights.
+    const components: { z: number; w: number }[] = [];
+
+    if (intensityStats) {
+      const ratio = intensityByGame.get(m.gameId);
+      if (ratio !== undefined) {
+        components.push({ z: clampedZ(ratio, intensityStats.mean, intensityStats.std), w: 0.40 });
+      }
+    }
+    if (stepsStats && m.estSteps !== null) {
+      components.push({ z: clampedZ(m.estSteps, stepsStats.mean, stepsStats.std), w: 0.35 });
+    }
+    if (strainStats && m.strain !== null) {
+      components.push({ z: clampedZ(m.strain, strainStats.mean, strainStats.std), w: 0.25 });
+    }
+
+    if (components.length === 0) continue;
+
+    // Re-normalize weights so they always sum to 1 even when some
+    // components are missing for this particular game.
+    const totalW = components.reduce((s, c) => s + c.w, 0);
+    const compositeZ = components.reduce((s, c) => s + (c.z * c.w) / totalW, 0);
+
+    // Linear map: compositeZ ∈ [−3, +3] → score ∈ [0, 100].
+    // Center 50 ± 50 across the ±3 sigma range.
+    const raw = 50 + compositeZ * (50 / 3);
+    scoreMap.set(m.gameId, Math.round(Math.max(0, Math.min(100, raw))));
+  }
+
+  return metrics.map((m) => ({
+    ...m,
+    performanceScore: scoreMap.get(m.gameId) ?? null,
+  }));
 }
