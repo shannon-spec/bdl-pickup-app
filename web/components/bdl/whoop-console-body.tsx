@@ -587,9 +587,8 @@ function scoreColor(score: number | null | undefined): string | undefined {
   if (score === null || score === undefined) return undefined;
   switch (scoreGrade(score)) {
     case "elite":
-      return "var(--up)";
     case "strong":
-      return "#3b82f6";
+      return "var(--up)";
     case "avg":
       return "var(--text-2)";
     case "below":
@@ -603,9 +602,8 @@ function scoreColor(score: number | null | undefined): string | undefined {
 function scorePillClasses(grade: ScoreGrade): string {
   switch (grade) {
     case "elite":
-      return "bg-[color:var(--up-soft)] text-[color:var(--up)]";
     case "strong":
-      return "bg-[#3b82f6]/15 text-[#3b82f6]";
+      return "bg-[color:var(--up-soft)] text-[color:var(--up)]";
     case "avg":
       return "bg-[color:var(--surface-2)] text-[color:var(--text-2)]";
     case "below":
