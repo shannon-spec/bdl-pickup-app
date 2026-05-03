@@ -26,6 +26,7 @@ import {
 import { EditPlayerButton } from "./edit-button";
 import { GradePanel } from "./grade-panel";
 import { LeagueGradesCard } from "./league-grades-card";
+import { WhoopConsole } from "@/components/bdl/whoop-console";
 import type { Player as PlayerType } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -368,6 +369,10 @@ export default async function PlayerProfilePage({
             </div>
           </div>
         )}
+
+        {/* Whoop console — self-view only. Shows basketball workout data
+            (strain, HR, calories) from the player's connected Whoop account. */}
+        {isMe && <WhoopConsole playerId={player.id} />}
 
         {/* Cell + email are NEVER displayed publicly. The viewing player
             can confirm their own data; everyone else gets a Message Center
