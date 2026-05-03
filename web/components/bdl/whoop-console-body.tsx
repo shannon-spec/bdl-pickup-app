@@ -140,11 +140,17 @@ export function WhoopConsoleBody({
       )}
 
       {!connected && (
-        <div className="flex flex-col gap-2 py-4 items-center text-center">
-          <p className="text-[13px] text-[color:var(--text-3)] max-w-xs leading-relaxed">
+        <div className="flex flex-col gap-3 py-4 items-center text-center">
+          <p className="text-[13px] text-[color:var(--text-3)] max-w-md leading-relaxed">
             Connect your Whoop and BDL will pair strain, heart rate, and
             calories to every scheduled game on your roster — even if
             you never tagged the session as basketball in the Whoop app.
+          </p>
+          <p className="text-[12px] text-[color:var(--text-3)] max-w-md leading-relaxed">
+            <strong className="text-[color:var(--text-2)]">Private by default.</strong>{" "}
+            Your Whoop data is visible only to you. You can opt in to share
+            with your league for head-to-head and leaderboard products in
+            <em> Edit Player → Whoop Privacy</em>.
           </p>
         </div>
       )}

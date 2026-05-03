@@ -66,6 +66,7 @@ const playerSchema = z.object({
   college: z.string().trim().max(120).optional().or(z.literal("")),
   sport: z.string().trim().max(60).optional().or(z.literal("")),
   highestLevel: z.enum(HIGHEST_LEVELS).optional().or(z.literal("")),
+  whoopShareWithLeague: z.string().optional().or(z.literal("")),
 });
 
 export type PlayerInput = z.infer<typeof playerSchema>;
@@ -129,6 +130,9 @@ function valuesFor(v: PlayerInput) {
     college: toNullable(v.college),
     sport: toNullable(v.sport),
     highestLevel: toNullable(v.highestLevel),
+    whoopShareWithLeague:
+      v.whoopShareWithLeague === "on" ||
+      v.whoopShareWithLeague === "true",
   };
 }
 

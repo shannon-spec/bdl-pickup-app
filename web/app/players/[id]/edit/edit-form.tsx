@@ -228,6 +228,21 @@ export function EditPlayerForm({ player }: { player: Player }) {
           </Field>
         </Section>
 
+        <Section title="Whoop Privacy">
+          <PrivacyNote>
+            Your Whoop strain, heart rate, and calories are private by
+            default — only you see them on your profile. Turn this on
+            to share with your league&apos;s commissioners and let your
+            data appear in head-to-head and leaderboard products.
+          </PrivacyNote>
+          <ToggleRow
+            name="whoopShareWithLeague"
+            defaultChecked={player.whoopShareWithLeague}
+            label="Share Whoop data with my league"
+            description="Includes strain, HR, and calories per game. You can turn this off any time."
+          />
+        </Section>
+
         {error && (
           <div className="text-[12px] text-[color:var(--down)] bg-[color:var(--down-soft)] rounded-[var(--r-md)] px-3 py-2">
             {error}
@@ -361,5 +376,54 @@ function PrivacyNote({ children }: { children: React.ReactNode }) {
     <div className="rounded-[var(--r-md)] border border-[color:var(--hairline)] bg-[color:var(--brand-soft)]/40 px-3 py-2.5 text-[12px] text-[color:var(--text-2)] leading-relaxed">
       {children}
     </div>
+  );
+}
+
+function ToggleRow({
+  name,
+  defaultChecked,
+  label,
+  description,
+}: {
+  name: string;
+  defaultChecked: boolean;
+  label: string;
+  description?: string;
+}) {
+  const [checked, setChecked] = useState(defaultChecked);
+  return (
+    <label className="flex items-start gap-3 cursor-pointer select-none">
+      <input
+        type="checkbox"
+        name={name}
+        checked={checked}
+        onChange={(e) => setChecked(e.target.checked)}
+        className="sr-only"
+      />
+      <span
+        className={`mt-0.5 inline-flex w-9 h-5 shrink-0 rounded-full relative transition-colors border ${
+          checked
+            ? "bg-[color:var(--brand)] border-[color:var(--brand)]"
+            : "bg-[color:var(--surface-2)] border-[color:var(--hairline-2)]"
+        }`}
+        aria-hidden
+      >
+        <span
+          className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${
+            checked ? "translate-x-4" : ""
+          }`}
+        />
+      </span>
+      <span className="flex flex-col gap-0.5">
+        <span className="text-[13px] font-semibold text-[color:var(--text)]">
+          {label}
+        </span>
+        {description && (
+          <span className="text-[11.5px] text-[color:var(--text-3)] leading-snug">
+            {description}
+          </span>
+        )}
+      </span>
+    </label>
   );
 }

@@ -148,6 +148,14 @@ export const players = pgTable(
     // Most recent successful Whoop backfill — surfaced as "Last synced"
     // on the profile and used by Sync Now to compute incremental deltas.
     whoopLastSyncAt: timestamp("whoop_last_sync_at", { withTimezone: true }),
+    // Player-controlled toggle for whether Whoop strain/HR data may
+    // appear in league comparison products (leaderboards, head-to-head
+    // intensity charts, etc.). Defaults to private; the player has to
+    // opt in explicitly. The self-view always sees their own data
+    // regardless of this flag.
+    whoopShareWithLeague: boolean("whoop_share_with_league")
+      .notNull()
+      .default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
