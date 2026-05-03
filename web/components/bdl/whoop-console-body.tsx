@@ -570,15 +570,49 @@ function OutcomeBadge({ outcome }: { outcome: "W" | "L" | "T" | null }) {
   );
 }
 
-/** Maps a 0–100 BDL Performance Score to a display color.
- *  Green = exceptional, blue = strong, neutral = average, orange = below, red = well below. */
+/** Grade band for a BDL Performance Score, in five tiers that match
+ *  the pill colors below. */
+type ScoreGrade = "elite" | "strong" | "avg" | "below" | "poor";
+function scoreGrade(score: number): ScoreGrade {
+  if (score >= 80) return "elite";
+  if (score >= 65) return "strong";
+  if (score >= 45) return "avg";
+  if (score >= 30) return "below";
+  return "poor";
+}
+
+/** Hero-text color for the avg BDL Score — pulls the same accent used
+ *  in the pill text so the hero and table reads as one system. */
 function scoreColor(score: number | null | undefined): string | undefined {
   if (score === null || score === undefined) return undefined;
-  if (score >= 80) return "var(--up)";
-  if (score >= 65) return "#3b82f6";
-  if (score >= 45) return "var(--text-2)";
-  if (score >= 30) return "#f97316";
-  return "var(--down)";
+  switch (scoreGrade(score)) {
+    case "elite":
+      return "var(--up)";
+    case "strong":
+      return "#3b82f6";
+    case "avg":
+      return "var(--text-2)";
+    case "below":
+      return "#f97316";
+    case "poor":
+      return "var(--down)";
+  }
+}
+
+/** Background + text classes for the score pill, keyed off the grade. */
+function scorePillClasses(grade: ScoreGrade): string {
+  switch (grade) {
+    case "elite":
+      return "bg-[color:var(--up-soft)] text-[color:var(--up)]";
+    case "strong":
+      return "bg-[#3b82f6]/15 text-[#3b82f6]";
+    case "avg":
+      return "bg-[color:var(--surface-2)] text-[color:var(--text-2)]";
+    case "below":
+      return "bg-[#f97316]/15 text-[#f97316]";
+    case "poor":
+      return "bg-[color:var(--down-soft)] text-[color:var(--down)]";
+  }
 }
 
 function PerformanceScoreCell({ score }: { score: number | null }) {
@@ -589,13 +623,12 @@ function PerformanceScoreCell({ score }: { score: number | null }) {
       </div>
     );
   }
-  const color = scoreColor(score);
+  const grade = scoreGrade(score);
   return (
     <div className="flex justify-end">
       <span
-        className="font-[family-name:var(--mono)] font-extrabold text-[13px] num"
-        style={{ color }}
-        title="BDL Performance Score — player-relative composite of intensity (Z4+Z5%), output (steps), and load (strain). 50 = your average game."
+        className={`inline-flex items-center justify-center min-w-[34px] h-6 px-2 rounded-full font-[family-name:var(--mono)] font-extrabold text-[12px] num ${scorePillClasses(grade)}`}
+        title="BDL Performance Score — player-relative composite of intensity (Z4+Z5%) and load (strain). 50 = your average game."
       >
         {score}
       </span>
