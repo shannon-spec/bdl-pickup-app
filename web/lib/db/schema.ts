@@ -213,6 +213,12 @@ export const leagues = pgTable("leagues", {
   avatarKind: text("avatar_kind").notNull().default("monogram"),
   avatarColor: text("avatar_color").notNull().default("brand"),
   avatarEmoji: text("avatar_emoji"),
+  // Venue — surfaced on the league detail page with a Google Maps
+  // embed when an address is set. Court lets you disambiguate when a
+  // gym has multiple floors (e.g. "Court 2 — North side").
+  venueName: text("venue_name"),
+  venueCourt: text("venue_court"),
+  venueAddress: text("venue_address"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()

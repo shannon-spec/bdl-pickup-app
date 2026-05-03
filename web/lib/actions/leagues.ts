@@ -74,6 +74,9 @@ const leagueSchema = z.object({
   avatarKind: z.enum(AVATAR_KINDS).default("monogram"),
   avatarColor: z.enum(AVATAR_COLORS).default("brand"),
   avatarEmoji: z.string().trim().max(8).optional().or(z.literal("")),
+  venueName: z.string().trim().max(120).optional().or(z.literal("")),
+  venueCourt: z.string().trim().max(80).optional().or(z.literal("")),
+  venueAddress: z.string().trim().max(300).optional().or(z.literal("")),
 });
 
 const toInt = (s?: string | null) => {
@@ -141,6 +144,9 @@ export async function createLeague(formData: FormData): Promise<ActionResult<{ i
       avatarColor: v.avatarColor,
       avatarEmoji:
         v.avatarKind === "emoji" ? nullable(v.avatarEmoji) : null,
+      venueName: nullable(v.venueName),
+      venueCourt: nullable(v.venueCourt),
+      venueAddress: nullable(v.venueAddress),
     })
     .returning({ id: leagues.id });
 
@@ -197,6 +203,9 @@ export async function updateLeague(
       avatarColor: v.avatarColor,
       avatarEmoji:
         v.avatarKind === "emoji" ? nullable(v.avatarEmoji) : null,
+      venueName: nullable(v.venueName),
+      venueCourt: nullable(v.venueCourt),
+      venueAddress: nullable(v.venueAddress),
     })
     .where(eq(leagues.id, id));
   revalidatePath("/leagues");

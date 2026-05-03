@@ -325,6 +325,38 @@ export function LeagueForm({
           />
         </Field>
       </Row>
+      <div className="flex flex-col gap-2 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface-2)] p-4">
+        <span className="text-[11px] font-semibold tracking-[0.12em] uppercase text-[color:var(--text-3)]">
+          Venue
+        </span>
+        <Row>
+          <Field label="Gym Name">
+            <input
+              name="venueName"
+              defaultValue={editing?.venueName ?? ""}
+              className={inputCx}
+              placeholder="O.D. Wyatt Gym"
+            />
+          </Field>
+          <Field label="Court">
+            <input
+              name="venueCourt"
+              defaultValue={editing?.venueCourt ?? ""}
+              className={inputCx}
+              placeholder="Court 2 — North side"
+            />
+          </Field>
+        </Row>
+        <Field label="Address" hint="renders a Google Map">
+          <input
+            name="venueAddress"
+            defaultValue={editing?.venueAddress ?? ""}
+            className={inputCx}
+            placeholder="1500 E Berry St, Fort Worth, TX 76105"
+          />
+        </Field>
+      </div>
+
       <Field label="Description">
         <textarea
           name="description"

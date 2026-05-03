@@ -13,6 +13,7 @@ import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
 import { GradePill } from "@/components/bdl/grade-pill";
 import { LeagueAvatar } from "@/components/bdl/league-avatar";
+import { LeagueVenueCard } from "@/components/bdl/league-venue-card";
 import { TeamBadge } from "@/components/bdl/team-badge";
 import { ProbabilityBar } from "@/components/bdl/probability-bar";
 import { getLeagueDetail } from "@/lib/queries/leagues";
@@ -226,6 +227,12 @@ export default async function LeagueDetailPage({
             </div>
           </section>
         )}
+
+        <LeagueVenueCard
+          venueName={detail.league.venueName}
+          venueCourt={detail.league.venueCourt}
+          venueAddress={detail.league.venueAddress}
+        />
 
         <CommissionerStrip leagueId={detail.league.id} />
         <MembersStrip leagueId={detail.league.id} />
