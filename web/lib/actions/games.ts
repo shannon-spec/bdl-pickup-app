@@ -165,6 +165,8 @@ export async function setGameScore(
           ? ("B" as const)
           : ("Tie" as const)
       : null;
+  const willLock = v.locked === "on" || v.locked === "true";
+  const lockedAtPatch = await computeLockedAtPatch(id, willLock);
   await db
     .update(games)
     .set({
@@ -172,13 +174,35 @@ export async function setGameScore(
       scoreB: sB,
       winTeam,
       gameWinner: v.gameWinnerId && v.gameWinnerId !== "" ? v.gameWinnerId : null,
-      locked: v.locked === "on" || v.locked === "true",
+      locked: willLock,
+      ...lockedAtPatch,
     })
     .where(eq(games.id, id));
   revalidatePath(`/games/${id}`);
   revalidatePath("/games");
   revalidatePath("/");
   return { ok: true };
+}
+
+/**
+ * Decide what to write to games.locked_at on a transition. We only
+ * stamp it when the row is actually moving from unlocked → locked
+ * (so re-saves of an already-locked game don't reset the auto-sync
+ * watermark) and clear it on locked → unlocked.
+ */
+async function computeLockedAtPatch(
+  id: string,
+  willLock: boolean,
+): Promise<{ lockedAt?: Date | null }> {
+  const [row] = await db
+    .select({ locked: games.locked, lockedAt: games.lockedAt })
+    .from(games)
+    .where(eq(games.id, id))
+    .limit(1);
+  if (!row) return {};
+  if (willLock && !row.locked) return { lockedAt: new Date() };
+  if (!willLock && row.locked) return { lockedAt: null };
+  return {};
 }
 
 /**
@@ -240,6 +264,8 @@ export async function setSeriesScore(
     );
   }
 
+  const willLock = raw.locked === "on" || raw.locked === "true";
+  const lockedAtPatch = await computeLockedAtPatch(id, willLock);
   await db
     .update(games)
     .set({
@@ -248,7 +274,8 @@ export async function setSeriesScore(
       winTeam: parentWin,
       gameWinner:
         raw.gameWinnerId && raw.gameWinnerId !== "" ? raw.gameWinnerId : null,
-      locked: raw.locked === "on" || raw.locked === "true",
+      locked: willLock,
+      ...lockedAtPatch,
     })
     .where(eq(games.id, id));
 

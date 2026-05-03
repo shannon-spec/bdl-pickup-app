@@ -294,6 +294,12 @@ export const games = pgTable(
     winTeam: winTeamEnum("win_team"),
     gameWinner: uuid("game_winner").references(() => players.id, { onDelete: "set null" }),
     locked: boolean("locked").notNull().default(false),
+    /** When this game most recently transitioned to locked. Drives the
+     *  Whoop auto-sync — when a game locks, we wait 15 min for Whoop
+     *  to finish processing the session, then backfill on the next
+     *  profile visit. Null when the game has never been locked or has
+     *  been unlocked since. */
+    lockedAt: timestamp("locked_at", { withTimezone: true }),
     autoScheduled: boolean("auto_scheduled").notNull().default(false),
     numInvites: integer("num_invites").notNull().default(10),
     seriesId: uuid("series_id"),

@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import { db, players } from "@/lib/db";
 import { WhoopConsoleBody } from "@/components/bdl/whoop-console-body";
 import { getPlayerWhoopGameMetrics } from "@/lib/whoop/game-metrics";
+import { runDueWhoopSyncs } from "@/lib/whoop/auto-sync";
 
 export async function WhoopConsole({ playerId }: { playerId: string }) {
   const [player] = await db
@@ -22,6 +23,12 @@ export async function WhoopConsole({ playerId }: { playerId: string }) {
   const lastSyncAt = player?.whoopLastSyncAt
     ? player.whoopLastSyncAt.toISOString()
     : null;
+
+  if (connected) {
+    // Schedule a backfill if any rostered game locked >15 min ago and
+    // hasn't been synced yet. Runs after the response is sent.
+    await runDueWhoopSyncs(playerId);
+  }
 
   const metrics = connected ? await getPlayerWhoopGameMetrics(playerId) : [];
 
