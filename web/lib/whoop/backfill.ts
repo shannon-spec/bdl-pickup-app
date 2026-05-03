@@ -20,9 +20,10 @@ const WORKOUT_LIST_PATH = "/developer/v2/activity/workout";
  *  the floor — the league season started in 2026. */
 const BACKFILL_START = "2026-01-01T00:00:00.000Z";
 
-/** Whoop V2 sport ID for basketball. Verify by logging a basketball
- *  session in the Whoop app and inspecting the returned sport_id. */
-const BASKETBALL_SPORT_ID = 0;
+/** V2 returns a stable lowercased `sport_name` string. Filter on that
+ *  rather than the integer sport_id, which has drifted between API
+ *  versions and is not reliably documented for basketball. */
+const BASKETBALL_SPORT_NAME = "basketball";
 
 /** Hard cap on pages so a runaway loop can't pin the function for
  *  longer than the platform's invocation timeout. 50 pages * 25
@@ -176,8 +177,7 @@ export async function backfillWhoopWorkouts(
     pagesFetched += 1;
 
     const basketball = records.filter(
-      (w) =>
-        w.sport_id === BASKETBALL_SPORT_ID && w.score_state === "SCORED",
+      (w) => w.sport_name?.toLowerCase() === BASKETBALL_SPORT_NAME,
     );
     basketballSeen += basketball.length;
 
