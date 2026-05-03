@@ -1,11 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { WhoopGameMetric } from "@/lib/whoop/game-metrics";
 import { WhoopConnectButton } from "@/components/bdl/whoop-connect-button";
 import { WhoopSyncControls } from "@/components/bdl/whoop-sync-controls";
 
 type Range = "MTD" | "YTD";
+
+const YTD_PAGE_SIZE = 25;
 
 function fmtDate(iso: string): string {
   const d = new Date(iso);
@@ -63,6 +65,14 @@ export function WhoopConsoleBody({
   metrics: WhoopGameMetric[];
 }) {
   const [range, setRange] = useState<Range>("MTD");
+  const [visibleCount, setVisibleCount] = useState(YTD_PAGE_SIZE);
+
+  // Reset pagination whenever the range tab changes — switching to
+  // YTD shouldn't keep an arbitrarily-grown page count from a prior
+  // session.
+  useEffect(() => {
+    setVisibleCount(YTD_PAGE_SIZE);
+  }, [range]);
 
   const filtered = useMemo(() => {
     const now = new Date();
@@ -72,6 +82,12 @@ export function WhoopConsoleBody({
         : new Date(now.getFullYear(), 0, 1);
     return metrics.filter((m) => new Date(m.date) >= start);
   }, [metrics, range]);
+
+  // Pagination only kicks in on YTD where lists are long. MTD is a
+  // month at most and shows everything.
+  const visibleRows =
+    range === "YTD" ? filtered.slice(0, visibleCount) : filtered;
+  const moreAvailable = range === "YTD" && visibleCount < filtered.length;
 
   const summary = useMemo(() => {
     const wins = filtered.filter((m) => m.outcome === "W");
@@ -211,7 +227,7 @@ export function WhoopConsoleBody({
                 <span className="text-right">Max HR</span>
                 <span className="text-right">Cal</span>
               </div>
-              {filtered.map((m) => (
+              {visibleRows.map((m) => (
                 <div
                   key={m.gameId}
                   className="grid grid-cols-[1fr_44px_56px_64px_60px_60px_60px] gap-3 items-center py-3"
@@ -251,6 +267,22 @@ export function WhoopConsoleBody({
                   </span>
                 </div>
               ))}
+              {moreAvailable && (
+                <div className="flex items-center justify-center pt-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setVisibleCount((n) => n + YTD_PAGE_SIZE)
+                    }
+                    className="inline-flex items-center gap-1.5 h-8 px-4 rounded-full border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[11px] font-bold tracking-[0.06em] uppercase text-[color:var(--text-2)] hover:text-[color:var(--text)] hover:bg-[color:var(--surface-2)] transition-colors"
+                  >
+                    Show {Math.min(YTD_PAGE_SIZE, filtered.length - visibleCount)} more
+                    <span className="text-[color:var(--text-4)] font-semibold normal-case tracking-normal">
+                      · {visibleCount} of {filtered.length}
+                    </span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </>
