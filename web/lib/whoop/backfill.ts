@@ -215,32 +215,37 @@ export async function backfillWhoopWorkouts(
 
   let workoutsInserted = 0;
   if (workoutPages.records.length > 0) {
-    const rows = workoutPages.records.map((w) => {
-      const start = new Date(w.start);
-      const end = new Date(w.end);
-      return {
-        playerId,
-        whoopWorkoutId: String(w.id),
-        date: start,
-        endDate: end,
-        durationMin: Math.max(
-          0,
-          Math.round((end.getTime() - start.getTime()) / 60000),
-        ),
-        strain:
-          typeof w.score?.strain === "number"
-            ? Math.round(w.score.strain * 10) / 10
+    const rows = workoutPages.records
+      .filter((w) => !!w.start && !isNaN(new Date(w.start).getTime()))
+      .map((w) => {
+        const start = new Date(w.start);
+        const end = w.end ? new Date(w.end) : null;
+        const validEnd = end && !isNaN(end.getTime()) ? end : null;
+        return {
+          playerId,
+          whoopWorkoutId: String(w.id),
+          date: start,
+          endDate: validEnd,
+          durationMin: validEnd
+            ? Math.max(
+                0,
+                Math.round((validEnd.getTime() - start.getTime()) / 60000),
+              )
             : null,
-        avgHr: w.score?.average_heart_rate ?? null,
-        maxHr: w.score?.max_heart_rate ?? null,
-        calories:
-          typeof w.score?.kilojoule === "number"
-            ? Math.round(w.score.kilojoule * 0.239)
-            : null,
-        sportId: w.sport_id ?? null,
-        sportName: w.sport_name ?? null,
-      };
-    });
+          strain:
+            typeof w.score?.strain === "number"
+              ? Math.round(w.score.strain * 10) / 10
+              : null,
+          avgHr: w.score?.average_heart_rate ?? null,
+          maxHr: w.score?.max_heart_rate ?? null,
+          calories:
+            typeof w.score?.kilojoule === "number"
+              ? Math.round(w.score.kilojoule * 0.239)
+              : null,
+          sportId: w.sport_id ?? null,
+          sportName: w.sport_name ?? null,
+        };
+      });
     const inserts = await db
       .insert(whoopWorkouts)
       .values(rows)

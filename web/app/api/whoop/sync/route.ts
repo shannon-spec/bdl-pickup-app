@@ -53,8 +53,18 @@ export async function POST(request: Request) {
     );
   }
 
-  const result = await backfillWhoopWorkouts(targetPlayerId);
-  return NextResponse.json(result, {
-    status: result.ok ? 200 : 502,
-  });
+  try {
+    const result = await backfillWhoopWorkouts(targetPlayerId);
+    return NextResponse.json(result, {
+      status: result.ok ? 200 : 502,
+    });
+  } catch (err) {
+    console.error("[whoop] sync threw", err);
+    const message =
+      err instanceof Error ? err.message : "Unknown sync error.";
+    return NextResponse.json(
+      { ok: false, error: `Backfill crashed: ${message}` },
+      { status: 500 },
+    );
+  }
 }
