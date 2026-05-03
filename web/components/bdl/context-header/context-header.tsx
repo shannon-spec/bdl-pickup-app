@@ -2,6 +2,7 @@ import { readSession } from "@/lib/auth/session";
 import { getViewCaps } from "@/lib/auth/view";
 import { getSessionContext } from "@/lib/queries/session-context";
 import { getUnreadMessageCount } from "@/lib/queries/messages";
+import { getUnreadAnnouncementCount } from "@/lib/queries/announcements";
 import { ContextHeaderClient } from "./context-header-client";
 
 /**
@@ -16,8 +17,11 @@ export async function ContextHeader() {
   if (!ctx) return null;
   const session = await readSession();
   const caps = await getViewCaps(session);
+  // Combined badge — match the top-bar bell so both light up
+  // together on any unread item (DM or league announcement).
   const unreadMessages = ctx.user.playerId
-    ? await getUnreadMessageCount(ctx.user.playerId)
+    ? (await getUnreadMessageCount(ctx.user.playerId)) +
+      (await getUnreadAnnouncementCount(ctx.user.playerId))
     : 0;
   return (
     <ContextHeaderClient
