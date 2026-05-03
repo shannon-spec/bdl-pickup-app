@@ -145,9 +145,13 @@ export function WhoopConsoleBody({
   }, [filtered]);
 
   // "Last Game Strain" should represent an actual game session, so
-  // skip DAY rows here too.
+  // skip DAY rows here too. Same rule for the "Last Game" pillar in the
+  // BDL Score hero.
   const lastWithStrain =
     filtered.find((m) => m.source === "workout" && m.strain !== null) ?? null;
+  const lastScored =
+    filtered.find((m) => m.source === "workout" && m.performanceScore !== null) ??
+    null;
 
   return (
     <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6 flex flex-col gap-5">
@@ -209,25 +213,15 @@ export function WhoopConsoleBody({
 
       {connected && sourceMetrics.length > 0 && (
         <>
-          <div className="grid grid-cols-6 gap-3 max-md:grid-cols-3 max-sm:grid-cols-2">
-            <SummaryBlock
-              label={
-                summary.scoredCount < summary.total
-                  ? `${scope === "league" ? "Games" : "Sessions"} · ${summary.scoredCount} scored`
-                  : `${scope === "league" ? "Games" : "Sessions"} · ${summary.total}`
-              }
-              value={`${summary.total}`}
-            />
-            <SummaryBlock
-              label="BDL Score"
-              hint="avg"
-              value={
-                summary.avgScore !== null
-                  ? Math.round(summary.avgScore).toString()
-                  : "—"
-              }
-              scoreColor={scoreColor(summary.avgScore)}
-            />
+          <BdlScoreHero
+            avgScore={summary.avgScore}
+            lastScore={lastScored?.performanceScore ?? null}
+            bestScore={summary.bestScore}
+            scoredCount={summary.scoredCount}
+            scope={scope}
+            range={range}
+          />
+          <div className="grid grid-cols-4 gap-3 max-md:grid-cols-2">
             <SummaryBlock
               label="Avg Strain"
               value={summary.avgStrain ? summary.avgStrain.toFixed(1) : "—"}
@@ -630,6 +624,223 @@ function PerformanceScoreCell({ score }: { score: number | null }) {
       >
         {score}
       </span>
+    </div>
+  );
+}
+
+/* ── BDL Score hero ─────────────────────────────────────────────────
+ * Three pillars (Season Avg / Last Game / All Time Best) above a
+ * tier-segmented scale bar with a needle pinned at the season avg.
+ * Replaces the small "BDL Score" SummaryBlock previously in the hero
+ * strip — same data, more legible at a glance.
+ * ──────────────────────────────────────────────────────────────── */
+function BdlScoreHero({
+  avgScore,
+  lastScore,
+  bestScore,
+  scoredCount,
+  scope,
+  range,
+}: {
+  avgScore: number | null;
+  lastScore: number | null;
+  bestScore: number | null;
+  scoredCount: number;
+  scope: "league" | "other";
+  range: Range;
+}) {
+  const noun = scope === "league" ? "Game" : "Session";
+  return (
+    <div className="rounded-[14px] border border-[color:var(--hairline-2)] bg-[color:var(--surface-2)] px-6 py-6 flex flex-col items-center gap-5">
+      <div className="flex flex-col items-center gap-1">
+        <h3 className="text-[12px] font-bold tracking-[0.1em] uppercase text-[color:var(--text)]">
+          BDL Max Effort{" "}
+          <span className="text-[11px] font-medium tracking-[0.04em] normal-case text-[color:var(--text-3)]">
+            (Personal Scale)
+          </span>
+        </h3>
+        <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-4)]">
+          {scoredCount} {noun}
+          {scoredCount === 1 ? "" : "s"} · {range}
+        </p>
+      </div>
+
+      <div className="inline-flex items-stretch rounded-[12px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden max-sm:flex-col">
+        <ScorePillar
+          label={scope === "league" ? "Season Avg" : "Avg"}
+          score={avgScore !== null ? Math.round(avgScore) : null}
+        />
+        <Divider />
+        <ScorePillar label={`Last ${noun}`} score={lastScore} />
+        <Divider />
+        <ScorePillar label="All Time Best" score={bestScore} />
+      </div>
+
+      {avgScore !== null && <ScaleBar score={Math.round(avgScore)} />}
+    </div>
+  );
+}
+
+function Divider() {
+  return (
+    <div className="w-px self-stretch bg-[color:var(--hairline-2)] max-sm:w-full max-sm:h-px" />
+  );
+}
+
+const TIER_LABEL: Record<ScoreGrade, string> = {
+  elite: "Elite",
+  strong: "Strong",
+  avg: "Avg",
+  below: "Below",
+  poor: "Poor",
+};
+
+function ScorePillar({
+  label,
+  score,
+}: {
+  label: string;
+  score: number | null;
+}) {
+  const grade = score !== null ? scoreGrade(score) : null;
+  const color = score !== null ? scoreColor(score) : "var(--text-4)";
+  return (
+    <div className="flex flex-col items-center gap-2 px-7 py-4 max-sm:px-4 max-sm:py-3">
+      <span className="text-[9px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
+        {label}
+      </span>
+      <span
+        className="font-[family-name:var(--mono)] font-extrabold text-[32px] num leading-none"
+        style={{ color }}
+      >
+        {score !== null ? score : "—"}
+      </span>
+      {grade ? (
+        <span
+          className={`text-[8.5px] font-bold tracking-[0.1em] uppercase px-2 py-0.5 rounded-full ${scorePillClasses(grade)}`}
+        >
+          {TIER_LABEL[grade]}
+        </span>
+      ) : (
+        <span className="text-[8.5px] font-bold tracking-[0.1em] uppercase px-2 py-0.5 rounded-full bg-[color:var(--surface-2)] text-[color:var(--text-4)]">
+          —
+        </span>
+      )}
+    </div>
+  );
+}
+
+const SCALE_TIERS: Array<{
+  grade: ScoreGrade;
+  name: string;
+  min: number;
+  max: number;
+  /** Flex-grow weight = numeric width of the band (max−min+1). */
+  w: number;
+}> = [
+  { grade: "poor", name: "Poor", min: 0, max: 29, w: 30 },
+  { grade: "below", name: "Below", min: 30, max: 44, w: 15 },
+  { grade: "avg", name: "Avg", min: 45, max: 64, w: 20 },
+  { grade: "strong", name: "Strong", min: 65, max: 79, w: 15 },
+  { grade: "elite", name: "Elite", min: 80, max: 100, w: 21 },
+];
+
+function tierColor(g: ScoreGrade): string {
+  switch (g) {
+    case "elite":
+    case "strong":
+      return "var(--up)";
+    case "avg":
+      return "var(--text-3)";
+    case "below":
+      return "#f97316";
+    case "poor":
+      return "var(--down)";
+  }
+}
+
+function ScaleBar({ score }: { score: number }) {
+  const grade = scoreGrade(score);
+  const activeColor = tierColor(grade);
+  return (
+    <div className="w-full max-w-[640px] flex flex-col gap-1.5">
+      {/* Tier name labels */}
+      <div className="flex">
+        {SCALE_TIERS.map((t) => {
+          const isActive = t.grade === grade;
+          return (
+            <div
+              key={t.name}
+              className="text-center text-[9.5px] font-bold tracking-[0.13em] uppercase"
+              style={{
+                flex: t.w,
+                color: isActive ? tierColor(t.grade) : "var(--text-4)",
+              }}
+            >
+              {t.name}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Bar with needle */}
+      <div className="relative pt-7">
+        <div
+          className="absolute top-0 -translate-x-1/2 flex flex-col items-center gap-0.5 z-10"
+          style={{ left: `${Math.max(0, Math.min(100, score))}%` }}
+        >
+          <div
+            className="font-[family-name:var(--mono)] font-extrabold text-[10.5px] px-1.5 py-0.5 rounded leading-none border bg-[color:var(--surface)] num"
+            style={{ color: activeColor, borderColor: activeColor }}
+          >
+            {score}
+          </div>
+          <div
+            className="w-0 h-0 border-l-[5px] border-r-[5px] border-l-transparent border-r-transparent"
+            style={{
+              borderTopWidth: 6,
+              borderTopStyle: "solid",
+              borderTopColor: activeColor,
+            }}
+          />
+        </div>
+        <div className="flex h-[18px] rounded-md overflow-hidden border border-[color:var(--hairline-2)]">
+          {SCALE_TIERS.map((t) => {
+            const c = tierColor(t.grade);
+            const isActive = t.grade === grade;
+            return (
+              <div
+                key={t.name}
+                style={{
+                  flex: t.w,
+                  background: isActive
+                    ? c
+                    : `color-mix(in oklab, ${c} 28%, transparent)`,
+                }}
+              />
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Range labels */}
+      <div className="flex">
+        {SCALE_TIERS.map((t) => {
+          const isActive = t.grade === grade;
+          return (
+            <div
+              key={t.name}
+              className="text-center text-[9px] font-medium tracking-[0.04em] num"
+              style={{
+                flex: t.w,
+                color: isActive ? tierColor(t.grade) : "var(--text-4)",
+              }}
+            >
+              {t.min}–{t.max}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
