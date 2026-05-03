@@ -30,6 +30,10 @@ function chunk<T>(arr: T[], size: number): T[][] {
   return out;
 }
 
+function zoneSec(milli: number | undefined): number | null {
+  return typeof milli === "number" ? Math.round(milli / 1000) : null;
+}
+
 type WhoopWorkoutRecord = {
   id: string;
   sport_id: number;
@@ -42,6 +46,14 @@ type WhoopWorkoutRecord = {
     average_heart_rate?: number;
     max_heart_rate?: number;
     kilojoule?: number;
+    zone_durations?: {
+      zone_zero_milli?: number;
+      zone_one_milli?: number;
+      zone_two_milli?: number;
+      zone_three_milli?: number;
+      zone_four_milli?: number;
+      zone_five_milli?: number;
+    };
   };
 };
 
@@ -254,14 +266,40 @@ export async function backfillWhoopWorkouts(
               : null,
           sportId: w.sport_id ?? null,
           sportName: w.sport_name ?? null,
+          zone0Sec: zoneSec(w.score?.zone_durations?.zone_zero_milli),
+          zone1Sec: zoneSec(w.score?.zone_durations?.zone_one_milli),
+          zone2Sec: zoneSec(w.score?.zone_durations?.zone_two_milli),
+          zone3Sec: zoneSec(w.score?.zone_durations?.zone_three_milli),
+          zone4Sec: zoneSec(w.score?.zone_durations?.zone_four_milli),
+          zone5Sec: zoneSec(w.score?.zone_durations?.zone_five_milli),
         };
       });
     for (const batch of chunk(rows, INSERT_CHUNK)) {
+      // Update on conflict so newly-added columns (zones, end_date,
+      // sport_name) and any score corrections from Whoop flow through
+      // to existing rows on a re-sync.
       const inserts = await db
         .insert(whoopWorkouts)
         .values(batch)
-        .onConflictDoNothing({
+        .onConflictDoUpdate({
           target: [whoopWorkouts.playerId, whoopWorkouts.whoopWorkoutId],
+          set: {
+            date: sql`excluded.date`,
+            endDate: sql`excluded.end_date`,
+            durationMin: sql`excluded.duration_min`,
+            strain: sql`excluded.strain`,
+            avgHr: sql`excluded.avg_hr`,
+            maxHr: sql`excluded.max_hr`,
+            calories: sql`excluded.calories`,
+            sportId: sql`excluded.sport_id`,
+            sportName: sql`excluded.sport_name`,
+            zone0Sec: sql`excluded.zone0_sec`,
+            zone1Sec: sql`excluded.zone1_sec`,
+            zone2Sec: sql`excluded.zone2_sec`,
+            zone3Sec: sql`excluded.zone3_sec`,
+            zone4Sec: sql`excluded.zone4_sec`,
+            zone5Sec: sql`excluded.zone5_sec`,
+          },
         })
         .returning({ id: whoopWorkouts.id });
       workoutsInserted += inserts.length;

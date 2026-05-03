@@ -53,6 +53,13 @@ export type WhoopGameMetric = {
   calories: number | null;
   durationMin: number | null;
   sportName: string | null;
+  /** Minutes spent in each Whoop HR zone (0–5). null when the source
+   *  is a cycle (cycles don't expose per-zone breakdowns) or the
+   *  workout score state didn't include zone data. */
+  zoneMin: [number, number, number, number, number, number] | null;
+  /** Time at high intensity (Z4 + Z5) in minutes. Convenience for
+   *  the UI; computed from zoneMin. */
+  highZoneMin: number | null;
 };
 
 function combineDateTime(dateStr: string, timeStr: string | null): Date {
@@ -133,6 +140,12 @@ export async function getPlayerWhoopGameMetrics(
         maxHr: whoopWorkouts.maxHr,
         calories: whoopWorkouts.calories,
         sportName: whoopWorkouts.sportName,
+        zone0Sec: whoopWorkouts.zone0Sec,
+        zone1Sec: whoopWorkouts.zone1Sec,
+        zone2Sec: whoopWorkouts.zone2Sec,
+        zone3Sec: whoopWorkouts.zone3Sec,
+        zone4Sec: whoopWorkouts.zone4Sec,
+        zone5Sec: whoopWorkouts.zone5Sec,
       })
       .from(whoopWorkouts)
       .where(
@@ -189,6 +202,7 @@ export async function getPlayerWhoopGameMetrics(
     if (candidates.length > 0) {
       candidates.sort((a, b) => (b.strain ?? -1) - (a.strain ?? -1));
       const best = candidates[0];
+      const zones = zoneMinutesFrom(best);
       return {
         gameId: g.gameId,
         date: g.gameStart.toISOString(),
@@ -206,6 +220,8 @@ export async function getPlayerWhoopGameMetrics(
         calories: best.calories,
         durationMin: best.durationMin,
         sportName: best.sportName,
+        zoneMin: zones,
+        highZoneMin: zones ? zones[4] + zones[5] : null,
       };
     }
 
@@ -228,6 +244,8 @@ export async function getPlayerWhoopGameMetrics(
         calories: cycle.calories,
         durationMin: null,
         sportName: null,
+        zoneMin: null,
+        highZoneMin: null,
       };
     }
 
@@ -248,6 +266,30 @@ export async function getPlayerWhoopGameMetrics(
       calories: null,
       durationMin: null,
       sportName: null,
+      zoneMin: null,
+      highZoneMin: null,
     };
   });
+}
+
+function zoneMinutesFrom(w: {
+  zone0Sec: number | null;
+  zone1Sec: number | null;
+  zone2Sec: number | null;
+  zone3Sec: number | null;
+  zone4Sec: number | null;
+  zone5Sec: number | null;
+}): WhoopGameMetric["zoneMin"] {
+  const cells = [
+    w.zone0Sec,
+    w.zone1Sec,
+    w.zone2Sec,
+    w.zone3Sec,
+    w.zone4Sec,
+    w.zone5Sec,
+  ];
+  // If every zone is null, the workout didn't have a scored zone
+  // breakdown — return null so the UI can render a dash.
+  if (cells.every((c) => c === null)) return null;
+  return cells.map((c) => Math.round((c ?? 0) / 60)) as WhoopGameMetric["zoneMin"];
 }

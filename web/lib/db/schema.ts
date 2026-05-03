@@ -746,6 +746,16 @@ export const whoopWorkouts = pgTable(
     calories: integer("calories"),
     sportId: integer("sport_id"),
     sportName: text("sport_name"),
+    /** Heart-rate zone durations in seconds. Whoop returns ms but we
+     *  downscale to keep the integers small. Zones 0–5 map to
+     *  Whoop's intensity bands (zone 0 ≈ <50% max HR, zone 5 ≈
+     *  90%+). The sum across zones equals the workout duration. */
+    zone0Sec: integer("zone0_sec"),
+    zone1Sec: integer("zone1_sec"),
+    zone2Sec: integer("zone2_sec"),
+    zone3Sec: integer("zone3_sec"),
+    zone4Sec: integer("zone4_sec"),
+    zone5Sec: integer("zone5_sec"),
     syncedAt: timestamp("synced_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

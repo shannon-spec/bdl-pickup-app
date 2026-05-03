@@ -114,6 +114,7 @@ export function WhoopConsoleBody({
       avgHr: avg(scorable.map((m) => m.avgHr)),
       maxHr: scorable.reduce((m, w) => Math.max(m, w.maxHr ?? 0), 0),
       avgCal: avg(scorable.map((m) => m.calories)),
+      avgHighZone: avg(scorable.map((m) => m.highZoneMin)),
       strainW: avg(wins.map((m) => m.strain)),
       strainL: avg(losses.map((m) => m.strain)),
       hrW: avg(wins.map((m) => m.avgHr)),
@@ -183,7 +184,7 @@ export function WhoopConsoleBody({
 
       {connected && metrics.length > 0 && (
         <>
-          <div className="grid grid-cols-4 gap-3 max-sm:grid-cols-2">
+          <div className="grid grid-cols-5 gap-3 max-md:grid-cols-3 max-sm:grid-cols-2">
             <SummaryBlock
               label={
                 summary.scoredCount < summary.total
@@ -208,6 +209,16 @@ export function WhoopConsoleBody({
                   ? Math.round(summary.avgCal).toLocaleString()
                   : "—"
               }
+            />
+            <SummaryBlock
+              label="Avg Hard Min"
+              hint="Z4+5"
+              value={
+                summary.avgHighZone !== null
+                  ? Math.round(summary.avgHighZone).toString()
+                  : "—"
+              }
+              unit="min"
             />
           </div>
 
@@ -257,7 +268,7 @@ export function WhoopConsoleBody({
             </p>
           ) : (
             <div className="flex flex-col divide-y divide-[color:var(--hairline)]">
-              <div className="grid grid-cols-[1fr_44px_56px_64px_60px_60px_60px] gap-3 pb-2 text-[10px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
+              <div className="grid grid-cols-[1fr_44px_56px_64px_60px_60px_60px_64px] gap-3 pb-2 text-[10px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
                 <span>Game</span>
                 <span className="text-right">W/L</span>
                 <span className="text-right">Source</span>
@@ -265,13 +276,14 @@ export function WhoopConsoleBody({
                 <span className="text-right">Avg HR</span>
                 <span className="text-right">Max HR</span>
                 <span className="text-right">Cal</span>
+                <span className="text-right">Z4+5</span>
               </div>
               {visibleRows.map((m) => {
                 const isUpcoming = isUpcomingGame(m);
                 return (
                   <div
                     key={m.gameId}
-                    className="grid grid-cols-[1fr_44px_56px_64px_60px_60px_60px] gap-3 items-center py-3"
+                    className="grid grid-cols-[1fr_44px_56px_64px_60px_60px_60px_64px] gap-3 items-center py-3"
                   >
                     <div className="flex flex-col gap-0.5 min-w-0">
                       <span className="text-[13px] font-semibold truncate">
@@ -284,7 +296,7 @@ export function WhoopConsoleBody({
                     </div>
                     {isUpcoming ? (
                       <div
-                        className="col-span-6 flex justify-end"
+                        className="col-span-7 flex justify-end"
                         aria-label="Upcoming game"
                       >
                         <UpcomingPill />
@@ -314,6 +326,18 @@ export function WhoopConsoleBody({
                         </span>
                         <span className="font-[family-name:var(--mono)] num text-[12px] text-[color:var(--text-3)] text-right">
                           {m.calories ?? "—"}
+                        </span>
+                        <span className="font-[family-name:var(--mono)] num text-[13px] text-right">
+                          {m.highZoneMin !== null ? (
+                            <>
+                              {m.highZoneMin}
+                              <span className="text-[10px] text-[color:var(--text-4)] ml-0.5">
+                                m
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-[color:var(--text-4)]">—</span>
+                          )}
                         </span>
                       </>
                     )}
@@ -492,17 +516,24 @@ function SourceBadge({ source }: { source: "workout" | "cycle" | "none" }) {
 
 function SummaryBlock({
   label,
+  hint,
   value,
   unit,
 }: {
   label: string;
+  hint?: string;
   value: string;
   unit?: string;
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-[10px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
-        {label}
+      <span className="flex items-baseline gap-1.5 text-[10px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
+        <span>{label}</span>
+        {hint && (
+          <span className="text-[9px] font-semibold tracking-[0.06em] text-[color:var(--text-4)] normal-case">
+            {hint}
+          </span>
+        )}
       </span>
       <span className="font-[family-name:var(--mono)] font-extrabold text-[22px] num text-[color:var(--text)]">
         {value}
