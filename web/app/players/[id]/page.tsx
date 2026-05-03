@@ -235,39 +235,45 @@ export default async function PlayerProfilePage({
           </StatRow>
         </section>
 
-        {gradeAgg && voteLeagueId && voteLeagueName && (
-          <GradePanel
-            targetId={player.id}
-            leagueId={voteLeagueId}
-            leagueName={voteLeagueName}
-            agg={gradeAgg}
-            adminLevel={(() => {
-              // Admin-set baseline for THIS league: prefer the
-              // per-league override, fall back to the global level
-              // (which acts as the seed when no override is set).
-              const row = leagueGrades.find((r) => r.leagueId === voteLeagueId);
-              if (row?.adminLevel) return row.adminLevel;
-              const lv = player.level;
-              const allowed: GradeKey[] = [
-                "Novice",
-                "Intermediate",
-                "Advanced",
-                "Game Changer",
-                "Pro",
-              ];
-              return lv && (allowed as readonly string[]).includes(lv)
-                ? (lv as GradeKey)
-                : null;
-            })()}
-          />
-        )}
-
-        {/* Per-league grade breakdown — one row per league the
-            player is currently in, so their full grade picture is
-            visible without bouncing between leagues. */}
-        {leagueGrades.length > 0 && (
-          <LeagueGradesCard rows={leagueGrades} />
-        )}
+        {/* BDL Grade card + per-league breakdown share a row on
+            desktop to save vertical real estate; collapse to a single
+            column on mobile so neither card has to fight for width. */}
+        {(gradeAgg && voteLeagueId && voteLeagueName) ||
+        leagueGrades.length > 0 ? (
+          <div className="grid grid-cols-2 gap-5 max-md:grid-cols-1 items-start">
+            {gradeAgg && voteLeagueId && voteLeagueName && (
+              <GradePanel
+                targetId={player.id}
+                leagueId={voteLeagueId}
+                leagueName={voteLeagueName}
+                agg={gradeAgg}
+                adminLevel={(() => {
+                  // Admin-set baseline for THIS league: prefer the
+                  // per-league override, fall back to the global level
+                  // (which acts as the seed when no override is set).
+                  const row = leagueGrades.find(
+                    (r) => r.leagueId === voteLeagueId,
+                  );
+                  if (row?.adminLevel) return row.adminLevel;
+                  const lv = player.level;
+                  const allowed: GradeKey[] = [
+                    "Novice",
+                    "Intermediate",
+                    "Advanced",
+                    "Game Changer",
+                    "Pro",
+                  ];
+                  return lv && (allowed as readonly string[]).includes(lv)
+                    ? (lv as GradeKey)
+                    : null;
+                })()}
+              />
+            )}
+            {leagueGrades.length > 0 && (
+              <LeagueGradesCard rows={leagueGrades} />
+            )}
+          </div>
+        ) : null}
 
         {/* Per-league breakdown */}
         {profile.byLeague.length > 0 && (
