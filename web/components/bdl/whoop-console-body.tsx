@@ -790,7 +790,7 @@ function ScaleBar({ score }: { score: number }) {
           style={{ left: `${Math.max(0, Math.min(100, score))}%` }}
         >
           <div
-            className="font-[family-name:var(--mono)] font-extrabold text-[10.5px] px-1.5 py-0.5 rounded leading-none border bg-[color:var(--surface)] num"
+            className="font-[family-name:var(--mono)] font-black text-[12px] px-2 py-0.5 rounded leading-none border bg-[color:var(--surface)] num"
             style={{ color: activeColor, borderColor: activeColor }}
           >
             {score}
