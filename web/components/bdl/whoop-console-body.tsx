@@ -115,6 +115,13 @@ export function WhoopConsoleBody({
       maxHr: scorable.reduce((m, w) => Math.max(m, w.maxHr ?? 0), 0),
       avgCal: avg(scorable.map((m) => m.calories)),
       avgHighZone: avg(scorable.map((m) => m.highZoneMin)),
+      avgHighZonePct: avg(
+        scorable.map((m) =>
+          m.highZoneMin !== null && m.durationMin && m.durationMin > 0
+            ? (m.highZoneMin / m.durationMin) * 100
+            : null,
+        ),
+      ),
       strainW: avg(wins.map((m) => m.strain)),
       strainL: avg(losses.map((m) => m.strain)),
       hrW: avg(wins.map((m) => m.avgHr)),
@@ -212,7 +219,11 @@ export function WhoopConsoleBody({
             />
             <SummaryBlock
               label="Avg Hard Min"
-              hint="Z4+5"
+              hint={
+                summary.avgHighZonePct !== null
+                  ? `Z4+5 · ${Math.round(summary.avgHighZonePct)}%`
+                  : "Z4+5"
+              }
               value={
                 summary.avgHighZone !== null
                   ? Math.round(summary.avgHighZone).toString()
@@ -327,18 +338,10 @@ export function WhoopConsoleBody({
                         <span className="font-[family-name:var(--mono)] num text-[12px] text-[color:var(--text-3)] text-right">
                           {m.calories ?? "—"}
                         </span>
-                        <span className="font-[family-name:var(--mono)] num text-[13px] text-right">
-                          {m.highZoneMin !== null ? (
-                            <>
-                              {m.highZoneMin}
-                              <span className="text-[10px] text-[color:var(--text-4)] ml-0.5">
-                                m
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-[color:var(--text-4)]">—</span>
-                          )}
-                        </span>
+                        <HighZoneCell
+                          highZoneMin={m.highZoneMin}
+                          durationMin={m.durationMin}
+                        />
                       </>
                     )}
                   </div>
@@ -480,6 +483,56 @@ function OutcomeBadge({ outcome }: { outcome: "W" | "L" | "T" | null }) {
     >
       {outcome}
     </span>
+  );
+}
+
+function HighZoneCell({
+  highZoneMin,
+  durationMin,
+}: {
+  highZoneMin: number | null;
+  durationMin: number | null;
+}) {
+  if (highZoneMin === null) {
+    return (
+      <div className="flex justify-end">
+        <span className="text-[color:var(--text-4)]">—</span>
+      </div>
+    );
+  }
+  const pct =
+    durationMin && durationMin > 0
+      ? Math.round((highZoneMin / durationMin) * 100)
+      : null;
+  // Color the percentage by intensity band — basketball typically
+  // sits 30–55% Z4+5; anything higher is genuinely all-out.
+  const pctColor =
+    pct === null
+      ? "var(--text-3)"
+      : pct >= 60
+        ? "var(--down)"
+        : pct >= 40
+          ? "#f97316"
+          : pct >= 25
+            ? "#eab308"
+            : "var(--text-3)";
+  return (
+    <div className="flex flex-col items-end gap-0 leading-tight">
+      <span className="font-[family-name:var(--mono)] num text-[13px] font-bold">
+        {highZoneMin}
+        <span className="text-[10px] text-[color:var(--text-4)] ml-0.5 font-semibold">
+          m
+        </span>
+      </span>
+      {pct !== null && (
+        <span
+          className="font-[family-name:var(--mono)] num text-[10.5px] font-semibold"
+          style={{ color: pctColor }}
+        >
+          {pct}%
+        </span>
+      )}
+    </div>
   );
 }
 
