@@ -31,6 +31,9 @@ export type WhoopGameMetric = {
   side: "A" | "B" | "invited";
   scoreA: number | null;
   scoreB: number | null;
+  winTeam: "A" | "B" | "Tie" | null;
+  /** Resolved outcome from the player's perspective. */
+  outcome: "W" | "L" | "T" | null;
   source: "workout" | "cycle" | "none";
   strain: number | null;
   avgHr: number | null;
@@ -57,7 +60,7 @@ function combineDateTime(dateStr: string, timeStr: string | null): Date {
  */
 export async function getPlayerWhoopGameMetrics(
   playerId: string,
-  limit = 30,
+  limit = 200,
 ): Promise<WhoopGameMetric[]> {
   // 1) Pull rostered games (A/B/invited) for this player, newest first.
   const rosterRows = await db
@@ -70,6 +73,7 @@ export async function getPlayerWhoopGameMetrics(
       side: gameRoster.side,
       scoreA: games.scoreA,
       scoreB: games.scoreB,
+      winTeam: games.winTeam,
     })
     .from(gameRoster)
     .innerJoin(games, eq(games.id, gameRoster.gameId))
@@ -161,11 +165,17 @@ export async function getPlayerWhoopGameMetrics(
       return wStart <= winEnd && wEnd >= winStart;
     });
 
+    const outcome: "W" | "L" | "T" | null =
+      g.winTeam === "Tie"
+        ? "T"
+        : g.winTeam && (g.side === "A" || g.side === "B")
+          ? g.side === g.winTeam
+            ? "W"
+            : "L"
+          : null;
+
     if (candidates.length > 0) {
-      // Prefer the one with highest strain (likely the real session).
-      candidates.sort(
-        (a, b) => (b.strain ?? -1) - (a.strain ?? -1),
-      );
+      candidates.sort((a, b) => (b.strain ?? -1) - (a.strain ?? -1));
       const best = candidates[0];
       return {
         gameId: g.gameId,
@@ -175,6 +185,8 @@ export async function getPlayerWhoopGameMetrics(
         side: g.side,
         scoreA: g.scoreA,
         scoreB: g.scoreB,
+        winTeam: g.winTeam,
+        outcome,
         source: "workout",
         strain: best.strain,
         avgHr: best.avgHr,
@@ -195,6 +207,8 @@ export async function getPlayerWhoopGameMetrics(
         side: g.side,
         scoreA: g.scoreA,
         scoreB: g.scoreB,
+        winTeam: g.winTeam,
+        outcome,
         source: "cycle",
         strain: cycle.dayStrain,
         avgHr: cycle.avgHr,
@@ -213,6 +227,8 @@ export async function getPlayerWhoopGameMetrics(
       side: g.side,
       scoreA: g.scoreA,
       scoreB: g.scoreB,
+      winTeam: g.winTeam,
+      outcome,
       source: "none",
       strain: null,
       avgHr: null,
