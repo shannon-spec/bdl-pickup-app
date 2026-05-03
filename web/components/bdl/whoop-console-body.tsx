@@ -6,6 +6,7 @@ import { WhoopConnectButton } from "@/components/bdl/whoop-connect-button";
 import { WhoopSyncControls } from "@/components/bdl/whoop-sync-controls";
 
 type Range = "MTD" | "YTD";
+type Scope = "league" | "other";
 
 const YTD_PAGE_SIZE = 25;
 
@@ -66,21 +67,25 @@ export function WhoopConsoleBody({
   connected,
   lastSyncAt,
   metrics,
+  otherMetrics,
 }: {
   playerId: string;
   connected: boolean;
   lastSyncAt: string | null;
   metrics: WhoopGameMetric[];
+  otherMetrics: WhoopGameMetric[];
 }) {
+  const [scope, setScope] = useState<Scope>("league");
   const [range, setRange] = useState<Range>("MTD");
   const [visibleCount, setVisibleCount] = useState(YTD_PAGE_SIZE);
 
-  // Reset pagination whenever the range tab changes — switching to
-  // YTD shouldn't keep an arbitrarily-grown page count from a prior
-  // session.
+  const sourceMetrics = scope === "league" ? metrics : otherMetrics;
+
+  // Reset pagination whenever the active range OR scope changes —
+  // either tab switch should drop the user back to the first page.
   useEffect(() => {
     setVisibleCount(YTD_PAGE_SIZE);
-  }, [range]);
+  }, [range, scope]);
 
   const filtered = useMemo(() => {
     const now = new Date();
@@ -88,8 +93,8 @@ export function WhoopConsoleBody({
       range === "MTD"
         ? new Date(now.getFullYear(), now.getMonth(), 1)
         : new Date(now.getFullYear(), 0, 1);
-    return metrics.filter((m) => new Date(m.date) >= start);
-  }, [metrics, range]);
+    return sourceMetrics.filter((m) => new Date(m.date) >= start);
+  }, [sourceMetrics, range]);
 
   // Pagination only kicks in on YTD where lists are long. MTD is a
   // month at most and shows everything.
@@ -155,7 +160,11 @@ export function WhoopConsoleBody({
           )}
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
-          {connected && metrics.length > 0 && (
+          {connected &&
+            (metrics.length > 0 || otherMetrics.length > 0) && (
+              <ScopeTabs scope={scope} onChange={setScope} />
+            )}
+          {connected && sourceMetrics.length > 0 && (
             <RangeTabs range={range} onChange={setRange} />
           )}
           <WhoopConnectButton connected={connected} />
@@ -182,21 +191,22 @@ export function WhoopConsoleBody({
         </div>
       )}
 
-      {connected && metrics.length === 0 && (
+      {connected && sourceMetrics.length === 0 && (
         <p className="text-[13px] text-[color:var(--text-3)] py-2">
-          No BDL games on your roster yet. Once you&apos;re scheduled,
-          we&apos;ll pull strain from the matching Whoop session.
+          {scope === "league"
+            ? "No BDL games on your roster yet. Once you're scheduled, we'll pull strain from the matching Whoop session."
+            : "No off-league basketball sessions in Whoop yet. Pickup or open-gym games tagged Basketball in the Whoop app will land here."}
         </p>
       )}
 
-      {connected && metrics.length > 0 && (
+      {connected && sourceMetrics.length > 0 && (
         <>
           <div className="grid grid-cols-5 gap-3 max-md:grid-cols-3 max-sm:grid-cols-2">
             <SummaryBlock
               label={
                 summary.scoredCount < summary.total
-                  ? `Games · ${summary.scoredCount} scored`
-                  : `Games · ${summary.total}`
+                  ? `${scope === "league" ? "Games" : "Sessions"} · ${summary.scoredCount} scored`
+                  : `${scope === "league" ? "Games" : "Sessions"} · ${summary.total}`
               }
               value={`${summary.total}`}
             />
@@ -232,25 +242,27 @@ export function WhoopConsoleBody({
             />
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <SplitPill
-              label="Strain"
-              wins={summary.strainW}
-              losses={summary.strainL}
-              winCount={summary.winCount}
-              lossCount={summary.lossCount}
-              decimals={1}
-            />
-            <SplitPill
-              label="Avg HR"
-              wins={summary.hrW}
-              losses={summary.hrL}
-              winCount={summary.winCount}
-              lossCount={summary.lossCount}
-              decimals={0}
-              unit="bpm"
-            />
-          </div>
+          {scope === "league" && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <SplitPill
+                label="Strain"
+                wins={summary.strainW}
+                losses={summary.strainL}
+                winCount={summary.winCount}
+                lossCount={summary.lossCount}
+                decimals={1}
+              />
+              <SplitPill
+                label="Avg HR"
+                wins={summary.hrW}
+                losses={summary.hrL}
+                winCount={summary.winCount}
+                lossCount={summary.lossCount}
+                decimals={0}
+                unit="bpm"
+              />
+            </div>
+          )}
 
           {summary.scoredCount < summary.total && (
             <p className="text-[10.5px] text-[color:var(--text-3)] -mt-1">
@@ -266,7 +278,7 @@ export function WhoopConsoleBody({
             lastWithStrain?.strain !== null && (
               <div className="flex flex-col gap-1.5">
                 <span className="text-[10.5px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
-                  Last Game Strain
+                  {scope === "league" ? "Last Game Strain" : "Last Session Strain"}
                 </span>
                 <StrainBar strain={lastWithStrain.strain} />
               </div>
@@ -300,7 +312,7 @@ export function WhoopConsoleBody({
                         {fmtDate(m.date)}
                       </span>
                       <span className="text-[11px] text-[color:var(--text-3)] truncate">
-                        {m.leagueName ?? "—"}
+                        {m.leagueName ?? "Basketball"}
                         {m.durationMin ? ` · ${m.durationMin}m` : ""}
                       </span>
                     </div>
@@ -412,6 +424,40 @@ function RangeTabs({
             }`}
           >
             {r}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ScopeTabs({
+  scope,
+  onChange,
+}: {
+  scope: Scope;
+  onChange: (s: Scope) => void;
+}) {
+  const tabs: Array<{ key: Scope; label: string }> = [
+    { key: "league", label: "By League" },
+    { key: "other", label: "All Other" },
+  ];
+  return (
+    <div className="inline-flex rounded-full bg-[color:var(--surface-2)] p-0.5">
+      {tabs.map((t) => {
+        const active = t.key === scope;
+        return (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => onChange(t.key)}
+            className={`px-3 h-6 rounded-full text-[10px] font-bold tracking-[0.12em] uppercase transition-colors ${
+              active
+                ? "bg-[color:var(--surface)] text-[color:var(--text)] shadow-sm"
+                : "text-[color:var(--text-3)] hover:text-[color:var(--text-2)]"
+            }`}
+          >
+            {t.label}
           </button>
         );
       })}

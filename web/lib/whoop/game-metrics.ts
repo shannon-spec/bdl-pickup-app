@@ -272,6 +272,96 @@ export async function getPlayerWhoopGameMetrics(
   });
 }
 
+/**
+ * "All Other" basketball workouts — every Whoop session tagged as
+ * basketball whose date does NOT coincide with one of the player's
+ * BDL games. Useful for tracking pickup/open-gym sessions outside
+ * scheduled league play. Same WhoopGameMetric shape so the table
+ * column layout is reused without conditionals; outcome and league
+ * are null since there's no scheduled game to attach to.
+ */
+export async function getPlayerOtherBasketballWorkouts(
+  playerId: string,
+  limit = 200,
+): Promise<WhoopGameMetric[]> {
+  // Pull every basketball workout since the backfill cutoff, plus the
+  // dates of all BDL games on the player's roster — anything matching
+  // a roster date is already shown in the "By League" tab and is
+  // excluded here.
+  const [workouts, rosterRows] = await Promise.all([
+    db
+      .select({
+        id: whoopWorkouts.id,
+        date: whoopWorkouts.date,
+        endDate: whoopWorkouts.endDate,
+        durationMin: whoopWorkouts.durationMin,
+        strain: whoopWorkouts.strain,
+        avgHr: whoopWorkouts.avgHr,
+        maxHr: whoopWorkouts.maxHr,
+        calories: whoopWorkouts.calories,
+        sportName: whoopWorkouts.sportName,
+        zone0Sec: whoopWorkouts.zone0Sec,
+        zone1Sec: whoopWorkouts.zone1Sec,
+        zone2Sec: whoopWorkouts.zone2Sec,
+        zone3Sec: whoopWorkouts.zone3Sec,
+        zone4Sec: whoopWorkouts.zone4Sec,
+        zone5Sec: whoopWorkouts.zone5Sec,
+      })
+      .from(whoopWorkouts)
+      .where(
+        and(
+          eq(whoopWorkouts.playerId, playerId),
+          eq(whoopWorkouts.sportName, "basketball"),
+        ),
+      )
+      .orderBy(desc(whoopWorkouts.date))
+      .limit(limit),
+    db
+      .select({ gameDate: games.gameDate })
+      .from(gameRoster)
+      .innerJoin(games, eq(games.id, gameRoster.gameId))
+      .where(
+        and(
+          eq(gameRoster.playerId, playerId),
+          inArray(gameRoster.side, ["A", "B", "invited"]),
+        ),
+      ),
+  ]);
+
+  const leagueDates = new Set(
+    rosterRows.map((r) => r.gameDate).filter((d): d is string => !!d),
+  );
+
+  return workouts
+    .filter((w) => {
+      const dateStr = localDateString(w.date, DEFAULT_TZ);
+      return !leagueDates.has(dateStr);
+    })
+    .map((w): WhoopGameMetric => {
+      const zones = zoneMinutesFrom(w);
+      return {
+        gameId: `wkt:${w.id}`,
+        date: w.date.toISOString(),
+        leagueId: null,
+        leagueName: null,
+        side: "A",
+        scoreA: null,
+        scoreB: null,
+        winTeam: null,
+        outcome: null,
+        source: "workout",
+        strain: w.strain,
+        avgHr: w.avgHr,
+        maxHr: w.maxHr,
+        calories: w.calories,
+        durationMin: w.durationMin,
+        sportName: w.sportName,
+        zoneMin: zones,
+        highZoneMin: zones ? zones[4] + zones[5] : null,
+      };
+    });
+}
+
 function zoneMinutesFrom(w: {
   zone0Sec: number | null;
   zone1Sec: number | null;

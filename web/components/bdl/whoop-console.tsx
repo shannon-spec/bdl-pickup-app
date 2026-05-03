@@ -6,7 +6,10 @@
 import { eq } from "drizzle-orm";
 import { db, players } from "@/lib/db";
 import { WhoopConsoleBody } from "@/components/bdl/whoop-console-body";
-import { getPlayerWhoopGameMetrics } from "@/lib/whoop/game-metrics";
+import {
+  getPlayerOtherBasketballWorkouts,
+  getPlayerWhoopGameMetrics,
+} from "@/lib/whoop/game-metrics";
 import { runDueWhoopSyncs } from "@/lib/whoop/auto-sync";
 
 export async function WhoopConsole({ playerId }: { playerId: string }) {
@@ -30,7 +33,12 @@ export async function WhoopConsole({ playerId }: { playerId: string }) {
     await runDueWhoopSyncs(playerId);
   }
 
-  const metrics = connected ? await getPlayerWhoopGameMetrics(playerId) : [];
+  const [metrics, otherMetrics] = connected
+    ? await Promise.all([
+        getPlayerWhoopGameMetrics(playerId),
+        getPlayerOtherBasketballWorkouts(playerId),
+      ])
+    : [[], []];
 
   return (
     <WhoopConsoleBody
@@ -38,6 +46,7 @@ export async function WhoopConsole({ playerId }: { playerId: string }) {
       connected={connected}
       lastSyncAt={lastSyncAt}
       metrics={metrics}
+      otherMetrics={otherMetrics}
     />
   );
 }
