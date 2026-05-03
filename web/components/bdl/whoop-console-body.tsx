@@ -53,6 +53,14 @@ function avg(nums: Array<number | null | undefined>): number | null {
   return filtered.reduce((s, n) => s + n, 0) / filtered.length;
 }
 
+/** A roster game is "upcoming" if it has no outcome AND its scheduled
+ *  start hasn't passed yet. Past games without an outcome stay
+ *  unlabeled — they're either unscored or were never played. */
+function isUpcomingGame(m: WhoopGameMetric): boolean {
+  if (m.outcome !== null) return false;
+  return new Date(m.date).getTime() > Date.now();
+}
+
 export function WhoopConsoleBody({
   playerId,
   connected,
@@ -233,46 +241,60 @@ export function WhoopConsoleBody({
                 <span className="text-right">Max HR</span>
                 <span className="text-right">Cal</span>
               </div>
-              {visibleRows.map((m) => (
-                <div
-                  key={m.gameId}
-                  className="grid grid-cols-[1fr_44px_56px_64px_60px_60px_60px] gap-3 items-center py-3"
-                >
-                  <div className="flex flex-col gap-0.5 min-w-0">
-                    <span className="text-[13px] font-semibold truncate">
-                      {fmtDate(m.date)}
-                    </span>
-                    <span className="text-[11px] text-[color:var(--text-3)] truncate">
-                      {m.leagueName ?? "—"}
-                      {m.durationMin ? ` · ${m.durationMin}m` : ""}
-                    </span>
-                  </div>
-                  <div className="flex justify-end">
-                    <OutcomeBadge outcome={m.outcome} />
-                  </div>
-                  <div className="flex justify-end">
-                    <SourceBadge source={m.source} />
-                  </div>
-                  <div className="flex justify-end">
-                    {m.strain !== null ? (
-                      <span className="font-[family-name:var(--mono)] font-bold text-[13px] num">
-                        {m.strain.toFixed(1)}
+              {visibleRows.map((m) => {
+                const isUpcoming = isUpcomingGame(m);
+                return (
+                  <div
+                    key={m.gameId}
+                    className="grid grid-cols-[1fr_44px_56px_64px_60px_60px_60px] gap-3 items-center py-3"
+                  >
+                    <div className="flex flex-col gap-0.5 min-w-0">
+                      <span className="text-[13px] font-semibold truncate">
+                        {fmtDate(m.date)}
                       </span>
+                      <span className="text-[11px] text-[color:var(--text-3)] truncate">
+                        {m.leagueName ?? "—"}
+                        {m.durationMin ? ` · ${m.durationMin}m` : ""}
+                      </span>
+                    </div>
+                    {isUpcoming ? (
+                      <div
+                        className="col-span-6 flex justify-end"
+                        aria-label="Upcoming game"
+                      >
+                        <UpcomingPill />
+                      </div>
                     ) : (
-                      <span className="text-[color:var(--text-4)]">—</span>
+                      <>
+                        <div className="flex justify-end">
+                          <OutcomeBadge outcome={m.outcome} />
+                        </div>
+                        <div className="flex justify-end">
+                          <SourceBadge source={m.source} />
+                        </div>
+                        <div className="flex justify-end">
+                          {m.strain !== null ? (
+                            <span className="font-[family-name:var(--mono)] font-bold text-[13px] num">
+                              {m.strain.toFixed(1)}
+                            </span>
+                          ) : (
+                            <span className="text-[color:var(--text-4)]">—</span>
+                          )}
+                        </div>
+                        <span className="font-[family-name:var(--mono)] num text-[13px] text-right">
+                          {m.avgHr ?? "—"}
+                        </span>
+                        <span className="font-[family-name:var(--mono)] num text-[13px] font-bold text-right">
+                          {m.maxHr ?? "—"}
+                        </span>
+                        <span className="font-[family-name:var(--mono)] num text-[12px] text-[color:var(--text-3)] text-right">
+                          {m.calories ?? "—"}
+                        </span>
+                      </>
                     )}
                   </div>
-                  <span className="font-[family-name:var(--mono)] num text-[13px] text-right">
-                    {m.avgHr ?? "—"}
-                  </span>
-                  <span className="font-[family-name:var(--mono)] num text-[13px] font-bold text-right">
-                    {m.maxHr ?? "—"}
-                  </span>
-                  <span className="font-[family-name:var(--mono)] num text-[12px] text-[color:var(--text-3)] text-right">
-                    {m.calories ?? "—"}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
               {moreAvailable && (
                 <div className="flex items-center justify-center pt-3">
                   <button
@@ -408,6 +430,15 @@ function OutcomeBadge({ outcome }: { outcome: "W" | "L" | "T" | null }) {
       className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-extrabold ${cls}`}
     >
       {outcome}
+    </span>
+  );
+}
+
+function UpcomingPill() {
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2.5 h-5 rounded-full bg-[color:var(--brand-soft)] text-[color:var(--brand)] text-[10px] font-bold tracking-[0.1em] uppercase">
+      <span className="w-1.5 h-1.5 rounded-full bg-[color:var(--brand)] animate-pulse" />
+      Upcoming Game
     </span>
   );
 }
