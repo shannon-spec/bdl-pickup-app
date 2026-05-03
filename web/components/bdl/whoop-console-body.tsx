@@ -608,8 +608,9 @@ function scoreColor(score: number | null | undefined): string | undefined {
   if (score === null || score === undefined) return undefined;
   switch (scoreGrade(score)) {
     case "elite":
-    case "strong":
       return "var(--up)";
+    case "strong":
+      return "#3b82f6";
     case "avg":
       return "var(--text-2)";
     case "below":
@@ -623,8 +624,9 @@ function scoreColor(score: number | null | undefined): string | undefined {
 function scorePillClasses(grade: ScoreGrade): string {
   switch (grade) {
     case "elite":
-    case "strong":
       return "bg-[color:var(--up-soft)] text-[color:var(--up)]";
+    case "strong":
+      return "bg-[#3b82f6]/15 text-[#3b82f6]";
     case "avg":
       return "bg-[color:var(--surface-2)] text-[color:var(--text-2)]";
     case "below":
@@ -773,8 +775,9 @@ const SCALE_TIERS: Array<{
 function tierColor(g: ScoreGrade): string {
   switch (g) {
     case "elite":
-    case "strong":
       return "var(--up)";
+    case "strong":
+      return "#3b82f6";
     case "avg":
       return "var(--text-3)";
     case "below":
