@@ -279,7 +279,7 @@ export function WhoopConsoleBody({
             </p>
           ) : (
             <div className="flex flex-col divide-y divide-[color:var(--hairline)]">
-              <div className="grid grid-cols-[1fr_44px_56px_64px_60px_60px_60px_64px] gap-3 pb-2 text-[10px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
+              <div className="grid grid-cols-[1fr_44px_56px_64px_60px_60px_60px_92px] gap-3 pb-2 text-[10px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
                 <span>Game</span>
                 <span className="text-right">W/L</span>
                 <span className="text-right">Source</span>
@@ -294,7 +294,7 @@ export function WhoopConsoleBody({
                 return (
                   <div
                     key={m.gameId}
-                    className="grid grid-cols-[1fr_44px_56px_64px_60px_60px_60px_64px] gap-3 items-center py-3"
+                    className="grid grid-cols-[1fr_44px_56px_64px_60px_60px_60px_92px] gap-3 items-center py-3"
                   >
                     <div className="flex flex-col gap-0.5 min-w-0">
                       <span className="text-[13px] font-semibold truncate">
@@ -547,9 +547,9 @@ function HighZoneCell({
             ? "#eab308"
             : "var(--text-3)";
   return (
-    <div className="flex flex-col items-end gap-0 leading-tight">
+    <div className="flex items-baseline justify-end gap-1 font-[family-name:var(--mono)] num">
       <span
-        className="font-[family-name:var(--mono)] num text-[13px] font-bold"
+        className="text-[13px] font-bold"
         style={{ color: highlight ? "var(--up)" : undefined }}
       >
         {highZoneMin}
@@ -558,12 +558,15 @@ function HighZoneCell({
         </span>
       </span>
       {pct !== null && (
-        <span
-          className="font-[family-name:var(--mono)] num text-[10.5px] font-semibold"
-          style={{ color: pctColor }}
-        >
-          {pct}%
-        </span>
+        <>
+          <span className="text-[10px] text-[color:var(--text-4)]">/</span>
+          <span
+            className="text-[12px] font-semibold"
+            style={{ color: pctColor }}
+          >
+            {pct}%
+          </span>
+        </>
       )}
     </div>
   );
