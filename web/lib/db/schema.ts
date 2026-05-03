@@ -139,6 +139,15 @@ export const players = pgTable(
     // lowercased for case-insensitive lookup.
     username: text("username"),
     passwordHash: text("password_hash"),
+    // Whoop OAuth tokens — stored per-player so each user connects
+    // their own Whoop account. Null = not connected.
+    whoopAccessToken: text("whoop_access_token"),
+    whoopRefreshToken: text("whoop_refresh_token"),
+    whoopTokenExpiry: timestamp("whoop_token_expiry", { withTimezone: true }),
+    whoopUserId: text("whoop_user_id"),
+    // Most recent successful Whoop backfill — surfaced as "Last synced"
+    // on the profile and used by Sync Now to compute incremental deltas.
+    whoopLastSyncAt: timestamp("whoop_last_sync_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
@@ -688,6 +697,50 @@ export const passwordResetTokens = pgTable(
   (t) => [index("password_reset_player_idx").on(t.playerId)],
 );
 
+/* ============== WHOOP WORKOUTS ============== */
+
+/**
+ * Whoop workout records pulled via the Whoop developer API and
+ * filtered to basketball sessions. Backfilled on first connect, then
+ * topped up by Sync Now from the profile. Idempotent on
+ * (player_id, whoop_workout_id) so re-syncing is safe.
+ *
+ * Strain/HR/calories fields are nullable since SCORED state isn't
+ * guaranteed for every record (in-progress sessions, partial recordings).
+ */
+export const whoopWorkouts = pgTable(
+  "whoop_workouts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    /** Whoop's own workout ID (numeric). Stored as text to dodge
+     *  bigint/precision pitfalls. */
+    whoopWorkoutId: text("whoop_workout_id").notNull(),
+    /** Workout start timestamp from Whoop. */
+    date: timestamp("date", { withTimezone: true }).notNull(),
+    durationMin: integer("duration_min"),
+    /** Whoop strain (0–21). Stored 1 decimal. */
+    strain: real("strain"),
+    avgHr: integer("avg_hr"),
+    maxHr: integer("max_hr"),
+    /** Calories computed from kilojoules at fetch time. */
+    calories: integer("calories"),
+    sportId: integer("sport_id"),
+    syncedAt: timestamp("synced_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("whoop_workouts_player_workout_uq").on(
+      t.playerId,
+      t.whoopWorkoutId,
+    ),
+    index("whoop_workouts_player_date_idx").on(t.playerId, t.date),
+  ],
+);
+
 /* ============== RELATIONS ============== */
 
 export const playersRelations = relations(players, ({ many }) => ({
@@ -787,6 +840,8 @@ export type Conversation = typeof conversations.$inferSelect;
 export type NewConversation = typeof conversations.$inferInsert;
 export type Message = typeof messages.$inferSelect;
 export type NewMessage = typeof messages.$inferInsert;
+export type WhoopWorkout = typeof whoopWorkouts.$inferSelect;
+export type NewWhoopWorkout = typeof whoopWorkouts.$inferInsert;
 
 // Suppress an unused-symbol warning when this file is imported as types-only.
 export const __schemaSqlMarker = sql`/* schema */`;
