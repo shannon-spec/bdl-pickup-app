@@ -540,17 +540,21 @@ function HighZoneCell({
   // and calorie highlights. Otherwise fall back to the intensity
   // band (red/orange/yellow) for absolute workload shape.
   const pctAboveAvg = pct !== null && aboveAvg(pct, avgPct ?? null);
+  // Green is the win-state for percentage too — used to be a yellow
+  // band at 25–39%, but the user reads green as "good" and yellow
+  // as "meh", so promote anything in basketball-realistic territory
+  // (>=25%) to green. Orange/red stay for genuinely all-out games.
   const pctColor =
     pct === null
       ? "var(--text-3)"
-      : pctAboveAvg
-        ? "var(--up)"
-        : pct >= 60
-          ? "var(--down)"
-          : pct >= 40
-            ? "#f97316"
-            : pct >= 25
-              ? "#eab308"
+      : pct >= 60
+        ? "var(--down)"
+        : pct >= 40
+          ? "#f97316"
+          : pct >= 25
+            ? "var(--up)"
+            : pctAboveAvg
+              ? "var(--up)"
               : "var(--text-3)";
   return (
     <div className="flex items-baseline justify-end gap-1 font-[family-name:var(--mono)] num">
