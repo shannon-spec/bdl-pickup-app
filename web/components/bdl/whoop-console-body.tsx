@@ -219,17 +219,16 @@ export function WhoopConsoleBody({
             />
             <SummaryBlock
               label="Avg Hard Min"
-              hint={
-                summary.avgHighZonePct !== null
-                  ? `Z4+5 · ${Math.round(summary.avgHighZonePct)}%`
-                  : "Z4+5"
-              }
+              hint="Z4+5"
               value={
                 summary.avgHighZone !== null
-                  ? Math.round(summary.avgHighZone).toString()
+                  ? `${Math.round(summary.avgHighZone)} min${
+                      summary.avgHighZonePct !== null
+                        ? ` / ${Math.round(summary.avgHighZonePct)}%`
+                        : ""
+                    }`
                   : "—"
               }
-              unit="min"
             />
           </div>
 
