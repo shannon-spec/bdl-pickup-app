@@ -771,7 +771,7 @@ function ScaleBar({ score }: { score: number }) {
           return (
             <div
               key={t.name}
-              className="text-center text-[9.5px] font-bold tracking-[0.13em] uppercase"
+              className="text-center text-[10.5px] font-extrabold tracking-[0.14em] uppercase"
               style={{
                 flex: t.w,
                 color: isActive ? tierColor(t.grade) : "var(--text-4)",
