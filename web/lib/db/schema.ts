@@ -156,6 +156,12 @@ export const players = pgTable(
     whoopShareWithLeague: boolean("whoop_share_with_league")
       .notNull()
       .default(false),
+    // Per-viewer soft-clear watermarks for the Message Center. Setting
+    // either timestamp hides every item older than it from THIS viewer's
+    // list — mirrors `conversations.aClearedAt`/`bClearedAt`. Other
+    // recipients are unaffected; no rows are deleted.
+    inboxClearedAt: timestamp("inbox_cleared_at", { withTimezone: true }),
+    broadcastsClearedAt: timestamp("broadcasts_cleared_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
@@ -794,6 +800,10 @@ export const whoopCycles = pgTable(
     avgHr: integer("avg_hr"),
     maxHr: integer("max_hr"),
     calories: integer("calories"),
+    /** Total steps for the calendar day as reported by Whoop's cycles
+     *  endpoint (requires read:cycles scope). Null when the API didn't
+     *  return a steps value for the cycle. */
+    steps: integer("steps"),
     syncedAt: timestamp("synced_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

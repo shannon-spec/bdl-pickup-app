@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, sql as drSql } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, sql as drSql } from "drizzle-orm";
 import {
   db,
   announcements,
@@ -23,9 +23,18 @@ export type InboxItem = {
 
 /**
  * Inbox feed for a player — every announcement they're a recipient of,
- * newest first. Caps at 50 since the inbox isn't paginated yet.
+ * newest first. Caps at 50 since the inbox isn't paginated yet. Honors
+ * the viewer's `players.inbox_cleared_at` watermark by filtering out
+ * announcements created on/before the clear timestamp.
  */
 export async function getInboxForPlayer(playerId: string): Promise<InboxItem[]> {
+  const [viewer] = await db
+    .select({ inboxClearedAt: players.inboxClearedAt })
+    .from(players)
+    .where(eq(players.id, playerId))
+    .limit(1);
+  const clearedAt = viewer?.inboxClearedAt ?? null;
+
   const rows = await db
     .select({
       id: announcements.id,
@@ -48,7 +57,14 @@ export async function getInboxForPlayer(playerId: string): Promise<InboxItem[]> 
     )
     .leftJoin(leagues, eq(leagues.id, announcements.leagueId))
     .leftJoin(players, eq(players.id, announcements.authorId))
-    .where(eq(announcementRecipients.playerId, playerId))
+    .where(
+      clearedAt
+        ? and(
+            eq(announcementRecipients.playerId, playerId),
+            gt(announcements.createdAt, clearedAt),
+          )
+        : eq(announcementRecipients.playerId, playerId),
+    )
     .orderBy(desc(announcements.createdAt))
     .limit(50);
 
@@ -70,18 +86,36 @@ export async function getInboxForPlayer(playerId: string): Promise<InboxItem[]> 
   }));
 }
 
-/** Unread count for the bell badge. */
+/** Unread count for the bell badge. Honors the viewer's inbox-clear
+ *  watermark so a "Clear inbox" hides the badge along with the rows. */
 export async function getUnreadAnnouncementCount(
   playerId: string,
 ): Promise<number> {
+  const [viewer] = await db
+    .select({ inboxClearedAt: players.inboxClearedAt })
+    .from(players)
+    .where(eq(players.id, playerId))
+    .limit(1);
+  const clearedAt = viewer?.inboxClearedAt ?? null;
+
   const [row] = await db
     .select({ n: drSql<number>`count(*)::int` })
     .from(announcementRecipients)
+    .innerJoin(
+      announcements,
+      eq(announcements.id, announcementRecipients.announcementId),
+    )
     .where(
-      and(
-        eq(announcementRecipients.playerId, playerId),
-        isNull(announcementRecipients.readAt),
-      ),
+      clearedAt
+        ? and(
+            eq(announcementRecipients.playerId, playerId),
+            isNull(announcementRecipients.readAt),
+            gt(announcements.createdAt, clearedAt),
+          )
+        : and(
+            eq(announcementRecipients.playerId, playerId),
+            isNull(announcementRecipients.readAt),
+          ),
     );
   return row?.n ?? 0;
 }
@@ -108,6 +142,13 @@ export async function getAuthoredAnnouncements(
   authorId: string,
   limit = 20,
 ): Promise<AuthoredAnnouncement[]> {
+  const [viewer] = await db
+    .select({ broadcastsClearedAt: players.broadcastsClearedAt })
+    .from(players)
+    .where(eq(players.id, authorId))
+    .limit(1);
+  const clearedAt = viewer?.broadcastsClearedAt ?? null;
+
   const rows = await db
     .select({
       id: announcements.id,
@@ -129,7 +170,14 @@ export async function getAuthoredAnnouncements(
     })
     .from(announcements)
     .leftJoin(leagues, eq(leagues.id, announcements.leagueId))
-    .where(eq(announcements.authorId, authorId))
+    .where(
+      clearedAt
+        ? and(
+            eq(announcements.authorId, authorId),
+            gt(announcements.createdAt, clearedAt),
+          )
+        : eq(announcements.authorId, authorId),
+    )
     .orderBy(desc(announcements.createdAt))
     .limit(limit);
 

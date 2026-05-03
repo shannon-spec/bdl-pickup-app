@@ -27,6 +27,8 @@ import {
   createAnnouncement,
   markAnnouncementRead,
   markAllAnnouncementsRead,
+  clearInbox,
+  clearAuthoredBroadcasts,
 } from "@/lib/actions/announcements";
 import type {
   ConversationListItem,
@@ -95,7 +97,9 @@ export function MessageCenterClient({
   const [emailOn, setEmailOn] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [confirmClear, setConfirmClear] = useState(false);
+  const [confirmClear, setConfirmClear] = useState<
+    null | "conversations" | "inbox" | "broadcasts"
+  >(null);
   // Optimistic read state for inbox — flips immediately on click.
   const [inboxReadLocal, setInboxReadLocal] = useState<Set<string>>(
     new Set(inbox.filter((i) => i.readAt).map((i) => i.id)),
@@ -201,10 +205,14 @@ export function MessageCenterClient({
     });
   };
 
-  const onClearAll = () => {
-    setConfirmClear(false);
+  const onConfirmClear = () => {
+    const kind = confirmClear;
+    setConfirmClear(null);
+    if (!kind) return;
     start(async () => {
-      await clearAllConversations();
+      if (kind === "conversations") await clearAllConversations();
+      else if (kind === "inbox") await clearInbox();
+      else if (kind === "broadcasts") await clearAuthoredBroadcasts();
       router.refresh();
     });
   };
@@ -593,16 +601,28 @@ export function MessageCenterClient({
             {inboxUnread > 0 ? `${inboxUnread} unread` : inbox.length}
           </span>
         </div>
-        {inboxUnread > 0 && (
-          <button
-            type="button"
-            onClick={onMarkAllInboxRead}
-            disabled={pending}
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[11px] font-semibold tracking-[0.04em] uppercase border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[color:var(--text-3)] hover:text-[color:var(--text)] disabled:opacity-60"
-          >
-            <CheckCheck size={11} /> Mark all read
-          </button>
-        )}
+        <div className="inline-flex items-center gap-2">
+          {inboxUnread > 0 && (
+            <button
+              type="button"
+              onClick={onMarkAllInboxRead}
+              disabled={pending}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[11px] font-semibold tracking-[0.04em] uppercase border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[color:var(--text-3)] hover:text-[color:var(--text)] disabled:opacity-60"
+            >
+              <CheckCheck size={11} /> Mark all read
+            </button>
+          )}
+          {inbox.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setConfirmClear("inbox")}
+              disabled={pending}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[11px] font-semibold tracking-[0.04em] uppercase border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[color:var(--text-3)] hover:text-[color:var(--text)] disabled:opacity-60"
+            >
+              <Eraser size={11} /> Clear inbox
+            </button>
+          )}
+        </div>
       </div>
 
       {inbox.length === 0 ? (
@@ -701,7 +721,7 @@ export function MessageCenterClient({
         {conversations.length > 0 && (
           <button
             type="button"
-            onClick={() => setConfirmClear(true)}
+            onClick={() => setConfirmClear("conversations")}
             disabled={pending}
             className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[11px] font-semibold tracking-[0.04em] uppercase border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[color:var(--text-3)] hover:text-[color:var(--text)] disabled:opacity-60"
           >
@@ -774,17 +794,27 @@ export function MessageCenterClient({
       {/* Recent broadcasts (admin / commissioner only) */}
       {canBroadcastLeague && broadcastHistory.length > 0 && (
         <>
-          <div className="flex items-center gap-2.5 mt-2">
-            <span
-              aria-hidden
-              className="w-[3px] h-[12px] rounded-sm bg-[color:var(--brand)]"
-            />
-            <span className="text-[11.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)]">
-              Recent Broadcasts
-            </span>
-            <span className="text-[12px] font-medium text-[color:var(--text-4)] num">
-              {broadcastHistory.length}
-            </span>
+          <div className="flex items-center justify-between gap-3 mt-2">
+            <div className="inline-flex items-center gap-2.5">
+              <span
+                aria-hidden
+                className="w-[3px] h-[12px] rounded-sm bg-[color:var(--brand)]"
+              />
+              <span className="text-[11.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)]">
+                Recent Broadcasts
+              </span>
+              <span className="text-[12px] font-medium text-[color:var(--text-4)] num">
+                {broadcastHistory.length}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setConfirmClear("broadcasts")}
+              disabled={pending}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[11px] font-semibold tracking-[0.04em] uppercase border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[color:var(--text-3)] hover:text-[color:var(--text)] disabled:opacity-60"
+            >
+              <Eraser size={11} /> Clear recent
+            </button>
           </div>
           <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden">
             {broadcastHistory.map((a) => (
@@ -830,33 +860,41 @@ export function MessageCenterClient({
         </>
       )}
 
-      {/* Clear-all confirm overlay */}
+      {/* Clear-all confirm overlay — kind-specific copy */}
       {confirmClear && (
         <div
           className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4"
-          onClick={() => setConfirmClear(false)}
+          onClick={() => setConfirmClear(null)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-md rounded-[16px] bg-[color:var(--surface)] border border-[color:var(--hairline-2)] shadow-xl p-5 flex flex-col gap-3"
           >
-            <div className="font-bold text-[15px]">Clear recent messages?</div>
+            <div className="font-bold text-[15px]">
+              {confirmClear === "conversations"
+                ? "Clear recent messages?"
+                : confirmClear === "inbox"
+                  ? "Clear your inbox?"
+                  : "Clear recent broadcasts?"}
+            </div>
             <p className="text-[13px] text-[color:var(--text-3)] leading-relaxed">
-              This hides every conversation from your list. The other people
-              still see the threads — and any new messages they send will
-              bring the conversation back.
+              {confirmClear === "conversations"
+                ? "This hides every conversation from your list. The other people still see the threads — and any new messages they send will bring the conversation back."
+                : confirmClear === "inbox"
+                  ? "This hides every announcement currently in your inbox. New broadcasts sent after now will still arrive — and other recipients are unaffected."
+                  : "This hides your authored broadcasts from this list. Recipients still see them in their inboxes — only your sent history is cleared."}
             </p>
             <div className="flex justify-end gap-2 mt-1">
               <button
                 type="button"
-                onClick={() => setConfirmClear(false)}
+                onClick={() => setConfirmClear(null)}
                 className="h-9 px-4 rounded-[var(--r-md)] border border-[color:var(--hairline-2)] text-[12px] font-semibold tracking-[0.04em] uppercase text-[color:var(--text-2)] hover:text-[color:var(--text)]"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={onClearAll}
+                onClick={onConfirmClear}
                 disabled={pending}
                 className="h-9 px-4 rounded-[var(--r-md)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white text-[12px] font-bold tracking-[0.05em] uppercase disabled:opacity-60"
               >

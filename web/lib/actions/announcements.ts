@@ -364,3 +364,35 @@ export async function markAllAnnouncementsRead(): Promise<
   revalidatePath("/inbox");
   return { ok: true, data: { count: before.length } };
 }
+
+/** Soft-clear every announcement currently in the viewer's inbox.
+ *  Stamps `players.inbox_cleared_at = now()`; queries filter to items
+ *  newer than the watermark, so future announcements still show up. */
+export async function clearInbox(): Promise<ActionResult<{ ok: true }>> {
+  const session = await readSession();
+  if (!session?.playerId) return { ok: false, error: "Sign in." };
+  await db
+    .update(players)
+    .set({ inboxClearedAt: sql`now()` })
+    .where(eq(players.id, session.playerId));
+  revalidatePath("/messages");
+  revalidatePath("/inbox");
+  return { ok: true, data: { ok: true } };
+}
+
+/** Soft-clear the author's "Recent Broadcasts" history. Stamps
+ *  `players.broadcasts_cleared_at = now()`; the announcements
+ *  themselves are untouched (recipients still see them in their
+ *  inbox). */
+export async function clearAuthoredBroadcasts(): Promise<
+  ActionResult<{ ok: true }>
+> {
+  const session = await readSession();
+  if (!session?.playerId) return { ok: false, error: "Sign in." };
+  await db
+    .update(players)
+    .set({ broadcastsClearedAt: sql`now()` })
+    .where(eq(players.id, session.playerId));
+  revalidatePath("/messages");
+  return { ok: true, data: { ok: true } };
+}
