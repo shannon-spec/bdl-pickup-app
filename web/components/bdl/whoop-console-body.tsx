@@ -127,6 +127,7 @@ export function WhoopConsoleBody({
             : null,
         ),
       ),
+      avgEstSteps: avg(scorable.map((m) => m.estSteps)),
       strainW: avg(wins.map((m) => m.strain)),
       strainL: avg(losses.map((m) => m.strain)),
       hrW: avg(wins.map((m) => m.avgHr)),
@@ -201,7 +202,7 @@ export function WhoopConsoleBody({
 
       {connected && sourceMetrics.length > 0 && (
         <>
-          <div className="grid grid-cols-5 gap-3 max-md:grid-cols-3 max-sm:grid-cols-2">
+          <div className="grid grid-cols-6 gap-3 max-lg:grid-cols-3 max-sm:grid-cols-2">
             <SummaryBlock
               label={
                 summary.scoredCount < summary.total
@@ -237,6 +238,15 @@ export function WhoopConsoleBody({
                         ? ` / ${Math.round(summary.avgHighZonePct)}%`
                         : ""
                     }`
+                  : "—"
+              }
+            />
+            <SummaryBlock
+              label="Avg Steps"
+              hint="basketball"
+              value={
+                summary.avgEstSteps !== null
+                  ? Math.round(summary.avgEstSteps).toLocaleString()
                   : "—"
               }
             />
@@ -290,7 +300,7 @@ export function WhoopConsoleBody({
             </p>
           ) : (
             <div className="flex flex-col divide-y divide-[color:var(--hairline)]">
-              <div className="grid grid-cols-[1fr_44px_56px_64px_60px_60px_60px_92px] gap-3 pb-2 text-[10px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
+              <div className="grid grid-cols-[1fr_44px_56px_64px_60px_60px_60px_70px_92px] gap-3 pb-2 text-[10px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
                 <span>Game</span>
                 <span className="text-right">W/L</span>
                 <span className="text-right">Source</span>
@@ -298,6 +308,7 @@ export function WhoopConsoleBody({
                 <span className="text-right">Avg HR</span>
                 <span className="text-right">Max HR</span>
                 <span className="text-right">Cal</span>
+                <span className="text-right">Steps</span>
                 <span className="text-right">Z4+5</span>
               </div>
               {visibleRows.map((m) => {
@@ -305,7 +316,7 @@ export function WhoopConsoleBody({
                 return (
                   <div
                     key={m.gameId}
-                    className="grid grid-cols-[1fr_44px_56px_64px_60px_60px_60px_92px] gap-3 items-center py-3"
+                    className="grid grid-cols-[1fr_44px_56px_64px_60px_60px_60px_70px_92px] gap-3 items-center py-3"
                   >
                     <div className="flex flex-col gap-0.5 min-w-0">
                       <span className="text-[13px] font-semibold truncate">
@@ -318,7 +329,7 @@ export function WhoopConsoleBody({
                     </div>
                     {isUpcoming ? (
                       <div
-                        className="col-span-7 flex justify-end"
+                        className="col-span-8 flex justify-end"
                         aria-label="Upcoming game"
                       >
                         <UpcomingPill />
@@ -362,6 +373,23 @@ export function WhoopConsoleBody({
                           }}
                         >
                           {m.calories ?? "—"}
+                        </span>
+                        <span
+                          className="font-[family-name:var(--mono)] num text-[12px] font-bold text-right"
+                          title={
+                            m.totalStepsOnDay !== null
+                              ? `${m.totalStepsOnDay.toLocaleString()} total steps on day`
+                              : undefined
+                          }
+                          style={{
+                            color: aboveAvg(m.estSteps, summary.avgEstSteps)
+                              ? "var(--up)"
+                              : "var(--text-3)",
+                          }}
+                        >
+                          {m.estSteps !== null
+                            ? m.estSteps.toLocaleString()
+                            : "—"}
                         </span>
                         <HighZoneCell
                           highZoneMin={m.highZoneMin}

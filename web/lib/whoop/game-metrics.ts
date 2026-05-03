@@ -60,6 +60,22 @@ export type WhoopGameMetric = {
   /** Time at high intensity (Z4 + Z5) in minutes. Convenience for
    *  the UI; computed from zoneMin. */
   highZoneMin: number | null;
+  /** Estimated basketball steps for the day.
+   *
+   *  Method: total steps on the game day (from whoopCycles) minus the
+   *  player's average daily steps on days with NO basketball session.
+   *  That baseline captures routine walking/activity so we isolate the
+   *  increment attributable to basketball.
+   *
+   *  Null when: (a) no cycle step data exists for the day, (b) there
+   *  are fewer than 3 non-basketball days with step data (baseline
+   *  too thin to trust), or (c) the estimate is negative (clipped to
+   *  null so we never show a nonsensical value).
+   */
+  estSteps: number | null;
+  /** Total steps on the game day as reported by Whoop — raw value
+   *  before baseline subtraction. Null when no cycle data exists. */
+  totalStepsOnDay: number | null;
 };
 
 function combineDateTime(dateStr: string, timeStr: string | null): Date {
@@ -162,6 +178,7 @@ export async function getPlayerWhoopGameMetrics(
         avgHr: whoopCycles.avgHr,
         maxHr: whoopCycles.maxHr,
         calories: whoopCycles.calories,
+        steps: whoopCycles.steps,
       })
       .from(whoopCycles)
       .where(eq(whoopCycles.playerId, playerId)),
@@ -177,6 +194,29 @@ export async function getPlayerWhoopGameMetrics(
       cycleByDate.set(c.date, c);
     }
   }
+
+  // Build a set of all basketball-activity dates so we can exclude
+  // them when computing the "rest-of-life" step baseline.
+  const basketballDates = new Set(
+    workouts.map((w) => localDateString(w.date, DEFAULT_TZ)),
+  );
+
+  // Also mark every BDL game date as a basketball day even when no
+  // Whoop workout was found (the player still played that day).
+  for (const g of gamesWithWindow) {
+    if (g.gameDate) basketballDates.add(g.gameDate);
+  }
+
+  // Baseline: average daily steps on days WITHOUT any basketball.
+  // Require at least 3 qualifying days so the estimate is meaningful.
+  const nonBballSteps = [...cycleByDate.values()]
+    .filter((c) => !basketballDates.has(c.date) && c.steps !== null && c.steps !== undefined)
+    .map((c) => c.steps as number);
+
+  const baselineAvgSteps =
+    nonBballSteps.length >= 3
+      ? Math.round(nonBballSteps.reduce((s, n) => s + n, 0) / nonBballSteps.length)
+      : null;
 
   // 3) For each game, find the best-matching workout.
   return gamesWithWindow.map((g): WhoopGameMetric => {
@@ -198,6 +238,14 @@ export async function getPlayerWhoopGameMetrics(
             ? "W"
             : "L"
           : null;
+
+    // Steps estimation — shared across all three branches.
+    const dayCycle = cycleByDate.get(g.gameDate);
+    const totalStepsOnDay = dayCycle?.steps ?? null;
+    const estSteps =
+      totalStepsOnDay !== null && baselineAvgSteps !== null
+        ? Math.max(0, totalStepsOnDay - baselineAvgSteps) || null
+        : null;
 
     if (candidates.length > 0) {
       candidates.sort((a, b) => (b.strain ?? -1) - (a.strain ?? -1));
@@ -222,6 +270,8 @@ export async function getPlayerWhoopGameMetrics(
         sportName: best.sportName,
         zoneMin: zones,
         highZoneMin: zones ? zones[4] + zones[5] : null,
+        estSteps,
+        totalStepsOnDay,
       };
     }
 
@@ -246,6 +296,8 @@ export async function getPlayerWhoopGameMetrics(
         sportName: null,
         zoneMin: null,
         highZoneMin: null,
+        estSteps,
+        totalStepsOnDay,
       };
     }
 
@@ -268,6 +320,8 @@ export async function getPlayerWhoopGameMetrics(
       sportName: null,
       zoneMin: null,
       highZoneMin: null,
+      estSteps: null,
+      totalStepsOnDay: null,
     };
   });
 }
@@ -288,7 +342,7 @@ export async function getPlayerOtherBasketballWorkouts(
   // dates of all BDL games on the player's roster — anything matching
   // a roster date is already shown in the "By League" tab and is
   // excluded here.
-  const [workouts, rosterRows] = await Promise.all([
+  const [workouts, rosterRows, allCycles] = await Promise.all([
     db
       .select({
         id: whoopWorkouts.id,
@@ -326,19 +380,51 @@ export async function getPlayerOtherBasketballWorkouts(
           inArray(gameRoster.side, ["A", "B", "invited"]),
         ),
       ),
+    db
+      .select({ date: whoopCycles.date, steps: whoopCycles.steps })
+      .from(whoopCycles)
+      .where(eq(whoopCycles.playerId, playerId)),
   ]);
 
-  const leagueDates = new Set(
+  // Build cycle steps map and compute baseline for other-basketball sessions.
+  const cycleStepsByDate = new Map<string, number>();
+  for (const c of allCycles) {
+    if (c.steps !== null && c.steps !== undefined) {
+      const existing = cycleStepsByDate.get(c.date);
+      if (!existing || c.steps > existing) cycleStepsByDate.set(c.date, c.steps);
+    }
+  }
+
+  const leagueDatesSet = new Set(
     rosterRows.map((r) => r.gameDate).filter((d): d is string => !!d),
   );
+  const workoutDates = new Set(
+    workouts.map((w) => localDateString(w.date, DEFAULT_TZ)),
+  );
+  const allBasketballDates = new Set([...leagueDatesSet, ...workoutDates]);
+
+  const nonBballStepsOther = [...cycleStepsByDate.entries()]
+    .filter(([date]) => !allBasketballDates.has(date))
+    .map(([, s]) => s);
+
+  const baselineOther =
+    nonBballStepsOther.length >= 3
+      ? Math.round(nonBballStepsOther.reduce((s, n) => s + n, 0) / nonBballStepsOther.length)
+      : null;
 
   return workouts
     .filter((w) => {
       const dateStr = localDateString(w.date, DEFAULT_TZ);
-      return !leagueDates.has(dateStr);
+      return !leagueDatesSet.has(dateStr);
     })
     .map((w): WhoopGameMetric => {
       const zones = zoneMinutesFrom(w);
+      const dateStr = localDateString(w.date, DEFAULT_TZ);
+      const totalStepsOnDay = cycleStepsByDate.get(dateStr) ?? null;
+      const estSteps =
+        totalStepsOnDay !== null && baselineOther !== null
+          ? Math.max(0, totalStepsOnDay - baselineOther) || null
+          : null;
       return {
         gameId: `wkt:${w.id}`,
         date: w.date.toISOString(),
@@ -358,6 +444,8 @@ export async function getPlayerOtherBasketballWorkouts(
         sportName: w.sportName,
         zoneMin: zones,
         highZoneMin: zones ? zones[4] + zones[5] : null,
+        estSteps,
+        totalStepsOnDay,
       };
     });
 }

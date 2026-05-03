@@ -67,6 +67,9 @@ type WhoopCycleRecord = {
     kilojoule?: number;
     average_heart_rate?: number;
     max_heart_rate?: number;
+    /** Daily step count — present when read:cycles scope is granted and
+     *  the device supports step tracking (Whoop 4.0+). */
+    steps?: number;
   };
 };
 
@@ -331,6 +334,7 @@ export async function backfillWhoopWorkouts(
           typeof c.score?.kilojoule === "number"
             ? Math.round(c.score.kilojoule * 0.239)
             : null,
+        steps: typeof c.score?.steps === "number" ? c.score.steps : null,
       };
     });
     for (const batch of chunk(rows, INSERT_CHUNK)) {
@@ -350,6 +354,7 @@ export async function backfillWhoopWorkouts(
             avgHr: sql`excluded.avg_hr`,
             maxHr: sql`excluded.max_hr`,
             calories: sql`excluded.calories`,
+            steps: sql`excluded.steps`,
           },
         })
         .returning({ id: whoopCycles.id });
