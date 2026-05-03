@@ -597,7 +597,7 @@ function OutcomeBadge({ outcome }: { outcome: "W" | "L" | "T" | null }) {
 type ScoreGrade = "elite" | "strong" | "avg" | "below" | "poor";
 function scoreGrade(score: number): ScoreGrade {
   if (score >= 80) return "elite";
-  if (score >= 65) return "strong";
+  if (score >= 60) return "strong";
   if (score >= 45) return "avg";
   if (score >= 30) return "below";
   return "poor";
@@ -757,7 +757,7 @@ function BdlScoreInfoPill() {
               <ul className="flex flex-col gap-1 text-[12.5px] text-[color:var(--text-2)]">
                 <ScaleRow score="50" label="Your typical game" tone="avg" />
                 <ScaleRow
-                  score="65"
+                  score="60"
                   label="Strong game (~1σ above your average)"
                   tone="strong"
                 />
@@ -942,8 +942,8 @@ const SCALE_TIERS: Array<{
 }> = [
   { grade: "poor", name: "Poor", min: 0, max: 29, w: 30 },
   { grade: "below", name: "Below", min: 30, max: 44, w: 15 },
-  { grade: "avg", name: "Avg", min: 45, max: 64, w: 20 },
-  { grade: "strong", name: "Strong", min: 65, max: 79, w: 15 },
+  { grade: "avg", name: "Avg", min: 45, max: 59, w: 15 },
+  { grade: "strong", name: "Strong", min: 60, max: 79, w: 20 },
   { grade: "elite", name: "Elite", min: 80, max: 100, w: 21 },
 ];
 
@@ -977,7 +977,9 @@ function ScaleBar({ score }: { score: number }) {
               className="text-center text-[10.5px] font-extrabold tracking-[0.14em] uppercase"
               style={{
                 flex: t.w,
-                color: isActive ? tierColor(t.grade) : "var(--text-4)",
+                color: isActive
+                  ? tierColor(t.grade)
+                  : `color-mix(in oklab, ${tierColor(t.grade)} 70%, transparent)`,
               }}
             >
               {t.name}
@@ -1007,7 +1009,7 @@ function ScaleBar({ score }: { score: number }) {
             }}
           />
         </div>
-        <div className="flex h-[18px] rounded-md overflow-hidden border border-[color:var(--hairline-2)]">
+        <div className="flex h-[20px] rounded-md overflow-hidden border border-[color:var(--hairline-2)]">
           {SCALE_TIERS.map((t) => {
             const c = tierColor(t.grade);
             const isActive = t.grade === grade;
@@ -1018,7 +1020,7 @@ function ScaleBar({ score }: { score: number }) {
                   flex: t.w,
                   background: isActive
                     ? c
-                    : `color-mix(in oklab, ${c} 28%, transparent)`,
+                    : `color-mix(in oklab, ${c} 55%, transparent)`,
                 }}
               />
             );
@@ -1033,10 +1035,12 @@ function ScaleBar({ score }: { score: number }) {
           return (
             <div
               key={t.name}
-              className="text-center text-[9px] font-medium tracking-[0.04em] num"
+              className="text-center text-[9.5px] font-semibold tracking-[0.04em] num"
               style={{
                 flex: t.w,
-                color: isActive ? tierColor(t.grade) : "var(--text-4)",
+                color: isActive
+                  ? tierColor(t.grade)
+                  : `color-mix(in oklab, ${tierColor(t.grade)} 65%, transparent)`,
               }}
             >
               {t.min}–{t.max}
