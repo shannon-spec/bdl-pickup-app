@@ -14,12 +14,24 @@ const escapeHtml = (s: unknown) =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 
+/** Google Maps directions URL for the given address. Returns null when
+ *  no address is provided so callers can render conditional CTAs. */
+export function googleMapsUrl(address: string | null | undefined): string | null {
+  const t = (address ?? "").trim();
+  if (!t) return null;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t)}`;
+}
+
 export type InviteEmailContext = {
   to: string;
   firstName: string;
   leagueName: string;
   gameDateLabel: string; // pre-formatted: "Wed · Apr 29 · 7:00 PM"
   venue: string | null;
+  /** League-configured gym/court (falls back to `venue` when unset). */
+  venueCourt?: string | null;
+  /** Street address used for the directions link + maps CTA. */
+  venueAddress?: string | null;
   claimUrl: string;
   expiresAtLabel: string; // "in 2h" or absolute time
   teamAName: string;
@@ -89,28 +101,59 @@ const fillTemplate = (s: string, ctx: InviteEmailContext) =>
     .replace(/\{claimUrl\}/g, ctx.claimUrl)
     .replace(/\{expires\}/g, ctx.expiresAtLabel);
 
+/** Compose the location block (text + html) shared by initial / reminder
+ *  invite emails. Picks the best venue label available — gym + court
+ *  (with the per-game `venue` override winning), then address + Google
+ *  Maps directions link below. */
+function venueBlock(ctx: InviteEmailContext): { text: string; html: string } {
+  const gymLine = ctx.venue || ctx.venueCourt || null;
+  const address = ctx.venueAddress?.trim() || null;
+  const mapsUrl = googleMapsUrl(address);
+  if (!gymLine && !address) return { text: "", html: "" };
+
+  const text =
+    (gymLine ? `📍 ${gymLine}\n` : "") +
+    (address ? `${address}\n` : "") +
+    (mapsUrl ? `Directions: ${mapsUrl}\n` : "");
+
+  const html = `
+    <div style="margin:0 0 18px;padding:12px 14px;border:1px solid #e5e7eb;border-radius:10px;background:#fafafa;">
+      ${gymLine ? `<p style="font-size:14px;font-weight:600;margin:0 0 2px;color:#0a0a0a;">📍 ${escapeHtml(gymLine)}</p>` : ""}
+      ${address ? `<p style="font-size:13px;color:#555;margin:0 0 ${mapsUrl ? "10px" : "0"};">${escapeHtml(address)}</p>` : ""}
+      ${
+        mapsUrl
+          ? `<a href="${escapeHtml(mapsUrl)}" style="display:inline-block;font-size:12.5px;font-weight:600;color:#2563eb;text-decoration:none;">→ Get directions in Google Maps</a>`
+          : ""
+      }
+    </div>
+  `;
+  return { text, html };
+}
+
 export function sendInviteInitial(ctx: InviteEmailContext) {
   const subject = `${ctx.leagueName}: invite for ${ctx.gameDateLabel}`;
   const customBody = ctx.customMessage ? fillTemplate(ctx.customMessage, ctx) : null;
   const venueLine = ctx.venue ? ` @ ${ctx.venue}` : "";
+  const venueBlk = venueBlock(ctx);
   const defaultText =
     `Hi ${ctx.firstName},\n\n` +
     `You're invited to ${ctx.leagueName} — ${ctx.gameDateLabel}${venueLine}.\n\n` +
+    (venueBlk.text ? `${venueBlk.text}\n` : "") +
     `Claim or pass: ${ctx.claimUrl}\n` +
     `Invite expires ${ctx.expiresAtLabel}.\n\n— BDL`;
   const text = customBody
-    ? `${customBody}\n\nClaim or pass: ${ctx.claimUrl}\nInvite expires ${ctx.expiresAtLabel}.\n\n— BDL`
+    ? `${customBody}\n\n${venueBlk.text ? venueBlk.text + "\n" : ""}Claim or pass: ${ctx.claimUrl}\nInvite expires ${ctx.expiresAtLabel}.\n\n— BDL`
     : defaultText;
   const bodyHtml = customBody
     ? `<div style="font-size:14px;line-height:1.55;white-space:pre-wrap;margin:0 0 18px;">${escapeHtml(customBody)}</div>`
     : `
       <p style="font-size:15px;margin:0 0 4px;">${escapeHtml(ctx.gameDateLabel)}</p>
-      ${ctx.venue ? `<p style="font-size:13px;color:#555;margin:0 0 16px;">${escapeHtml(ctx.venue)}</p>` : ""}
     `;
   const html = wrapHtml(`
     <h2 style="margin:0 0 6px;font-size:18px;letter-spacing:-0.01em;">You're invited</h2>
     <p style="font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#666;margin:0 0 16px;">${escapeHtml(ctx.leagueName)}</p>
     ${bodyHtml}
+    ${venueBlk.html}
     <p style="margin:20px 0;">
       <a href="${escapeHtml(ctx.claimUrl)}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;font-size:14px;">Claim a seat</a>
     </p>
@@ -203,13 +246,16 @@ export async function sendInviteSMS(opts: {
 
 export function sendInviteReminder(ctx: InviteEmailContext) {
   const subject = `Reminder: ${ctx.leagueName} invite expires soon`;
+  const venueBlk = venueBlock(ctx);
   const text =
     `Hi ${ctx.firstName},\n\n` +
-    `Your invite to ${ctx.leagueName} (${ctx.gameDateLabel}) expires soon. ` +
+    `Your invite to ${ctx.leagueName} (${ctx.gameDateLabel}) expires soon.\n\n` +
+    (venueBlk.text ? `${venueBlk.text}\n` : "") +
     `Claim or pass: ${ctx.claimUrl}\n\n— BDL`;
   const html = wrapHtml(`
     <h2 style="margin:0 0 12px;font-size:18px;">Heads up — your invite expires soon</h2>
     <p>Your invite to <strong>${escapeHtml(ctx.leagueName)}</strong> on ${escapeHtml(ctx.gameDateLabel)} ${ctx.venue ? `at ${escapeHtml(ctx.venue)}` : ""} expires shortly.</p>
+    ${venueBlk.html}
     <p style="margin:18px 0;">
       <a href="${escapeHtml(ctx.claimUrl)}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:600;font-size:14px;">Claim a seat</a>
     </p>
@@ -231,6 +277,12 @@ export type LeagueJoinEmailContext = {
   claimUrl: string;
   /** Optional commissioner display name to put in the body ("from X"). */
   invitedByName?: string | null;
+  /** League venue — surfaced with a Google Maps directions link so
+   *  the invitee knows where the league actually plays before
+   *  accepting. */
+  venueName?: string | null;
+  venueCourt?: string | null;
+  venueAddress?: string | null;
 };
 
 export function sendLeagueJoinInvite(ctx: LeagueJoinEmailContext) {
@@ -238,9 +290,38 @@ export function sendLeagueJoinInvite(ctx: LeagueJoinEmailContext) {
   const fromLine = ctx.invitedByName
     ? `${ctx.invitedByName} invited you to join `
     : "You've been invited to join ";
+
+  const gymLine =
+    [ctx.venueName, ctx.venueCourt].filter(Boolean).join(" · ") || null;
+  const address = ctx.venueAddress?.trim() || null;
+  const mapsUrl = googleMapsUrl(address);
+
+  const venueText =
+    gymLine || address
+      ? "\n\n" +
+        (gymLine ? `📍 ${gymLine}\n` : "") +
+        (address ? `${address}\n` : "") +
+        (mapsUrl ? `Directions: ${mapsUrl}\n` : "")
+      : "";
+
+  const venueHtml =
+    gymLine || address
+      ? `
+        <div style="margin:0 0 18px;padding:12px 14px;border:1px solid #e5e7eb;border-radius:10px;background:#fafafa;">
+          ${gymLine ? `<p style="font-size:14px;font-weight:600;margin:0 0 2px;color:#0a0a0a;">📍 ${escapeHtml(gymLine)}</p>` : ""}
+          ${address ? `<p style="font-size:13px;color:#555;margin:0 0 ${mapsUrl ? "10px" : "0"};">${escapeHtml(address)}</p>` : ""}
+          ${
+            mapsUrl
+              ? `<a href="${escapeHtml(mapsUrl)}" style="display:inline-block;font-size:12.5px;font-weight:600;color:#2563eb;text-decoration:none;">→ Get directions in Google Maps</a>`
+              : ""
+          }
+        </div>
+      `
+      : "";
+
   const text =
     `Hi ${ctx.firstName},\n\n` +
-    `${fromLine}${ctx.leagueName} on BDL — Ball Don't Lie.\n\n` +
+    `${fromLine}${ctx.leagueName} on BDL — Ball Don't Lie.${venueText}\n\n` +
     `Accept the invite and create your player profile here:\n${ctx.claimUrl}\n\n— BDL`;
   const html = wrapHtml(`
     <h2 style="margin:0 0 6px;font-size:18px;letter-spacing:-0.01em;">You're invited to join</h2>
@@ -250,6 +331,7 @@ export function sendLeagueJoinInvite(ctx: LeagueJoinEmailContext) {
       ${escapeHtml(fromLine)}<strong>${escapeHtml(ctx.leagueName)}</strong> on BDL — Ball Don't Lie.
       Accept below to create your player profile and lock in your spot.
     </p>
+    ${venueHtml}
     <p style="margin:20px 0;">
       <a href="${escapeHtml(ctx.claimUrl)}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;font-size:14px;">Accept invite</a>
     </p>

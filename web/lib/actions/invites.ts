@@ -92,7 +92,13 @@ export async function createInvite(
   await requireManageView();
 
   const [league] = await db
-    .select({ id: leagues.id, name: leagues.name })
+    .select({
+      id: leagues.id,
+      name: leagues.name,
+      venueName: leagues.venueName,
+      venueCourt: leagues.venueCourt,
+      venueAddress: leagues.venueAddress,
+    })
     .from(leagues)
     .where(eq(leagues.id, v.leagueId))
     .limit(1);
@@ -148,6 +154,9 @@ export async function createInvite(
       leagueName: league.name,
       claimUrl,
       invitedByName,
+      venueName: league.venueName,
+      venueCourt: league.venueCourt,
+      venueAddress: league.venueAddress,
     });
 
     return {

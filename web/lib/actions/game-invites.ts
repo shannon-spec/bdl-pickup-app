@@ -98,7 +98,12 @@ async function inviteEmailContext(
   const [row] = await db
     .select({
       game: games,
-      league: { name: leagues.name },
+      league: {
+        name: leagues.name,
+        venueName: leagues.venueName,
+        venueCourt: leagues.venueCourt,
+        venueAddress: leagues.venueAddress,
+      },
       player: {
         firstName: players.firstName,
         email: players.email,
@@ -113,12 +118,22 @@ async function inviteEmailContext(
   const decryptedEmail = decryptOptional(row?.player.email);
   if (!row || !decryptedEmail) return null;
   const base = await getBaseUrl();
+  // Per-game `venue` override wins; fall back to the league's gym +
+  // court combo so every invite carries some location context.
+  const gymLine =
+    row.game.venue ||
+    [row.league?.venueName, row.league?.venueCourt]
+      .filter(Boolean)
+      .join(" · ") ||
+    null;
   return {
     to: decryptedEmail,
     firstName: row.player.firstName,
     leagueName: row.league?.name ?? row.game.leagueName ?? "BDL game",
     gameDateLabel: fmtGameDate(row.game.gameDate, row.game.gameTime),
-    venue: row.game.venue,
+    venue: gymLine,
+    venueCourt: row.league?.venueCourt ?? null,
+    venueAddress: row.league?.venueAddress ?? null,
     claimUrl: `${base}/i/${invite.claimToken}`,
     expiresAtLabel: invite.expiresAt
       ? fmtRelative(invite.expiresAt)
@@ -140,7 +155,11 @@ async function inviteSMSContext(
   const [row] = await db
     .select({
       game: games,
-      league: { name: leagues.name },
+      league: {
+        name: leagues.name,
+        venueName: leagues.venueName,
+        venueAddress: leagues.venueAddress,
+      },
       player: { firstName: players.firstName, cell: players.cell },
     })
     .from(gameInvites)
@@ -153,16 +172,22 @@ async function inviteSMSContext(
   if (!row || !decryptedCell) return null;
   const base = await getBaseUrl();
   const claimUrl = `${base}/i/${invite.claimToken}`;
+  const venueLabel = row.game.venue || row.league?.venueName || "";
+  const mapsUrl = row.league?.venueAddress
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(row.league.venueAddress)}`
+    : null;
   const filled = (customMessage ?? "")
     .replace(/\{firstName\}/g, row.player.firstName)
     .replace(/\{leagueName\}/g, row.league?.name ?? row.game.leagueName ?? "BDL")
     .replace(/\{gameDate\}/g, fmtGameDate(row.game.gameDate, row.game.gameTime))
-    .replace(/\{venue\}/g, row.game.venue ?? "")
+    .replace(/\{venue\}/g, venueLabel)
     .replace(/\{claimUrl\}/g, claimUrl)
     .replace(/\{expires\}/g, invite.expiresAt ? fmtRelative(invite.expiresAt) : "soon");
+  const venueLine = venueLabel ? `\n📍 ${venueLabel}` : "";
+  const mapsLine = mapsUrl ? `\nDirections: ${mapsUrl}` : "";
   const body = filled
-    ? `${filled}\n${claimUrl}`
-    : `BDL: ${row.league?.name ?? "Pickup"} — ${fmtGameDate(row.game.gameDate, row.game.gameTime)}. Claim or pass: ${claimUrl}`;
+    ? `${filled}${venueLine}${mapsLine}\n${claimUrl}`
+    : `BDL: ${row.league?.name ?? "Pickup"} — ${fmtGameDate(row.game.gameDate, row.game.gameTime)}.${venueLine}${mapsLine}\nClaim or pass: ${claimUrl}`;
   return { to: decryptedCell, body };
 }
 
