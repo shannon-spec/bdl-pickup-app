@@ -218,7 +218,7 @@ export function WhoopConsoleBody({
               }
             />
             <SummaryBlock
-              label="Avg Hard Min"
+              label="Avg Max Effort"
               hint="Z4+5"
               value={
                 summary.avgHighZone !== null
