@@ -8,7 +8,7 @@
  * of truth is the BDL game window, not Whoop's user-applied sport
  * label. Day-strain (cycle) is the fallback when no workout overlaps.
  */
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db, players, whoopCycles, whoopWorkouts } from "@/lib/db";
 
 const WHOOP_API = "https://api.prod.whoop.com";
@@ -273,13 +273,14 @@ export async function backfillWhoopWorkouts(
     const rows = cycleRecords.map((c) => {
       const start = new Date(c.start);
       const end = c.end ? new Date(c.end) : null;
-      // The cycle's "day" is the calendar date it ended (or started, if
-      // still in progress). This aligns with how BDL game dates are set.
-      const dayIso = end ? c.end! : c.start;
+      // Whoop cycles run wake-to-wake: a cycle that *ends* Saturday
+      // morning represents Friday. The cycle's `start` is the date
+      // the day's strain belongs to. (Earlier revisions used `end`,
+      // which off-set every day's strain by one.)
       return {
         playerId,
         whoopCycleId: String(c.id),
-        date: localDate(dayIso),
+        date: localDate(c.start),
         cycleStart: start,
         cycleEnd: end,
         dayStrain:
@@ -295,13 +296,24 @@ export async function backfillWhoopWorkouts(
       };
     });
     for (const batch of chunk(rows, INSERT_CHUNK)) {
-      // No target — Whoop occasionally emits two cycles for the same
-      // calendar day (sleep schedule shifts), so we want to skip on
-      // conflicts against either the cycle_id or date unique index.
+      // Update existing rows on cycle_id collision so date/strain
+      // corrections (e.g. fixing the wake-to-wake mapping) flow
+      // through on the next sync without manual data surgery.
       const inserts = await db
         .insert(whoopCycles)
         .values(batch)
-        .onConflictDoNothing()
+        .onConflictDoUpdate({
+          target: [whoopCycles.playerId, whoopCycles.whoopCycleId],
+          set: {
+            date: sql`excluded.date`,
+            cycleStart: sql`excluded.cycle_start`,
+            cycleEnd: sql`excluded.cycle_end`,
+            dayStrain: sql`excluded.day_strain`,
+            avgHr: sql`excluded.avg_hr`,
+            maxHr: sql`excluded.max_hr`,
+            calories: sql`excluded.calories`,
+          },
+        })
         .returning({ id: whoopCycles.id });
       cyclesInserted += inserts.length;
     }
