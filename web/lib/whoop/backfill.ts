@@ -14,7 +14,7 @@ import { db, players, whoopWorkouts } from "@/lib/db";
 
 const WHOOP_API = "https://api.prod.whoop.com";
 const WHOOP_TOKEN_URL = `${WHOOP_API}/oauth/oauth2/token`;
-const WORKOUT_LIST_PATH = "/developer/v1/activity/workout";
+const WORKOUT_LIST_PATH = "/developer/v2/activity/workout";
 
 /** Cutoff for the backfill. Anything older than this is dropped on
  *  the floor — the league season started in 2026. */
@@ -33,8 +33,9 @@ const PAGE_LIMIT = 25;
 
 type WhoopWorkoutResponse = {
   records?: Array<{
-    id: number;
+    id: string;
     sport_id: number;
+    sport_name?: string;
     start: string;
     end: string;
     score_state: string;
