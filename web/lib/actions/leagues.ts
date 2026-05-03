@@ -77,7 +77,47 @@ const leagueSchema = z.object({
   venueName: z.string().trim().max(120).optional().or(z.literal("")),
   venueCourt: z.string().trim().max(80).optional().or(z.literal("")),
   venueAddress: z.string().trim().max(300).optional().or(z.literal("")),
+  // Accepts "lat, lng" (or "lat,lng") with both numbers in valid range.
+  // Empty string clears the override.
+  venueCoords: z
+    .string()
+    .trim()
+    .max(80)
+    .optional()
+    .or(z.literal(""))
+    .refine(
+      (s) => {
+        const t = (s ?? "").trim();
+        if (!t) return true;
+        const m = t.match(
+          /^(-?\d+(?:\.\d+)?)[\s,]+(-?\d+(?:\.\d+)?)$/,
+        );
+        if (!m) return false;
+        const lat = parseFloat(m[1]);
+        const lng = parseFloat(m[2]);
+        return (
+          Number.isFinite(lat) &&
+          Number.isFinite(lng) &&
+          lat >= -90 &&
+          lat <= 90 &&
+          lng >= -180 &&
+          lng <= 180
+        );
+      },
+      'Coordinates must be "lat, lng" — e.g. "36.047208, -86.877487".',
+    ),
 });
+
+function parseCoords(raw: string | undefined | null): {
+  lat: number | null;
+  lng: number | null;
+} {
+  const t = (raw ?? "").trim();
+  if (!t) return { lat: null, lng: null };
+  const m = t.match(/^(-?\d+(?:\.\d+)?)[\s,]+(-?\d+(?:\.\d+)?)$/);
+  if (!m) return { lat: null, lng: null };
+  return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+}
 
 const toInt = (s?: string | null) => {
   const n = s ? parseInt(s, 10) : NaN;
@@ -147,6 +187,8 @@ export async function createLeague(formData: FormData): Promise<ActionResult<{ i
       venueName: nullable(v.venueName),
       venueCourt: nullable(v.venueCourt),
       venueAddress: nullable(v.venueAddress),
+      venueLat: parseCoords(v.venueCoords).lat,
+      venueLng: parseCoords(v.venueCoords).lng,
     })
     .returning({ id: leagues.id });
 
@@ -206,6 +248,8 @@ export async function updateLeague(
       venueName: nullable(v.venueName),
       venueCourt: nullable(v.venueCourt),
       venueAddress: nullable(v.venueAddress),
+      venueLat: parseCoords(v.venueCoords).lat,
+      venueLng: parseCoords(v.venueCoords).lng,
     })
     .where(eq(leagues.id, id));
   revalidatePath("/leagues");

@@ -18,6 +18,7 @@ import {
   varchar,
   integer,
   real,
+  doublePrecision,
   boolean,
   timestamp,
   date,
@@ -216,9 +217,14 @@ export const leagues = pgTable("leagues", {
   // Venue — surfaced on the league detail page with a Google Maps
   // embed when an address is set. Court lets you disambiguate when a
   // gym has multiple floors (e.g. "Court 2 — North side").
+  // Coordinates are an optional override for venues with large
+  // footprints (campuses, parks) where the address pin lands far from
+  // the actual gym entrance.
   venueName: text("venue_name"),
   venueCourt: text("venue_court"),
   venueAddress: text("venue_address"),
+  venueLat: doublePrecision("venue_lat"),
+  venueLng: doublePrecision("venue_lng"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()

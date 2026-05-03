@@ -98,6 +98,8 @@ export async function createInvite(
       venueName: leagues.venueName,
       venueCourt: leagues.venueCourt,
       venueAddress: leagues.venueAddress,
+      venueLat: leagues.venueLat,
+      venueLng: leagues.venueLng,
     })
     .from(leagues)
     .where(eq(leagues.id, v.leagueId))
@@ -157,6 +159,10 @@ export async function createInvite(
       venueName: league.venueName,
       venueCourt: league.venueCourt,
       venueAddress: league.venueAddress,
+      venueMapsTarget:
+        league.venueLat !== null && league.venueLng !== null
+          ? `${league.venueLat},${league.venueLng}`
+          : league.venueAddress,
     });
 
     return {

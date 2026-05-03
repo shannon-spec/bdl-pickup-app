@@ -13,22 +13,36 @@ export function LeagueVenueCard({
   venueName,
   venueCourt,
   venueAddress,
+  venueLat,
+  venueLng,
 }: {
   venueName: string | null;
   venueCourt: string | null;
   venueAddress: string | null;
+  venueLat: number | null;
+  venueLng: number | null;
 }) {
   // Render nothing when no venue info exists at all — keeps the page
   // clean for leagues that haven't filled in a location yet.
-  if (!venueName && !venueCourt && !venueAddress) return null;
+  if (!venueName && !venueCourt && !venueAddress && venueLat === null) {
+    return null;
+  }
+
+  // Pin precedence: explicit coordinates > address. Coords win because
+  // they target the specific gym door on big campuses where address
+  // geocoding lands at the property edge.
+  const hasCoords = venueLat !== null && venueLng !== null;
+  const pinQuery = hasCoords
+    ? `${venueLat},${venueLng}`
+    : (venueAddress ?? "").trim();
 
   const apiKey = process.env.GOOGLE_MAPS_EMBED_KEY;
   const embedUrl =
-    apiKey && venueAddress
-      ? `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${encodeURIComponent(venueAddress)}`
+    apiKey && pinQuery
+      ? `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${encodeURIComponent(pinQuery)}`
       : null;
-  const externalUrl = venueAddress
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venueAddress)}`
+  const externalUrl = pinQuery
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pinQuery)}`
     : null;
 
   return (

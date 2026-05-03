@@ -30,8 +30,12 @@ export type InviteEmailContext = {
   venue: string | null;
   /** League-configured gym/court (falls back to `venue` when unset). */
   venueCourt?: string | null;
-  /** Street address used for the directions link + maps CTA. */
+  /** Street address shown in the body for human reading. */
   venueAddress?: string | null;
+  /** Target for the Google Maps directions link — typically the
+   *  address, but coordinates win when the league set a pin override
+   *  (large campuses where the address geocodes off-target). */
+  venueMapsTarget?: string | null;
   claimUrl: string;
   expiresAtLabel: string; // "in 2h" or absolute time
   teamAName: string;
@@ -108,7 +112,8 @@ const fillTemplate = (s: string, ctx: InviteEmailContext) =>
 function venueBlock(ctx: InviteEmailContext): { text: string; html: string } {
   const gymLine = ctx.venue || ctx.venueCourt || null;
   const address = ctx.venueAddress?.trim() || null;
-  const mapsUrl = googleMapsUrl(address);
+  const mapsTarget = ctx.venueMapsTarget?.trim() || address;
+  const mapsUrl = googleMapsUrl(mapsTarget);
   if (!gymLine && !address) return { text: "", html: "" };
 
   const text =
@@ -283,6 +288,8 @@ export type LeagueJoinEmailContext = {
   venueName?: string | null;
   venueCourt?: string | null;
   venueAddress?: string | null;
+  /** Coordinate override for the directions link only. */
+  venueMapsTarget?: string | null;
 };
 
 export function sendLeagueJoinInvite(ctx: LeagueJoinEmailContext) {
@@ -294,7 +301,8 @@ export function sendLeagueJoinInvite(ctx: LeagueJoinEmailContext) {
   const gymLine =
     [ctx.venueName, ctx.venueCourt].filter(Boolean).join(" · ") || null;
   const address = ctx.venueAddress?.trim() || null;
-  const mapsUrl = googleMapsUrl(address);
+  const mapsTarget = ctx.venueMapsTarget?.trim() || address;
+  const mapsUrl = googleMapsUrl(mapsTarget);
 
   const venueText =
     gymLine || address

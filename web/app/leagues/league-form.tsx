@@ -347,7 +347,7 @@ export function LeagueForm({
             />
           </Field>
         </Row>
-        <Field label="Address" hint="renders a Google Map">
+        <Field label="Address" hint="shown in card + invites">
           <input
             name="venueAddress"
             defaultValue={editing?.venueAddress ?? ""}
@@ -355,6 +355,30 @@ export function LeagueForm({
             placeholder="1500 E Berry St, Fort Worth, TX 76105"
           />
         </Field>
+        <Field
+          label="Pin override (optional)"
+          hint="lat, lng — exact gym door"
+        >
+          <input
+            name="venueCoords"
+            defaultValue={
+              editing?.venueLat !== null &&
+              editing?.venueLat !== undefined &&
+              editing?.venueLng !== null &&
+              editing?.venueLng !== undefined
+                ? `${editing.venueLat}, ${editing.venueLng}`
+                : ""
+            }
+            className={inputCx}
+            placeholder="36.047208, -86.877487"
+          />
+        </Field>
+        <p className="text-[11.5px] text-[color:var(--text-3)] leading-relaxed mt-0.5">
+          Coordinates override the address only for the map pin. Big
+          campuses, parks, and complexes often geocode to the property
+          edge — paste lat/lng (right-click any spot in Google Maps →
+          first row) to land directly at the gym door.
+        </p>
       </div>
 
       <Field label="Description">

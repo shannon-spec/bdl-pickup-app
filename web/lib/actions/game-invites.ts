@@ -103,6 +103,8 @@ async function inviteEmailContext(
         venueName: leagues.venueName,
         venueCourt: leagues.venueCourt,
         venueAddress: leagues.venueAddress,
+        venueLat: leagues.venueLat,
+        venueLng: leagues.venueLng,
       },
       player: {
         firstName: players.firstName,
@@ -126,6 +128,15 @@ async function inviteEmailContext(
       .filter(Boolean)
       .join(" · ") ||
     null;
+  // Coordinates override the address for the map pin only — invitees
+  // still see the typed address in the body, but the directions link
+  // points at the exact gym door.
+  const lat = row.league?.venueLat ?? null;
+  const lng = row.league?.venueLng ?? null;
+  const pinTarget =
+    lat !== null && lng !== null
+      ? `${lat},${lng}`
+      : row.league?.venueAddress ?? null;
   return {
     to: decryptedEmail,
     firstName: row.player.firstName,
@@ -134,6 +145,7 @@ async function inviteEmailContext(
     venue: gymLine,
     venueCourt: row.league?.venueCourt ?? null,
     venueAddress: row.league?.venueAddress ?? null,
+    venueMapsTarget: pinTarget,
     claimUrl: `${base}/i/${invite.claimToken}`,
     expiresAtLabel: invite.expiresAt
       ? fmtRelative(invite.expiresAt)
@@ -159,6 +171,8 @@ async function inviteSMSContext(
         name: leagues.name,
         venueName: leagues.venueName,
         venueAddress: leagues.venueAddress,
+        venueLat: leagues.venueLat,
+        venueLng: leagues.venueLng,
       },
       player: { firstName: players.firstName, cell: players.cell },
     })
@@ -173,8 +187,14 @@ async function inviteSMSContext(
   const base = await getBaseUrl();
   const claimUrl = `${base}/i/${invite.claimToken}`;
   const venueLabel = row.game.venue || row.league?.venueName || "";
-  const mapsUrl = row.league?.venueAddress
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(row.league.venueAddress)}`
+  const smsLat = row.league?.venueLat ?? null;
+  const smsLng = row.league?.venueLng ?? null;
+  const mapsTarget =
+    smsLat !== null && smsLng !== null
+      ? `${smsLat},${smsLng}`
+      : row.league?.venueAddress ?? null;
+  const mapsUrl = mapsTarget
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsTarget)}`
     : null;
   const filled = (customMessage ?? "")
     .replace(/\{firstName\}/g, row.player.firstName)

@@ -232,6 +232,8 @@ export default async function LeagueDetailPage({
           venueName={detail.league.venueName}
           venueCourt={detail.league.venueCourt}
           venueAddress={detail.league.venueAddress}
+          venueLat={detail.league.venueLat}
+          venueLng={detail.league.venueLng}
         />
 
         <CommissionerStrip leagueId={detail.league.id} />
