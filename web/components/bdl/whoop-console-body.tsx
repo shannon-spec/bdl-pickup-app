@@ -145,13 +145,41 @@ export function WhoopConsoleBody({
   }, [filtered]);
 
   // "Last Game Strain" should represent an actual game session, so
-  // skip DAY rows here too. Same rule for the "Last Game" pillar in the
-  // BDL Score hero.
+  // skip DAY rows here too.
   const lastWithStrain =
     filtered.find((m) => m.source === "workout" && m.strain !== null) ?? null;
-  const lastScored =
-    filtered.find((m) => m.source === "workout" && m.performanceScore !== null) ??
-    null;
+
+  // BDL Max Effort hero is a *YTD anchor* — Season Avg, Last Game, and
+  // All Time Best all reflect the full year regardless of the MTD/YTD
+  // toggle on the table. The toggle controls the table & supporting
+  // averages; the hero stays put so a player can sanity-check today's
+  // game against their season-long baseline.
+  const ytdScored = useMemo(() => {
+    const start = new Date(new Date().getFullYear(), 0, 1);
+    return sourceMetrics.filter(
+      (m) => m.source === "workout" && new Date(m.date) >= start,
+    );
+  }, [sourceMetrics]);
+
+  const ytdHero = useMemo(() => {
+    const avgScore = avg(ytdScored.map((m) => m.performanceScore));
+    const bestScore = ytdScored.reduce<number | null>(
+      (best, m) =>
+        m.performanceScore !== null && m.performanceScore > (best ?? -1)
+          ? m.performanceScore
+          : best,
+      null,
+    );
+    const lastScore =
+      ytdScored.find((m) => m.performanceScore !== null)?.performanceScore ??
+      null;
+    return {
+      avgScore,
+      bestScore,
+      lastScore,
+      scoredCount: ytdScored.length,
+    };
+  }, [ytdScored]);
 
   return (
     <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6 flex flex-col gap-5">
@@ -214,12 +242,11 @@ export function WhoopConsoleBody({
       {connected && sourceMetrics.length > 0 && (
         <>
           <BdlScoreHero
-            avgScore={summary.avgScore}
-            lastScore={lastScored?.performanceScore ?? null}
-            bestScore={summary.bestScore}
-            scoredCount={summary.scoredCount}
+            avgScore={ytdHero.avgScore}
+            lastScore={ytdHero.lastScore}
+            bestScore={ytdHero.bestScore}
+            scoredCount={ytdHero.scoredCount}
             scope={scope}
-            range={range}
           />
           <div className="grid grid-cols-4 gap-3 max-md:grid-cols-2">
             <SummaryBlock
@@ -640,14 +667,12 @@ function BdlScoreHero({
   bestScore,
   scoredCount,
   scope,
-  range,
 }: {
   avgScore: number | null;
   lastScore: number | null;
   bestScore: number | null;
   scoredCount: number;
   scope: "league" | "other";
-  range: Range;
 }) {
   const noun = scope === "league" ? "Game" : "Session";
   return (
@@ -661,7 +686,7 @@ function BdlScoreHero({
         </h3>
         <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-4)]">
           {scoredCount} {noun}
-          {scoredCount === 1 ? "" : "s"} · {range}
+          {scoredCount === 1 ? "" : "s"} · YTD
         </p>
       </div>
 
