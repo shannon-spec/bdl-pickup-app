@@ -138,7 +138,16 @@ export async function getPlayerWhoopGameMetrics(
       .where(eq(whoopCycles.playerId, playerId)),
   ]);
 
-  const cycleByDate = new Map(cycles.map((c) => [c.date, c]));
+  // Whoop can emit multiple cycles per calendar day during sleep
+  // schedule shifts. When collapsing, keep the one with the highest
+  // day_strain — that's the one that captured the active session.
+  const cycleByDate = new Map<string, (typeof cycles)[number]>();
+  for (const c of cycles) {
+    const existing = cycleByDate.get(c.date);
+    if (!existing || (c.dayStrain ?? -1) > (existing.dayStrain ?? -1)) {
+      cycleByDate.set(c.date, c);
+    }
+  }
 
   // 3) For each game, find the best-matching workout.
   return gamesWithWindow.map((g): WhoopGameMetric => {

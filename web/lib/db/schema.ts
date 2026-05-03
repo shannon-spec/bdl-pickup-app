@@ -779,7 +779,10 @@ export const whoopCycles = pgTable(
       t.playerId,
       t.whoopCycleId,
     ),
-    uniqueIndex("whoop_cycles_player_date_uq").on(t.playerId, t.date),
+    // Non-unique: Whoop can emit multiple cycles per calendar day when
+    // a sleep schedule shifts. Date is queried frequently by the
+    // game-pairing join so we still want it indexed.
+    index("whoop_cycles_player_date_idx").on(t.playerId, t.date),
   ],
 );
 

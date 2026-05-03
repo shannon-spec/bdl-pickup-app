@@ -295,12 +295,13 @@ export async function backfillWhoopWorkouts(
       };
     });
     for (const batch of chunk(rows, INSERT_CHUNK)) {
+      // No target — Whoop occasionally emits two cycles for the same
+      // calendar day (sleep schedule shifts), so we want to skip on
+      // conflicts against either the cycle_id or date unique index.
       const inserts = await db
         .insert(whoopCycles)
         .values(batch)
-        .onConflictDoNothing({
-          target: [whoopCycles.playerId, whoopCycles.whoopCycleId],
-        })
+        .onConflictDoNothing()
         .returning({ id: whoopCycles.id });
       cyclesInserted += inserts.length;
     }

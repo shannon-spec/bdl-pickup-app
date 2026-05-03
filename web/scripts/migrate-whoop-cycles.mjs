@@ -37,8 +37,13 @@ await sql`
   CREATE UNIQUE INDEX IF NOT EXISTS whoop_cycles_player_cycle_uq
   ON whoop_cycles (player_id, whoop_cycle_id)
 `;
+// Earlier revisions of this script created a unique index on
+// (player_id, date). Whoop emits multiple cycles per calendar day
+// during sleep-schedule shifts, so the unique constraint blocked
+// upserts. Drop it if present and replace with a non-unique index.
+await sql`DROP INDEX IF EXISTS whoop_cycles_player_date_uq`;
 await sql`
-  CREATE UNIQUE INDEX IF NOT EXISTS whoop_cycles_player_date_uq
+  CREATE INDEX IF NOT EXISTS whoop_cycles_player_date_idx
   ON whoop_cycles (player_id, date)
 `;
 
