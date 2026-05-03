@@ -329,14 +329,13 @@ export function WhoopConsoleBody({
             </p>
           ) : (
             <div className="flex flex-col divide-y divide-[color:var(--hairline)]">
-              <div className="grid grid-cols-[1fr_44px_56px_48px_64px_60px_60px_60px_92px] gap-3 pb-2 text-[10px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
+              <div className="grid grid-cols-[1fr_44px_56px_48px_64px_84px_60px_92px] gap-3 pb-2 text-[10px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
                 <span>Game</span>
                 <span className="text-right">W/L</span>
                 <span className="text-right">Source</span>
                 <span className="text-right">Score</span>
                 <span className="text-right">Strain</span>
-                <span className="text-right">Avg HR</span>
-                <span className="text-right">Max HR</span>
+                <span className="text-right">Avg / Max HR</span>
                 <span className="text-right">Cal</span>
                 <span className="text-right">Z4+5</span>
               </div>
@@ -345,7 +344,7 @@ export function WhoopConsoleBody({
                 return (
                   <div
                     key={m.gameId}
-                    className="grid grid-cols-[1fr_44px_56px_48px_64px_60px_60px_60px_92px] gap-3 items-center py-3"
+                    className="grid grid-cols-[1fr_44px_56px_48px_64px_84px_60px_92px] gap-3 items-center py-3"
                   >
                     <div className="flex flex-col gap-0.5 min-w-0">
                       <span className="text-[13px] font-semibold truncate">
@@ -358,7 +357,7 @@ export function WhoopConsoleBody({
                     </div>
                     {isUpcoming ? (
                       <div
-                        className="col-span-8 flex justify-end"
+                        className="col-span-7 flex justify-end"
                         aria-label="Upcoming game"
                       >
                         <UpcomingPill />
@@ -389,10 +388,11 @@ export function WhoopConsoleBody({
                           )}
                         </div>
                         <span className="font-[family-name:var(--mono)] num text-[13px] text-right">
-                          {m.avgHr ?? "—"}
-                        </span>
-                        <span className="font-[family-name:var(--mono)] num text-[13px] font-bold text-right">
-                          {m.maxHr ?? "—"}
+                          <span>{m.avgHr ?? "—"}</span>
+                          <span className="text-[color:var(--text-4)] font-normal mx-0.5">
+                            /
+                          </span>
+                          <span className="font-bold">{m.maxHr ?? "—"}</span>
                         </span>
                         <span
                           className="font-[family-name:var(--mono)] num text-[12px] font-bold text-right"
