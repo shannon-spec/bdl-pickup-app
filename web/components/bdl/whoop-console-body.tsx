@@ -322,7 +322,14 @@ export function WhoopConsoleBody({
                         </div>
                         <div className="flex justify-end">
                           {m.strain !== null ? (
-                            <span className="font-[family-name:var(--mono)] font-bold text-[13px] num">
+                            <span
+                              className="font-[family-name:var(--mono)] font-bold text-[13px] num"
+                              style={{
+                                color: aboveAvg(m.strain, summary.avgStrain)
+                                  ? "var(--up)"
+                                  : undefined,
+                              }}
+                            >
                               {m.strain.toFixed(1)}
                             </span>
                           ) : (
@@ -335,12 +342,23 @@ export function WhoopConsoleBody({
                         <span className="font-[family-name:var(--mono)] num text-[13px] font-bold text-right">
                           {m.maxHr ?? "—"}
                         </span>
-                        <span className="font-[family-name:var(--mono)] num text-[12px] text-[color:var(--text-3)] text-right">
+                        <span
+                          className="font-[family-name:var(--mono)] num text-[12px] font-bold text-right"
+                          style={{
+                            color: aboveAvg(m.calories, summary.avgCal)
+                              ? "var(--up)"
+                              : "var(--text-3)",
+                          }}
+                        >
                           {m.calories ?? "—"}
                         </span>
                         <HighZoneCell
                           highZoneMin={m.highZoneMin}
                           durationMin={m.durationMin}
+                          highlight={aboveAvg(
+                            m.highZoneMin,
+                            summary.avgHighZone,
+                          )}
                         />
                       </>
                     )}
@@ -486,12 +504,23 @@ function OutcomeBadge({ outcome }: { outcome: "W" | "L" | "T" | null }) {
   );
 }
 
+function aboveAvg(
+  value: number | null | undefined,
+  average: number | null | undefined,
+): boolean {
+  if (value === null || value === undefined) return false;
+  if (average === null || average === undefined) return false;
+  return value > average;
+}
+
 function HighZoneCell({
   highZoneMin,
   durationMin,
+  highlight,
 }: {
   highZoneMin: number | null;
   durationMin: number | null;
+  highlight?: boolean;
 }) {
   if (highZoneMin === null) {
     return (
@@ -504,8 +533,9 @@ function HighZoneCell({
     durationMin && durationMin > 0
       ? Math.round((highZoneMin / durationMin) * 100)
       : null;
-  // Color the percentage by intensity band — basketball typically
-  // sits 30–55% Z4+5; anything higher is genuinely all-out.
+  // Percentage color band — independent of the above-avg highlight on
+  // the minutes, since the % is a workload-shape signal regardless of
+  // how it compares to your own average.
   const pctColor =
     pct === null
       ? "var(--text-3)"
@@ -518,7 +548,10 @@ function HighZoneCell({
             : "var(--text-3)";
   return (
     <div className="flex flex-col items-end gap-0 leading-tight">
-      <span className="font-[family-name:var(--mono)] num text-[13px] font-bold">
+      <span
+        className="font-[family-name:var(--mono)] num text-[13px] font-bold"
+        style={{ color: highlight ? "var(--up)" : undefined }}
+      >
         {highZoneMin}
         <span className="text-[10px] text-[color:var(--text-4)] ml-0.5 font-semibold">
           m
