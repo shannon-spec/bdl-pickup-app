@@ -700,13 +700,14 @@ export const passwordResetTokens = pgTable(
 /* ============== WHOOP WORKOUTS ============== */
 
 /**
- * Whoop workout records pulled via the Whoop developer API and
- * filtered to basketball sessions. Backfilled on first connect, then
- * topped up by Sync Now from the profile. Idempotent on
- * (player_id, whoop_workout_id) so re-syncing is safe.
+ * Whoop workout records pulled via the Whoop developer API. We pull
+ * every workout (not just basketball) because BDL pairs strain to its
+ * own scheduled games by time-overlap, not by Whoop's sport tag —
+ * users frequently fail to label sessions in the Whoop app, and the
+ * scheduled BDL game window is the source of truth.
  *
- * Strain/HR/calories fields are nullable since SCORED state isn't
- * guaranteed for every record (in-progress sessions, partial recordings).
+ * Backfilled on first connect, then topped up by Sync Now. Idempotent
+ * on (player_id, whoop_workout_id) so re-syncing is safe.
  */
 export const whoopWorkouts = pgTable(
   "whoop_workouts",
@@ -715,11 +716,13 @@ export const whoopWorkouts = pgTable(
     playerId: uuid("player_id")
       .notNull()
       .references(() => players.id, { onDelete: "cascade" }),
-    /** Whoop's own workout ID (numeric). Stored as text to dodge
-     *  bigint/precision pitfalls. */
+    /** Whoop's own workout ID. V2 returns a UUID string. */
     whoopWorkoutId: text("whoop_workout_id").notNull(),
     /** Workout start timestamp from Whoop. */
     date: timestamp("date", { withTimezone: true }).notNull(),
+    /** Workout end timestamp — used for time-overlap matching against
+     *  scheduled BDL games. */
+    endDate: timestamp("end_date", { withTimezone: true }),
     durationMin: integer("duration_min"),
     /** Whoop strain (0–21). Stored 1 decimal. */
     strain: real("strain"),
@@ -728,6 +731,7 @@ export const whoopWorkouts = pgTable(
     /** Calories computed from kilojoules at fetch time. */
     calories: integer("calories"),
     sportId: integer("sport_id"),
+    sportName: text("sport_name"),
     syncedAt: timestamp("synced_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -738,6 +742,44 @@ export const whoopWorkouts = pgTable(
       t.whoopWorkoutId,
     ),
     index("whoop_workouts_player_date_idx").on(t.playerId, t.date),
+  ],
+);
+
+/**
+ * Whoop daily cycles. One row per (player, calendar day). Captures
+ * "day strain" — the whole-day strain Whoop computes from heart-rate
+ * elevation across all activity. Used as a fallback when no workout
+ * record overlaps a scheduled BDL game.
+ */
+export const whoopCycles = pgTable(
+  "whoop_cycles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    /** Whoop's cycle id. */
+    whoopCycleId: text("whoop_cycle_id").notNull(),
+    /** Calendar date the cycle ends on, in the cycle's local timezone.
+     *  This is what BDL game dates align with. */
+    date: date("date").notNull(),
+    /** Cycle window — used if we ever need finer-grained matching. */
+    cycleStart: timestamp("cycle_start", { withTimezone: true }),
+    cycleEnd: timestamp("cycle_end", { withTimezone: true }),
+    dayStrain: real("day_strain"),
+    avgHr: integer("avg_hr"),
+    maxHr: integer("max_hr"),
+    calories: integer("calories"),
+    syncedAt: timestamp("synced_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("whoop_cycles_player_cycle_uq").on(
+      t.playerId,
+      t.whoopCycleId,
+    ),
+    uniqueIndex("whoop_cycles_player_date_uq").on(t.playerId, t.date),
   ],
 );
 
@@ -842,6 +884,8 @@ export type Message = typeof messages.$inferSelect;
 export type NewMessage = typeof messages.$inferInsert;
 export type WhoopWorkout = typeof whoopWorkouts.$inferSelect;
 export type NewWhoopWorkout = typeof whoopWorkouts.$inferInsert;
+export type WhoopCycle = typeof whoopCycles.$inferSelect;
+export type NewWhoopCycle = typeof whoopCycles.$inferInsert;
 
 // Suppress an unused-symbol warning when this file is imported as types-only.
 export const __schemaSqlMarker = sql`/* schema */`;

@@ -1,52 +1,55 @@
 /**
- * Whoop backfill — pulls every basketball workout from Jan 1, 2026
- * forward via the Whoop developer API and upserts into whoop_workouts.
+ * Whoop backfill — pulls every workout AND every daily cycle since
+ * Jan 1, 2026 via the Whoop developer API V2 and upserts into
+ * whoop_workouts / whoop_cycles.
  *
- * The cutoff is intentional: BDL doesn't care about pre-2026 sessions
- * since the league rosters and game history all start in this season.
- *
- * Pagination follows the `next_token` cursor returned by Whoop until
- * we run out of records. Token refresh is handled inline so a stale
- * access token doesn't abort a long backfill.
+ * We intentionally pull *all* workouts (not just basketball). BDL
+ * pairs strain to its scheduled games by time-overlap, so the source
+ * of truth is the BDL game window, not Whoop's user-applied sport
+ * label. Day-strain (cycle) is the fallback when no workout overlaps.
  */
 import { eq } from "drizzle-orm";
-import { db, players, whoopWorkouts } from "@/lib/db";
+import { db, players, whoopCycles, whoopWorkouts } from "@/lib/db";
 
 const WHOOP_API = "https://api.prod.whoop.com";
 const WHOOP_TOKEN_URL = `${WHOOP_API}/oauth/oauth2/token`;
 const WORKOUT_LIST_PATH = "/developer/v2/activity/workout";
+const CYCLE_LIST_PATH = "/developer/v2/cycle";
 
-/** Cutoff for the backfill. Anything older than this is dropped on
- *  the floor — the league season started in 2026. */
 const BACKFILL_START = "2026-01-01T00:00:00.000Z";
-
-/** V2 returns a stable lowercased `sport_name` string. Filter on that
- *  rather than the integer sport_id, which has drifted between API
- *  versions and is not reliably documented for basketball. */
-const BASKETBALL_SPORT_NAME = "basketball";
-
-/** Hard cap on pages so a runaway loop can't pin the function for
- *  longer than the platform's invocation timeout. 50 pages * 25
- *  records = 1,250 workouts which is comfortably more than a single
- *  player can post in 12 months of basketball. */
 const MAX_PAGES = 50;
 const PAGE_LIMIT = 25;
 
-type WhoopWorkoutResponse = {
-  records?: Array<{
-    id: string;
-    sport_id: number;
-    sport_name?: string;
-    start: string;
-    end: string;
-    score_state: string;
-    score?: {
-      strain?: number;
-      average_heart_rate?: number;
-      max_heart_rate?: number;
-      kilojoule?: number;
-    };
-  }>;
+type WhoopWorkoutRecord = {
+  id: string;
+  sport_id: number;
+  sport_name?: string;
+  start: string;
+  end: string;
+  score_state: string;
+  score?: {
+    strain?: number;
+    average_heart_rate?: number;
+    max_heart_rate?: number;
+    kilojoule?: number;
+  };
+};
+
+type WhoopCycleRecord = {
+  id: number | string;
+  start: string;
+  end?: string | null;
+  score_state: string;
+  score?: {
+    strain?: number;
+    kilojoule?: number;
+    average_heart_rate?: number;
+    max_heart_rate?: number;
+  };
+};
+
+type WhoopPaged<T> = {
+  records?: T[];
   next_token?: string | null;
 };
 
@@ -54,8 +57,8 @@ export type BackfillResult =
   | {
       ok: true;
       pagesFetched: number;
-      basketballSeen: number;
-      inserted: number;
+      workoutsInserted: number;
+      cyclesInserted: number;
       lastSyncAt: Date;
     }
   | { ok: false; error: string };
@@ -97,11 +100,58 @@ async function refreshAccessToken(
   return tokens.access_token;
 }
 
-/**
- * Pull every basketball workout for a player since BACKFILL_START and
- * upsert into whoop_workouts. Safe to call repeatedly — the unique
- * index on (player_id, whoop_workout_id) keeps re-runs idempotent.
- */
+async function fetchAllPages<T>(
+  basePath: string,
+  accessToken: string,
+  refreshFn: () => Promise<string | null>,
+): Promise<{ records: T[]; pages: number } | { error: string }> {
+  let nextToken: string | null = null;
+  let pages = 0;
+  let token = accessToken;
+  const out: T[] = [];
+
+  while (pages < MAX_PAGES) {
+    const params = new URLSearchParams({
+      limit: String(PAGE_LIMIT),
+      start: BACKFILL_START,
+    });
+    if (nextToken) params.set("nextToken", nextToken);
+
+    const url = `${WHOOP_API}${basePath}?${params.toString()}`;
+    let res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (res.status === 401) {
+      const refreshed = await refreshFn();
+      if (refreshed) {
+        token = refreshed;
+        res = await fetch(url, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+    }
+
+    if (!res.ok) {
+      return { error: `Whoop ${basePath} ${res.status} on page ${pages + 1}` };
+    }
+
+    const data = (await res.json()) as WhoopPaged<T>;
+    out.push(...(data.records ?? []));
+    pages += 1;
+    nextToken = data.next_token ?? null;
+    if (!nextToken) break;
+  }
+
+  return { records: out, pages };
+}
+
+function localDate(iso: string): string {
+  // YYYY-MM-DD slice — Whoop's start/end are ISO with timezone offset
+  // and the "day" of a cycle is its end date. Use UTC-stable slice.
+  return iso.slice(0, 10);
+}
+
 export async function backfillWhoopWorkouts(
   playerId: string,
 ): Promise<BackfillResult> {
@@ -119,8 +169,6 @@ export async function backfillWhoopWorkouts(
     return { ok: false, error: "Whoop not connected for this player." };
   }
 
-  // Refresh proactively when within 5 minutes of expiry; the long
-  // backfill should not be interrupted by a mid-loop 401.
   let accessToken = player.whoopAccessToken;
   if (
     player.whoopRefreshToken &&
@@ -134,94 +182,99 @@ export async function backfillWhoopWorkouts(
     if (refreshed) accessToken = refreshed;
   }
 
-  let nextToken: string | null = null;
-  let pagesFetched = 0;
-  let basketballSeen = 0;
-  let inserted = 0;
+  const refreshFn = async (): Promise<string | null> => {
+    if (!player.whoopRefreshToken) return null;
+    const fresh = await refreshAccessToken(playerId, player.whoopRefreshToken);
+    if (fresh) accessToken = fresh;
+    return fresh;
+  };
 
-  while (pagesFetched < MAX_PAGES) {
-    const params = new URLSearchParams({
-      limit: String(PAGE_LIMIT),
-      start: BACKFILL_START,
-    });
-    if (nextToken) params.set("nextToken", nextToken);
+  const workoutPages = await fetchAllPages<WhoopWorkoutRecord>(
+    WORKOUT_LIST_PATH,
+    accessToken,
+    refreshFn,
+  );
+  if ("error" in workoutPages) return { ok: false, error: workoutPages.error };
 
-    const url = `${WHOOP_API}${WORKOUT_LIST_PATH}?${params.toString()}`;
-    let res = await fetch(url, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+  const cyclePages = await fetchAllPages<WhoopCycleRecord>(
+    CYCLE_LIST_PATH,
+    accessToken,
+    refreshFn,
+  );
+  if ("error" in cyclePages) return { ok: false, error: cyclePages.error };
 
-    // One-shot retry on 401 in case the token expired mid-backfill.
-    if (res.status === 401 && player.whoopRefreshToken) {
-      const refreshed = await refreshAccessToken(
-        playerId,
-        player.whoopRefreshToken,
-      );
-      if (refreshed) {
-        accessToken = refreshed;
-        res = await fetch(url, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-      }
-    }
-
-    if (!res.ok) {
+  let workoutsInserted = 0;
+  if (workoutPages.records.length > 0) {
+    const rows = workoutPages.records.map((w) => {
+      const start = new Date(w.start);
+      const end = new Date(w.end);
       return {
-        ok: false,
-        error: `Whoop API ${res.status} on page ${pagesFetched + 1}`,
+        playerId,
+        whoopWorkoutId: String(w.id),
+        date: start,
+        endDate: end,
+        durationMin: Math.max(
+          0,
+          Math.round((end.getTime() - start.getTime()) / 60000),
+        ),
+        strain:
+          typeof w.score?.strain === "number"
+            ? Math.round(w.score.strain * 10) / 10
+            : null,
+        avgHr: w.score?.average_heart_rate ?? null,
+        maxHr: w.score?.max_heart_rate ?? null,
+        calories:
+          typeof w.score?.kilojoule === "number"
+            ? Math.round(w.score.kilojoule * 0.239)
+            : null,
+        sportId: w.sport_id ?? null,
+        sportName: w.sport_name ?? null,
       };
-    }
+    });
+    const inserts = await db
+      .insert(whoopWorkouts)
+      .values(rows)
+      .onConflictDoNothing({
+        target: [whoopWorkouts.playerId, whoopWorkouts.whoopWorkoutId],
+      })
+      .returning({ id: whoopWorkouts.id });
+    workoutsInserted = inserts.length;
+  }
 
-    const data = (await res.json()) as WhoopWorkoutResponse;
-    const records = data.records ?? [];
-    pagesFetched += 1;
-
-    const basketball = records.filter(
-      (w) => w.sport_name?.toLowerCase() === BASKETBALL_SPORT_NAME,
-    );
-    basketballSeen += basketball.length;
-
-    if (basketball.length > 0) {
-      const rows = basketball.map((w) => {
-        const start = new Date(w.start);
-        const end = new Date(w.end);
-        return {
-          playerId,
-          whoopWorkoutId: String(w.id),
-          date: start,
-          durationMin: Math.max(
-            0,
-            Math.round((end.getTime() - start.getTime()) / 60000),
-          ),
-          strain:
-            typeof w.score?.strain === "number"
-              ? Math.round(w.score.strain * 10) / 10
-              : null,
-          avgHr: w.score?.average_heart_rate ?? null,
-          maxHr: w.score?.max_heart_rate ?? null,
-          calories:
-            typeof w.score?.kilojoule === "number"
-              ? Math.round(w.score.kilojoule * 0.239)
-              : null,
-          sportId: w.sport_id,
-        };
-      });
-
-      const inserts = await db
-        .insert(whoopWorkouts)
-        .values(rows)
-        .onConflictDoNothing({
-          target: [
-            whoopWorkouts.playerId,
-            whoopWorkouts.whoopWorkoutId,
-          ],
-        })
-        .returning({ id: whoopWorkouts.id });
-      inserted += inserts.length;
-    }
-
-    nextToken = data.next_token ?? null;
-    if (!nextToken) break;
+  let cyclesInserted = 0;
+  if (cyclePages.records.length > 0) {
+    const rows = cyclePages.records.map((c) => {
+      const start = new Date(c.start);
+      const end = c.end ? new Date(c.end) : null;
+      // The cycle's "day" is the calendar date it ended (or started, if
+      // still in progress). This aligns with how BDL game dates are set.
+      const dayIso = end ? c.end! : c.start;
+      return {
+        playerId,
+        whoopCycleId: String(c.id),
+        date: localDate(dayIso),
+        cycleStart: start,
+        cycleEnd: end,
+        dayStrain:
+          typeof c.score?.strain === "number"
+            ? Math.round(c.score.strain * 10) / 10
+            : null,
+        avgHr: c.score?.average_heart_rate ?? null,
+        maxHr: c.score?.max_heart_rate ?? null,
+        calories:
+          typeof c.score?.kilojoule === "number"
+            ? Math.round(c.score.kilojoule * 0.239)
+            : null,
+      };
+    });
+    const inserts = await db
+      .insert(whoopCycles)
+      .values(rows)
+      .onConflictDoNothing({
+        target: [whoopCycles.playerId, whoopCycles.whoopCycleId],
+      })
+      .returning({ id: whoopCycles.id });
+    cyclesInserted = inserts.length;
   }
 
   const now = new Date();
@@ -232,9 +285,9 @@ export async function backfillWhoopWorkouts(
 
   return {
     ok: true,
-    pagesFetched,
-    basketballSeen,
-    inserted,
+    pagesFetched: workoutPages.pages + cyclePages.pages,
+    workoutsInserted,
+    cyclesInserted,
     lastSyncAt: now,
   };
 }

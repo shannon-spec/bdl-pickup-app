@@ -48,6 +48,7 @@ const TABLES = [
   "player_grades",
   "password_reset_tokens",
   "whoop_workouts",
+  "whoop_cycles",
 ];
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

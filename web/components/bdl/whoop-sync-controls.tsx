@@ -53,8 +53,14 @@ export function WhoopSyncControls({
           );
           return;
         }
-        if (typeof data.inserted === "number" && data.inserted > 0) {
-          setInfo(`Imported ${data.inserted} new session${data.inserted === 1 ? "" : "s"}.`);
+        const wIns = typeof data.workoutsInserted === "number" ? data.workoutsInserted : 0;
+        const cIns = typeof data.cyclesInserted === "number" ? data.cyclesInserted : 0;
+        const total = wIns + cIns;
+        if (total > 0) {
+          const parts: string[] = [];
+          if (wIns > 0) parts.push(`${wIns} workout${wIns === 1 ? "" : "s"}`);
+          if (cIns > 0) parts.push(`${cIns} day${cIns === 1 ? "" : "s"}`);
+          setInfo(`Imported ${parts.join(" + ")}.`);
         } else {
           setInfo("Already up to date.");
         }
