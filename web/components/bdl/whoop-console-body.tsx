@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Info, X } from "lucide-react";
 import type { WhoopGameMetric } from "@/lib/whoop/game-metrics";
 import { WhoopConnectButton } from "@/components/bdl/whoop-connect-button";
 import { WhoopSyncControls } from "@/components/bdl/whoop-sync-controls";
@@ -657,6 +658,180 @@ function PerformanceScoreCell({ score }: { score: number | null }) {
   );
 }
 
+/** Click-to-toggle "i" pill that explains the BDL Max Effort score.
+ *  Anchored next to the hero title; opens a centered modal so the copy
+ *  has room to breathe (a popover gets clipped by the parent card on
+ *  narrow viewports). Click outside or the X to close. */
+function BdlScoreInfoPill() {
+  const [open, setOpen] = useState(false);
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
+
+  // Close on Escape and trap focus on the close button when opened.
+  useEffect(() => {
+    if (!open) return;
+    closeBtnRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label="How is BDL Max Effort calculated?"
+        className="inline-flex items-center gap-1 h-5 px-2 rounded-full border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[color:var(--text-3)] hover:text-[color:var(--text)] hover:border-[color:var(--text-3)] transition-colors text-[9.5px] font-bold tracking-[0.1em] uppercase"
+      >
+        <Info size={10} />
+        <span>How it works</span>
+      </button>
+      {open && (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="BDL Max Effort — How it's calculated"
+            className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-[16px] bg-[color:var(--surface)] border border-[color:var(--hairline-2)] shadow-xl p-6 flex flex-col gap-4"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
+                  How it's calculated
+                </span>
+                <h4 className="text-[16px] font-extrabold text-[color:var(--text)]">
+                  BDL Max Effort
+                </h4>
+              </div>
+              <button
+                ref={closeBtnRef}
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Close"
+                className="inline-flex items-center justify-center w-8 h-8 rounded-full text-[color:var(--text-3)] hover:text-[color:var(--text)] hover:bg-[color:var(--surface-2)]"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <p className="text-[12.5px] leading-relaxed text-[color:var(--text-2)]">
+              A composite of three signals, each{" "}
+              <strong className="text-[color:var(--text)]">
+                z-scored against your own history
+              </strong>{" "}
+              — so the center is always your average game, no matter your
+              fitness level.
+            </p>
+
+            <div className="flex flex-col gap-2.5">
+              <InfoRow
+                label="Intensity"
+                weight="40%"
+                tone="elite"
+                body="Z4+Z5 minutes ÷ game duration. Already fitness-neutral because Whoop zones are % of YOUR max HR."
+              />
+              <InfoRow
+                label="Output"
+                weight="35%"
+                tone="strong"
+                body="Estimated basketball steps — physics-based movement, unaffected by fitness level."
+              />
+              <InfoRow
+                label="Strain"
+                weight="25%"
+                tone="below"
+                body="Overall load. Informative but fitness-biased, so given the lowest weight."
+              />
+            </div>
+
+            <div className="rounded-[10px] border border-[color:var(--hairline-2)] bg-[color:var(--surface-2)] p-3.5 flex flex-col gap-1.5">
+              <span className="text-[10px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
+                The scale
+              </span>
+              <ul className="flex flex-col gap-1 text-[12.5px] text-[color:var(--text-2)]">
+                <ScaleRow score="50" label="Your typical game" tone="avg" />
+                <ScaleRow
+                  score="65"
+                  label="Strong game (~1σ above your average)"
+                  tone="strong"
+                />
+                <ScaleRow score="80" label="Great game (~2σ)" tone="elite" />
+                <ScaleRow score="95+" label="Exceptional" tone="elite" />
+              </ul>
+            </div>
+
+            <p className="text-[11.5px] leading-relaxed text-[color:var(--text-3)]">
+              The score is{" "}
+              <code className="px-1 py-0.5 rounded bg-[color:var(--surface-2)] text-[color:var(--text-2)] font-[family-name:var(--mono)] text-[10.5px]">
+                null
+              </code>{" "}
+              until you have 3+ games with Whoop data — enough history to
+              establish a personal baseline.
+            </p>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function InfoRow({
+  label,
+  weight,
+  tone,
+  body,
+}: {
+  label: string;
+  weight: string;
+  tone: ScoreGrade;
+  body: string;
+}) {
+  return (
+    <div className="grid grid-cols-[auto_1fr] gap-3 items-start">
+      <div className="flex items-center gap-1.5 pt-0.5">
+        <span
+          className={`inline-flex items-center justify-center min-w-[64px] h-6 px-2.5 rounded-full text-[10px] font-extrabold tracking-[0.06em] uppercase ${scorePillClasses(tone)}`}
+        >
+          {label}
+        </span>
+        <span className="text-[10.5px] font-bold tracking-[0.06em] text-[color:var(--text-3)] num">
+          {weight}
+        </span>
+      </div>
+      <p className="text-[12.5px] leading-relaxed text-[color:var(--text-2)]">
+        {body}
+      </p>
+    </div>
+  );
+}
+
+function ScaleRow({
+  score,
+  label,
+  tone,
+}: {
+  score: string;
+  label: string;
+  tone: ScoreGrade;
+}) {
+  return (
+    <li className="flex items-center gap-2.5">
+      <span
+        className={`inline-flex items-center justify-center min-w-[36px] h-5 px-1.5 rounded-full text-[10.5px] font-extrabold num ${scorePillClasses(tone)}`}
+      >
+        {score}
+      </span>
+      <span>{label}</span>
+    </li>
+  );
+}
+
 /* ── BDL Score hero ─────────────────────────────────────────────────
  * Three pillars (Season Avg / Last Game / All Time Best) above a
  * tier-segmented scale bar with a needle pinned at the season avg.
@@ -679,13 +854,13 @@ function BdlScoreHero({
   const noun = scope === "league" ? "Game" : "Session";
   return (
     <div className="rounded-[14px] border border-[color:var(--hairline-2)] bg-[color:var(--surface-2)] px-6 py-6 flex flex-col items-center gap-5">
-      <div className="flex flex-col items-center gap-1">
-        <h3 className="text-[12px] font-bold tracking-[0.1em] uppercase text-[color:var(--text)]">
-          BDL Max Effort{" "}
-          <span className="text-[11px] font-medium tracking-[0.04em] normal-case text-[color:var(--text-3)]">
-            (Personal Scale)
-          </span>
-        </h3>
+      <div className="flex flex-col items-center gap-1.5">
+        <div className="inline-flex items-center gap-2">
+          <h3 className="text-[12px] font-bold tracking-[0.1em] uppercase text-[color:var(--text)]">
+            BDL Max Effort
+          </h3>
+          <BdlScoreInfoPill />
+        </div>
         <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-4)]">
           {scoredCount} {noun}
           {scoredCount === 1 ? "" : "s"} · YTD
