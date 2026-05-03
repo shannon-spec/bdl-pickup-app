@@ -359,6 +359,7 @@ export function WhoopConsoleBody({
                             m.highZoneMin,
                             summary.avgHighZone,
                           )}
+                          avgPct={summary.avgHighZonePct}
                         />
                       </>
                     )}
@@ -517,10 +518,12 @@ function HighZoneCell({
   highZoneMin,
   durationMin,
   highlight,
+  avgPct,
 }: {
   highZoneMin: number | null;
   durationMin: number | null;
   highlight?: boolean;
+  avgPct?: number | null;
 }) {
   if (highZoneMin === null) {
     return (
@@ -533,19 +536,23 @@ function HighZoneCell({
     durationMin && durationMin > 0
       ? Math.round((highZoneMin / durationMin) * 100)
       : null;
-  // Percentage color band — independent of the above-avg highlight on
-  // the minutes, since the % is a workload-shape signal regardless of
-  // how it compares to your own average.
+  // Above-the-player's-own-average wins. When this row's % beats the
+  // scope's average %, paint it green to match the same-row strain
+  // and calorie highlights. Otherwise fall back to the intensity
+  // band (red/orange/yellow) for absolute workload shape.
+  const pctAboveAvg = pct !== null && aboveAvg(pct, avgPct ?? null);
   const pctColor =
     pct === null
       ? "var(--text-3)"
-      : pct >= 60
-        ? "var(--down)"
-        : pct >= 40
-          ? "#f97316"
-          : pct >= 25
-            ? "#eab308"
-            : "var(--text-3)";
+      : pctAboveAvg
+        ? "var(--up)"
+        : pct >= 60
+          ? "var(--down)"
+          : pct >= 40
+            ? "#f97316"
+            : pct >= 25
+              ? "#eab308"
+              : "var(--text-3)";
   return (
     <div className="flex items-baseline justify-end gap-1 font-[family-name:var(--mono)] num">
       <span
