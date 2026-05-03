@@ -19,6 +19,16 @@ const CYCLE_LIST_PATH = "/developer/v2/cycle";
 const BACKFILL_START = "2026-01-01T00:00:00.000Z";
 const MAX_PAGES = 50;
 const PAGE_LIMIT = 25;
+/** Cap on rows per INSERT — Postgres has a ~65k parameter limit and
+ *  the Neon HTTP body is bounded too. 50 rows × ~10 cols stays well
+ *  under either ceiling. */
+const INSERT_CHUNK = 50;
+
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
 
 type WhoopWorkoutRecord = {
   id: string;
@@ -246,14 +256,16 @@ export async function backfillWhoopWorkouts(
           sportName: w.sport_name ?? null,
         };
       });
-    const inserts = await db
-      .insert(whoopWorkouts)
-      .values(rows)
-      .onConflictDoNothing({
-        target: [whoopWorkouts.playerId, whoopWorkouts.whoopWorkoutId],
-      })
-      .returning({ id: whoopWorkouts.id });
-    workoutsInserted = inserts.length;
+    for (const batch of chunk(rows, INSERT_CHUNK)) {
+      const inserts = await db
+        .insert(whoopWorkouts)
+        .values(batch)
+        .onConflictDoNothing({
+          target: [whoopWorkouts.playerId, whoopWorkouts.whoopWorkoutId],
+        })
+        .returning({ id: whoopWorkouts.id });
+      workoutsInserted += inserts.length;
+    }
   }
 
   let cyclesInserted = 0;
@@ -282,14 +294,16 @@ export async function backfillWhoopWorkouts(
             : null,
       };
     });
-    const inserts = await db
-      .insert(whoopCycles)
-      .values(rows)
-      .onConflictDoNothing({
-        target: [whoopCycles.playerId, whoopCycles.whoopCycleId],
-      })
-      .returning({ id: whoopCycles.id });
-    cyclesInserted = inserts.length;
+    for (const batch of chunk(rows, INSERT_CHUNK)) {
+      const inserts = await db
+        .insert(whoopCycles)
+        .values(batch)
+        .onConflictDoNothing({
+          target: [whoopCycles.playerId, whoopCycles.whoopCycleId],
+        })
+        .returning({ id: whoopCycles.id });
+      cyclesInserted += inserts.length;
+    }
   }
 
   const now = new Date();

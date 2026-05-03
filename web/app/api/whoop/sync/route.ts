@@ -60,10 +60,16 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     console.error("[whoop] sync threw", err);
-    const message =
-      err instanceof Error ? err.message : "Unknown sync error.";
+    const raw = err instanceof Error ? err.message : "Unknown sync error.";
+    // Postgres errors include the full prepared statement, which can
+    // be tens of KB of $1, $2, ... placeholders. Strip the values block
+    // so the toast stays readable.
+    const trimmed =
+      raw.length > 240
+        ? raw.replace(/values\s*\([^)]*\).*/i, "values (...)").slice(0, 240)
+        : raw;
     return NextResponse.json(
-      { ok: false, error: `Backfill crashed: ${message}` },
+      { ok: false, error: `Backfill crashed: ${trimmed}` },
       { status: 500 },
     );
   }
