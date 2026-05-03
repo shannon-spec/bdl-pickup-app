@@ -113,15 +113,26 @@ export function ContextHeaderClient({
             }
             className={`relative inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full text-white text-[11.5px] font-bold tracking-[0.04em] uppercase shadow-[var(--cta-shadow)] transition-colors max-sm:flex-1 max-sm:justify-center ${
               unreadMessages > 0
-                ? "bg-[color:var(--warn)] hover:opacity-90 border border-[color:var(--warn)]"
+                ? "hover:opacity-90 border"
                 : "bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)]"
             }`}
+            style={
+              unreadMessages > 0
+                ? {
+                    background: "#E5342B",
+                    borderColor: "#E5342B",
+                    boxShadow:
+                      "0 0 0 1px rgba(229,52,43,.4), 0 0 14px rgba(229,52,43,.45), var(--cta-shadow)",
+                  }
+                : undefined
+            }
           >
             <MessageSquare size={13} strokeWidth={2} /> Message
             {unreadMessages > 0 && (
               <span
                 aria-hidden
-                className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-white text-[color:var(--warn)] text-[10px] font-extrabold leading-[18px] -mr-1"
+                className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-white text-[10px] font-extrabold leading-[18px] -mr-1"
+                style={{ color: "#E5342B" }}
               >
                 {unreadMessages > 9 ? "9+" : unreadMessages}
               </span>
