@@ -271,11 +271,21 @@ export default async function Home() {
               Your Season ·{" "}
               <span className="text-[color:var(--text-2)]">{currentLeague.name}</span>
             </div>
-            {stats.totalWeeks > 0 && (
-              <div className="text-[12px] font-[family-name:var(--mono)] num text-[color:var(--text-3)]">
-                Week {stats.weekOf} of {stats.totalWeeks}
-              </div>
-            )}
+            <div className="inline-flex items-center gap-3 max-sm:w-full max-sm:justify-between">
+              {stats.totalWeeks > 0 && (
+                <div className="text-[12px] font-[family-name:var(--mono)] num text-[color:var(--text-3)]">
+                  Week {stats.weekOf} of {stats.totalWeeks}
+                </div>
+              )}
+              {canEditNextGame && (
+                <Link
+                  href={`/leagues/${currentLeague.id}/edit`}
+                  className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[10.5px] font-bold tracking-[0.05em] uppercase text-[color:var(--text-2)] hover:text-[color:var(--text)] hover:bg-[color:var(--surface-2)] transition-colors"
+                >
+                  <Pencil size={11} strokeWidth={2.25} /> Edit league
+                </Link>
+              )}
+            </div>
           </div>
 
           <StatRow>
