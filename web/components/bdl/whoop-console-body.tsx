@@ -98,14 +98,22 @@ export function WhoopConsoleBody({
   const moreAvailable = range === "YTD" && visibleCount < filtered.length;
 
   const summary = useMemo(() => {
-    const wins = filtered.filter((m) => m.outcome === "W");
-    const losses = filtered.filter((m) => m.outcome === "L");
+    // Hero/W-L averages exclude DAY-source rows. A "DAY" strain is the
+    // whole-day cycle average, not the game window — including it
+    // drags a 16-strain basketball session down to ~4 because most of
+    // the day was sleep/sedentary. We still show DAY rows in the table
+    // so the player knows we have *something* for that game; they just
+    // don't count toward the averages.
+    const scorable = filtered.filter((m) => m.source === "workout");
+    const wins = scorable.filter((m) => m.outcome === "W");
+    const losses = scorable.filter((m) => m.outcome === "L");
     return {
       total: filtered.length,
-      avgStrain: avg(filtered.map((m) => m.strain)),
-      avgHr: avg(filtered.map((m) => m.avgHr)),
-      maxHr: filtered.reduce((m, w) => Math.max(m, w.maxHr ?? 0), 0),
-      avgCal: avg(filtered.map((m) => m.calories)),
+      scoredCount: scorable.length,
+      avgStrain: avg(scorable.map((m) => m.strain)),
+      avgHr: avg(scorable.map((m) => m.avgHr)),
+      maxHr: scorable.reduce((m, w) => Math.max(m, w.maxHr ?? 0), 0),
+      avgCal: avg(scorable.map((m) => m.calories)),
       strainW: avg(wins.map((m) => m.strain)),
       strainL: avg(losses.map((m) => m.strain)),
       hrW: avg(wins.map((m) => m.avgHr)),
@@ -115,7 +123,10 @@ export function WhoopConsoleBody({
     };
   }, [filtered]);
 
-  const lastWithStrain = filtered.find((m) => m.strain !== null) ?? null;
+  // "Last Game Strain" should represent an actual game session, so
+  // skip DAY rows here too.
+  const lastWithStrain =
+    filtered.find((m) => m.source === "workout" && m.strain !== null) ?? null;
 
   return (
     <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6 flex flex-col gap-5">
@@ -174,7 +185,11 @@ export function WhoopConsoleBody({
         <>
           <div className="grid grid-cols-4 gap-3 max-sm:grid-cols-2">
             <SummaryBlock
-              label={`Games · ${summary.total}`}
+              label={
+                summary.scoredCount < summary.total
+                  ? `Games · ${summary.scoredCount} scored`
+                  : `Games · ${summary.total}`
+              }
               value={`${summary.total}`}
             />
             <SummaryBlock
@@ -215,6 +230,16 @@ export function WhoopConsoleBody({
               unit="bpm"
             />
           </div>
+
+          {summary.scoredCount < summary.total && (
+            <p className="text-[10.5px] text-[color:var(--text-3)] -mt-1">
+              Averages exclude{" "}
+              <span className="inline-flex items-center justify-center px-1.5 h-3.5 align-middle rounded-sm text-[8.5px] font-bold tracking-[0.08em] uppercase bg-[color:var(--surface-2)] text-[color:var(--text-3)] mx-0.5">
+                Day
+              </span>{" "}
+              rows — those are whole-day strain, not game-window strain.
+            </p>
+          )}
 
           {lastWithStrain?.strain !== undefined &&
             lastWithStrain?.strain !== null && (
