@@ -185,7 +185,9 @@ export function MessageCenterClient({
     fd.set("ctaLabel", ctaLabel);
     fd.set("ctaUrl", ctaUrl);
     const channels = ["inbox"];
-    if (emailOn && emailConfigured) channels.push("email");
+    // Bulk email (broadcast audiences) is paused pending compliant ESP
+    // setup — never include the email channel on a league/global send,
+    // even if `emailOn` was true from a previous single-player selection.
     fd.set("channels", channels.join(","));
 
     start(async () => {
@@ -499,7 +501,10 @@ export function MessageCenterClient({
         )}
 
         {/* Channels — broadcasts always; single-player only when the
-            sender is a commissioner/admin (player view stays in-app only). */}
+            sender is a commissioner/admin (player view stays in-app only).
+            Bulk email (League / Global) is intentionally disabled until a
+            compliant ESP setup (verified domain, list-unsubscribe, suppression
+            list, throttle) is in place. 1:1 transactional email stays on. */}
         {(isBroadcast || (audience === "single" && canBroadcastLeague)) && (
           <div className="flex flex-col gap-1.5">
             <span className="text-[11px] font-semibold tracking-[0.12em] uppercase text-[color:var(--text-3)]">
@@ -509,48 +514,58 @@ export function MessageCenterClient({
               <div className="h-10 rounded-[var(--r-md)] border border-[color:var(--brand)] bg-[color:var(--brand-soft)] text-[color:var(--brand-ink,var(--brand))] inline-flex items-center justify-center gap-1.5 text-[12px] font-bold tracking-[0.04em] uppercase">
                 <MessageSquare size={13} /> In-App · Always
               </div>
-              {(() => {
-                const recipientHasEmail =
-                  audience !== "single" || (recipient?.hasEmail ?? false);
-                const emailDisabled = !emailConfigured || !recipientHasEmail;
-                const title = !emailConfigured
-                  ? "Email isn't configured — set RESEND_API_KEY + ADMIN_FROM_EMAIL"
-                  : audience === "single" && !recipient
-                    ? "Pick a recipient first"
-                    : audience === "single" && !recipient?.hasEmail
-                      ? "This player has no email on file"
-                      : undefined;
-                return (
-                  <button
-                    type="button"
-                    onClick={() => !emailDisabled && setEmailOn((v) => !v)}
-                    disabled={emailDisabled}
-                    title={title}
-                    className={`h-10 rounded-[var(--r-md)] border text-[12px] font-bold tracking-[0.04em] uppercase inline-flex items-center justify-center gap-1.5 transition-colors ${
-                      emailDisabled
-                        ? "border-[color:var(--hairline-2)] text-[color:var(--text-4)] opacity-50 cursor-not-allowed"
-                        : emailOn
-                          ? "bg-[color:var(--brand-soft)] border-[color:var(--brand)] text-[color:var(--brand-ink,var(--brand))]"
-                          : "border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[color:var(--text-2)] hover:text-[color:var(--text)]"
-                    }`}
-                  >
-                    <Mail size={13} /> Email
-                    {!emailConfigured && (
-                      <span className="text-[9px] font-semibold tracking-[0.08em] uppercase px-1.5 py-0.5 rounded-full bg-[color:var(--surface-2)] text-[color:var(--text-3)] ml-1">
-                        Off
-                      </span>
-                    )}
-                    {emailConfigured &&
-                      audience === "single" &&
-                      recipient &&
-                      !recipient.hasEmail && (
+              {isBroadcast ? (
+                <div
+                  title="Bulk email is paused while compliance (verified sender, list-unsubscribe, suppression handling) is set up. Use In-App for now."
+                  className="h-10 rounded-[var(--r-md)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[color:var(--text-4)] opacity-60 cursor-not-allowed inline-flex items-center justify-center gap-1.5 text-[12px] font-bold tracking-[0.04em] uppercase"
+                >
+                  <Mail size={13} /> Email
+                  <span className="text-[9px] font-semibold tracking-[0.08em] uppercase px-1.5 py-0.5 rounded-full bg-[color:var(--surface-2)] text-[color:var(--text-3)] ml-1">
+                    Soon
+                  </span>
+                </div>
+              ) : (
+                (() => {
+                  const recipientHasEmail = recipient?.hasEmail ?? false;
+                  const emailDisabled = !emailConfigured || !recipientHasEmail;
+                  const title = !emailConfigured
+                    ? "Email isn't configured — set RESEND_API_KEY + ADMIN_FROM_EMAIL"
+                    : !recipient
+                      ? "Pick a recipient first"
+                      : !recipient.hasEmail
+                        ? "This player has no email on file"
+                        : undefined;
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => !emailDisabled && setEmailOn((v) => !v)}
+                      disabled={emailDisabled}
+                      title={title}
+                      className={`h-10 rounded-[var(--r-md)] border text-[12px] font-bold tracking-[0.04em] uppercase inline-flex items-center justify-center gap-1.5 transition-colors ${
+                        emailDisabled
+                          ? "border-[color:var(--hairline-2)] text-[color:var(--text-4)] opacity-50 cursor-not-allowed"
+                          : emailOn
+                            ? "bg-[color:var(--brand-soft)] border-[color:var(--brand)] text-[color:var(--brand-ink,var(--brand))]"
+                            : "border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[color:var(--text-2)] hover:text-[color:var(--text)]"
+                      }`}
+                    >
+                      <Mail size={13} /> Email
+                      {!emailConfigured && (
                         <span className="text-[9px] font-semibold tracking-[0.08em] uppercase px-1.5 py-0.5 rounded-full bg-[color:var(--surface-2)] text-[color:var(--text-3)] ml-1">
-                          No email
+                          Off
                         </span>
                       )}
-                  </button>
-                );
-              })()}
+                      {emailConfigured &&
+                        recipient &&
+                        !recipient.hasEmail && (
+                          <span className="text-[9px] font-semibold tracking-[0.08em] uppercase px-1.5 py-0.5 rounded-full bg-[color:var(--surface-2)] text-[color:var(--text-3)] ml-1">
+                            No email
+                          </span>
+                        )}
+                    </button>
+                  );
+                })()
+              )}
               <div
                 title="Text messaging coming soon"
                 className="h-10 rounded-[var(--r-md)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[color:var(--text-4)] opacity-60 cursor-not-allowed inline-flex items-center justify-center gap-1.5 text-[12px] font-bold tracking-[0.04em] uppercase"

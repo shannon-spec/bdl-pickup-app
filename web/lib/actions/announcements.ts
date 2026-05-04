@@ -104,22 +104,18 @@ export async function createAnnouncement(
   }
 
   // Channels — 'inbox' is always included even if not passed (it's
-  // the default behavior and doesn't need consent). 'email' is the
-  // only other accepted value in v1; gated on Resend config.
+  // the default behavior and doesn't need consent). Bulk email
+  // (league / global broadcasts) is intentionally disabled at the
+  // action layer too: a compliant ESP setup (verified domain,
+  // list-unsubscribe header, suppression list, throttle) is needed
+  // before we resume. The UI hides the toggle; this is the second
+  // line of defense against a manual POST.
   const requestedChannels = (v.channels ?? "inbox")
     .split(",")
     .map((c) => c.trim())
     .filter(Boolean);
-  const channels = Array.from(
-    new Set(["inbox", ...requestedChannels.filter((c) => c === "email")]),
-  );
-  if (channels.includes("email") && !isInviteEmailConfigured()) {
-    return {
-      ok: false,
-      error:
-        "Email isn't configured for this project — set RESEND_API_KEY and ADMIN_FROM_EMAIL in Vercel, or send via Inbox only.",
-    };
-  }
+  void requestedChannels; // currently inbox-only for broadcasts
+  const channels: string[] = ["inbox"];
 
   let recipientPlayerIds: string[] = [];
   let leagueId: string | null = null;
