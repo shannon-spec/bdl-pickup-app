@@ -330,10 +330,11 @@ export function WhoopConsoleBody({
             </p>
           ) : (
             <div className="flex flex-col divide-y divide-[color:var(--hairline)]">
-              <div className="grid grid-cols-[1fr_44px_56px_48px_64px_84px_60px_92px] gap-3 pb-2 text-[10px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
+              {/* Desktop header row — hidden below md where the mobile
+                  card layout takes over. */}
+              <div className="hidden md:grid grid-cols-[1fr_44px_48px_64px_84px_60px_92px] gap-3 pb-2 text-[10px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
                 <span>Game</span>
                 <span className="text-right">W/L</span>
-                <span className="text-right">Source</span>
                 <span className="text-right">Score</span>
                 <span className="text-right">Strain</span>
                 <span className="text-right">Avg / Max HR</span>
@@ -342,80 +343,129 @@ export function WhoopConsoleBody({
               </div>
               {visibleRows.map((m) => {
                 const isUpcoming = isUpcomingGame(m);
+                const strainHi = aboveAvg(m.strain, summary.avgStrain);
+                const calHi = aboveAvg(m.calories, summary.avgCal);
+                const z45Hi = aboveAvg(m.highZoneMin, summary.avgHighZone);
                 return (
-                  <div
-                    key={m.gameId}
-                    className="grid grid-cols-[1fr_44px_56px_48px_64px_84px_60px_92px] gap-3 items-center py-3"
-                  >
-                    <div className="flex flex-col gap-0.5 min-w-0">
-                      <span className="text-[13px] font-semibold truncate">
-                        {fmtDate(m.date)}
-                      </span>
-                      <span className="text-[11px] text-[color:var(--text-3)] truncate">
-                        {m.leagueName ?? "Basketball"}
-                        {m.durationMin ? ` · ${m.durationMin}m` : ""}
-                      </span>
-                    </div>
-                    {isUpcoming ? (
-                      <div
-                        className="col-span-7 flex justify-end"
-                        aria-label="Upcoming game"
-                      >
-                        <UpcomingPill />
+                  <div key={m.gameId} className="py-3">
+                    {/* ── Desktop row ─────────────────────────────── */}
+                    <div className="hidden md:grid grid-cols-[1fr_44px_48px_64px_84px_60px_92px] gap-3 items-center">
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <span className="text-[13px] font-semibold truncate">
+                          {fmtDate(m.date)}
+                        </span>
+                        <span className="text-[11px] text-[color:var(--text-3)] truncate">
+                          {m.leagueName ?? "Basketball"}
+                          {m.durationMin ? ` · ${m.durationMin}m` : ""}
+                        </span>
                       </div>
-                    ) : (
-                      <>
-                        <div className="flex justify-end">
-                          <OutcomeBadge outcome={m.outcome} />
-                        </div>
-                        <div className="flex justify-end">
-                          <SourceBadge source={m.source} />
-                        </div>
-                        <PerformanceScoreCell score={m.performanceScore} />
-                        <div className="flex justify-end">
-                          {m.strain !== null ? (
-                            <span
-                              className="font-[family-name:var(--mono)] font-bold text-[13px] num"
-                              style={{
-                                color: aboveAvg(m.strain, summary.avgStrain)
-                                  ? "var(--up)"
-                                  : undefined,
-                              }}
-                            >
-                              {m.strain.toFixed(1)}
-                            </span>
-                          ) : (
-                            <span className="text-[color:var(--text-4)]">—</span>
-                          )}
-                        </div>
-                        <span className="font-[family-name:var(--mono)] num text-[13px] text-right">
-                          <span>{m.avgHr ?? "—"}</span>
-                          <span className="text-[color:var(--text-4)] font-normal mx-0.5">
-                            /
-                          </span>
-                          <span className="font-bold">{m.maxHr ?? "—"}</span>
-                        </span>
-                        <span
-                          className="font-[family-name:var(--mono)] num text-[12px] font-bold text-right"
-                          style={{
-                            color: aboveAvg(m.calories, summary.avgCal)
-                              ? "var(--up)"
-                              : "var(--text-3)",
-                          }}
+                      {isUpcoming ? (
+                        <div
+                          className="col-span-6 flex justify-end"
+                          aria-label="Upcoming game"
                         >
-                          {m.calories ?? "—"}
-                        </span>
-                        <HighZoneCell
-                          highZoneMin={m.highZoneMin}
-                          durationMin={m.durationMin}
-                          highlight={aboveAvg(
-                            m.highZoneMin,
-                            summary.avgHighZone,
-                          )}
-                          avgPct={summary.avgHighZonePct}
-                        />
-                      </>
-                    )}
+                          <UpcomingPill />
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex justify-end">
+                            <OutcomeBadge outcome={m.outcome} />
+                          </div>
+                          <PerformanceScoreCell score={m.performanceScore} />
+                          <div className="flex justify-end">
+                            {m.strain !== null ? (
+                              <span
+                                className="font-[family-name:var(--mono)] font-bold text-[13px] num"
+                                style={{
+                                  color: strainHi ? "var(--up)" : undefined,
+                                }}
+                              >
+                                {m.strain.toFixed(1)}
+                              </span>
+                            ) : (
+                              <span className="text-[color:var(--text-4)]">—</span>
+                            )}
+                          </div>
+                          <span className="font-[family-name:var(--mono)] num text-[13px] text-right">
+                            <span>{m.avgHr ?? "—"}</span>
+                            <span className="text-[color:var(--text-4)] font-normal mx-0.5">
+                              /
+                            </span>
+                            <span className="font-bold">{m.maxHr ?? "—"}</span>
+                          </span>
+                          <span
+                            className="font-[family-name:var(--mono)] num text-[12px] font-bold text-right"
+                            style={{
+                              color: calHi ? "var(--up)" : "var(--text-3)",
+                            }}
+                          >
+                            {m.calories ?? "—"}
+                          </span>
+                          <HighZoneCell
+                            highZoneMin={m.highZoneMin}
+                            durationMin={m.durationMin}
+                            highlight={z45Hi}
+                            avgPct={summary.avgHighZonePct}
+                          />
+                        </>
+                      )}
+                    </div>
+
+                    {/* ── Mobile card ─────────────────────────────── */}
+                    <div className="md:hidden flex flex-col gap-2.5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className="text-[13.5px] font-semibold truncate">
+                            {fmtDate(m.date)}
+                          </span>
+                          <span className="text-[11.5px] text-[color:var(--text-3)] truncate">
+                            {m.leagueName ?? "Basketball"}
+                            {m.durationMin ? ` · ${m.durationMin}m` : ""}
+                          </span>
+                        </div>
+                        {isUpcoming ? (
+                          <UpcomingPill />
+                        ) : (
+                          <div className="flex items-center gap-2 shrink-0">
+                            <OutcomeBadge outcome={m.outcome} />
+                            <PerformanceScoreCell score={m.performanceScore} />
+                          </div>
+                        )}
+                      </div>
+                      {!isUpcoming && (
+                        <div className="grid grid-cols-4 gap-2">
+                          <MobileStat
+                            label="Strain"
+                            value={
+                              m.strain !== null ? m.strain.toFixed(1) : "—"
+                            }
+                            highlight={strainHi}
+                          />
+                          <MobileStat
+                            label="HR"
+                            value={
+                              m.avgHr !== null || m.maxHr !== null
+                                ? `${m.avgHr ?? "—"}/${m.maxHr ?? "—"}`
+                                : "—"
+                            }
+                          />
+                          <MobileStat
+                            label="Cal"
+                            value={m.calories?.toLocaleString() ?? "—"}
+                            highlight={calHi}
+                          />
+                          <MobileStat
+                            label="Z4+5"
+                            value={
+                              m.highZoneMin !== null
+                                ? `${m.highZoneMin}m`
+                                : "—"
+                            }
+                            highlight={z45Hi}
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -1139,25 +1189,32 @@ function UpcomingPill() {
   );
 }
 
-function SourceBadge({ source }: { source: "workout" | "cycle" | "none" }) {
-  if (source === "none") {
-    return (
-      <span className="text-[9.5px] font-semibold tracking-[0.1em] uppercase text-[color:var(--text-4)]">
-        —
-      </span>
-    );
-  }
-  const label = source === "workout" ? "Game" : "Day";
-  const cls =
-    source === "workout"
-      ? "bg-[color:var(--up-soft)] text-[color:var(--up)]"
-      : "bg-[color:var(--surface-2)] text-[color:var(--text-3)]";
+/** Compact label-over-value cell used inside the mobile card layout
+ *  for each game row. `highlight` opts into the same above-avg green
+ *  treatment the desktop columns use. */
+function MobileStat({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+}) {
   return (
-    <span
-      className={`inline-flex items-center justify-center px-1.5 h-4 rounded-sm text-[9px] font-bold tracking-[0.08em] uppercase ${cls}`}
-    >
-      {label}
-    </span>
+    <div className="flex flex-col items-center gap-0.5 rounded-md border border-[color:var(--hairline)] bg-[color:var(--surface-2)] py-1.5 px-1.5">
+      <span className="text-[8.5px] font-bold tracking-[0.12em] uppercase text-[color:var(--text-4)]">
+        {label}
+      </span>
+      <span
+        className="font-[family-name:var(--mono)] font-bold text-[12.5px] num leading-none"
+        style={{
+          color: highlight ? "var(--up)" : "var(--text)",
+        }}
+      >
+        {value}
+      </span>
+    </div>
   );
 }
 
