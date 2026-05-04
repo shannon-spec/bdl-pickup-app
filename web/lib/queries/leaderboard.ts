@@ -158,10 +158,18 @@ export async function getLeaderboard(opts: {
     }
     stats.set(r.playerId, cur);
   }
-  // Game winner + hero counts (separate from W/L). A "hero" is the
-  // gameWinner of a game decided by 3 points or fewer.
+  // Game winner + hero counts (separate from W/L).
+  //   • Game Winner credit is only awarded when the final differential
+  //     is 10 points or fewer. Blowouts (diff > 10) don't count — the
+  //     last basket wasn't actually decisive.
+  //   • A "Hero" is the game-winner of a game decided by 3 or fewer.
+  // Both rules require both scores to be entered; if either is null we
+  // can't enforce the differential, so we skip credit altogether.
   for (const g of completed) {
     if (!g.gameWinner) continue;
+    if (g.scoreA === null || g.scoreB === null) continue;
+    const diff = Math.abs(g.scoreA - g.scoreB);
+    if (diff > 10) continue;
     const cur = stats.get(g.gameWinner) ?? {
       wins: 0,
       losses: 0,
@@ -170,11 +178,7 @@ export async function getLeaderboard(opts: {
       heroCount: 0,
     };
     cur.gameWinnerCount++;
-    if (
-      g.scoreA !== null &&
-      g.scoreB !== null &&
-      Math.abs(g.scoreA - g.scoreB) <= 3
-    ) {
+    if (diff <= 3) {
       cur.heroCount++;
     }
     stats.set(g.gameWinner, cur);
