@@ -139,7 +139,7 @@ export default async function LeaderboardPage({
             featured="brand"
           />
           <Board
-            title="Game Winner Awards"
+            title="Game Winner Awards · Margin ≤ 10"
             rows={data.topGW}
             valueKey="gameWinnerCount"
             valueLabel="GW"
