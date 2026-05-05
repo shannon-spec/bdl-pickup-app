@@ -3,14 +3,14 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Copy, Mail, Pencil, Plus, RotateCcw, Trash2, X } from "lucide-react";
+import { Copy, Eye, EyeOff, Mail, Pencil, Plus, RotateCcw, X } from "lucide-react";
 import type { LeagueDetail } from "@/lib/queries/leagues";
 import {
   addCommissioner,
   addLeaguePlayer,
-  deleteLeague,
   removeCommissioner,
   removeLeaguePlayer,
+  setLeagueHidden,
 } from "@/lib/actions/leagues";
 import {
   createInvite,
@@ -47,16 +47,24 @@ export function LeagueDetailClient({
   isAdmin: boolean;
 }) {
   const router = useRouter();
-  const [confirmDel, setConfirmDel] = useState(false);
+  const [confirmHide, setConfirmHide] = useState(false);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const isHidden = detail.league.hiddenAt != null;
 
-  const onDelete = () => {
+  const onToggleHidden = () => {
     setError(null);
+    setConfirmHide(false);
     start(async () => {
-      const res = await deleteLeague(detail.league.id);
-      if (res.ok) router.push("/leagues");
-      else setError(res.error);
+      const res = await setLeagueHidden(detail.league.id, !isHidden);
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      // After hiding, drop back to /leagues (this league is now gone
+      // from that list). After unhiding, stay on the page.
+      if (!isHidden) router.push("/leagues");
+      else router.refresh();
     });
   };
 
@@ -72,29 +80,44 @@ export function LeagueDetailClient({
         {isAdmin && (
           <button
             type="button"
-            onClick={() => setConfirmDel(true)}
-            className="inline-flex items-center gap-2 h-10 px-3.5 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[12px] font-bold tracking-[0.06em] uppercase text-[color:var(--down)] hover:bg-[color:var(--down-soft)] transition-colors"
+            onClick={() => setConfirmHide(true)}
+            className={`inline-flex items-center gap-2 h-10 px-3.5 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[12px] font-bold tracking-[0.06em] uppercase hover:bg-[color:var(--surface-2)] transition-colors ${
+              isHidden
+                ? "text-[color:var(--up)]"
+                : "text-[color:var(--text-2)]"
+            }`}
           >
-            <Trash2 size={14} /> Delete
+            {isHidden ? (
+              <>
+                <Eye size={14} /> Unhide
+              </>
+            ) : (
+              <>
+                <EyeOff size={14} /> Hide
+              </>
+            )}
           </button>
         )}
       </div>
 
-      {confirmDel && (
+      {confirmHide && (
         <div
           role="dialog"
           aria-modal="true"
           className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center px-4 bg-black/60"
-          onClick={() => setConfirmDel(false)}
+          onClick={() => setConfirmHide(false)}
         >
           <div
             className="w-full max-w-[420px] rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-[18px] font-bold mb-2">Delete this league?</h3>
+            <h3 className="text-[18px] font-bold mb-2">
+              {isHidden ? "Unhide" : "Hide"} this league?
+            </h3>
             <p className="text-[13px] text-[color:var(--text-3)]">
-              All games and roster assignments for {detail.league.name} will be deleted. This
-              can&apos;t be undone.
+              {isHidden
+                ? `${detail.league.name} will reappear in league lists. All games and roster assignments stayed intact while it was hidden.`
+                : `${detail.league.name} will be hidden from league lists. Games, rosters, and scores stay intact — you can unhide any time.`}
             </p>
             {error && (
               <div className="text-[12px] text-[color:var(--down)] bg-[color:var(--down-soft)] rounded-[var(--r-md)] px-3 py-2 mt-3">
@@ -104,18 +127,18 @@ export function LeagueDetailClient({
             <div className="flex items-center justify-end gap-2 mt-5">
               <button
                 type="button"
-                onClick={() => setConfirmDel(false)}
+                onClick={() => setConfirmHide(false)}
                 className="h-10 px-4 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[13px] font-medium hover:bg-[color:var(--surface-2)]"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={onDelete}
+                onClick={onToggleHidden}
                 disabled={pending}
-                className="h-10 px-5 rounded-[var(--r-lg)] bg-[color:var(--down)] text-white font-bold text-[12px] tracking-[0.06em] uppercase disabled:opacity-60"
+                className="h-10 px-5 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase disabled:opacity-60"
               >
-                {pending ? "Deleting…" : "Delete league"}
+                {pending ? "Saving…" : isHidden ? "Unhide" : "Hide league"}
               </button>
             </div>
           </div>

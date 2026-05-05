@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { db, leagues, leaguePlayers, leagueCommissioners, players } from "@/lib/db";
@@ -258,11 +258,36 @@ export async function updateLeague(
   return { ok: true, data: { id } };
 }
 
-export async function deleteLeague(id: string): Promise<ActionResult> {
+/**
+ * League deletion is intentionally disabled.
+ *
+ * A delete cascades through games, rosters, scores, and player
+ * grades — not recoverable. Until a comprehensive data-protection
+ * plan is in place, the public path is `setLeagueHidden(id, true)`
+ * which soft-hides the row from list views without dropping data.
+ */
+export async function deleteLeague(_id: string): Promise<ActionResult> {
+  return {
+    ok: false,
+    error:
+      "League deletion is disabled. Use Hide / Unhide instead — it removes the league from list views without losing history.",
+  };
+}
+
+/** Soft-hide / unhide a league. Hidden leagues are filtered out of
+ *  list views; their games and roster history stay intact. */
+export async function setLeagueHidden(
+  id: string,
+  hidden: boolean,
+): Promise<ActionResult> {
   await requireAdminOnly();
   await requireAdminView();
-  await db.delete(leagues).where(eq(leagues.id, id));
+  await db
+    .update(leagues)
+    .set({ hiddenAt: hidden ? sql`now()` : null })
+    .where(eq(leagues.id, id));
   revalidatePath("/leagues");
+  revalidatePath(`/leagues/${id}`);
   revalidatePath("/");
   return { ok: true };
 }

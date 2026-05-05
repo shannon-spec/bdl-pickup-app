@@ -1,4 +1,4 @@
-import { asc, eq, ilike, or } from "drizzle-orm";
+import { and, asc, eq, ilike, isNull, or } from "drizzle-orm";
 import { db, players, type Player } from "@/lib/db";
 import { decryptOptional } from "@/lib/crypto/secrets";
 import { decryptPlayerPii } from "@/lib/crypto/player";
@@ -34,14 +34,21 @@ export async function getRoster(search?: string): Promise<RosterRow[]> {
   // encrypted, so ilike on ciphertext would never match. Name + city
   // search remains; email-based lookup happens via the credentials
   // page or by exact match through email_hash on login.
+  // Hidden players (soft-hide via Hide/Unhide) drop out of the
+  // roster list. The edit page can still load them by id so admins
+  // can flip the flag back.
+  const visible = isNull(players.hiddenAt);
   const where =
     q && q.length > 0
-      ? or(
-          ilike(players.lastName, `%${q}%`),
-          ilike(players.firstName, `%${q}%`),
-          ilike(players.city, `%${q}%`),
+      ? and(
+          visible,
+          or(
+            ilike(players.lastName, `%${q}%`),
+            ilike(players.firstName, `%${q}%`),
+            ilike(players.city, `%${q}%`),
+          ),
         )
-      : undefined;
+      : visible;
 
   const rows = await db
     .select({

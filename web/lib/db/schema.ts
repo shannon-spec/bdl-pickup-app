@@ -162,6 +162,12 @@ export const players = pgTable(
     // recipients are unaffected; no rows are deleted.
     inboxClearedAt: timestamp("inbox_cleared_at", { withTimezone: true }),
     broadcastsClearedAt: timestamp("broadcasts_cleared_at", { withTimezone: true }),
+    /** Soft-hide flag — null = visible everywhere; non-null = hidden
+     *  from list views. Replaces destructive deletes for players;
+     *  destructive `deletePlayer` is intentionally blocked at the
+     *  action layer. Player records (and their game history, scores,
+     *  etc.) are preserved so historical data is never lost. */
+    hiddenAt: timestamp("hidden_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
@@ -248,6 +254,11 @@ export const leagues = pgTable("leagues", {
   venueAddress: text("venue_address"),
   venueLat: doublePrecision("venue_lat"),
   venueLng: doublePrecision("venue_lng"),
+  /** Soft-hide flag — null = visible; non-null = hidden from list
+   *  views. Replaces destructive deletes for leagues; destructive
+   *  `deleteLeague` is intentionally blocked at the action layer.
+   *  League data (games, rosters, scores) stays intact. */
+  hiddenAt: timestamp("hidden_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()

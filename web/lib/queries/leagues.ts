@@ -1,4 +1,4 @@
-import { asc, count, eq, inArray, sql } from "drizzle-orm";
+import { asc, count, eq, inArray, isNull, sql } from "drizzle-orm";
 import {
   db,
   leagues,
@@ -19,7 +19,13 @@ export type LeagueListRow = League & {
 export async function getLeaguesWithStats(opts?: {
   scopeIds?: string[];
 }): Promise<LeagueListRow[]> {
-  const baseAll = await db.select().from(leagues).orderBy(asc(leagues.name));
+  // Hidden leagues drop out of every list view. The detail page still
+  // loads them by id so an admin can unhide.
+  const baseAll = await db
+    .select()
+    .from(leagues)
+    .where(isNull(leagues.hiddenAt))
+    .orderBy(asc(leagues.name));
   const all = opts?.scopeIds
     ? baseAll.filter((l) => opts.scopeIds!.includes(l.id))
     : baseAll;

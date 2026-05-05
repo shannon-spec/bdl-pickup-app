@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db, players, leaguePlayers } from "@/lib/db";
 import { readSession, requireAdmin } from "@/lib/auth/session";
@@ -219,11 +219,41 @@ export async function createPlayerInDirectory(
   return { ok: true, data: { id: row.id } };
 }
 
-export async function deletePlayer(id: string): Promise<ActionResult> {
+/**
+ * Player deletion is intentionally disabled.
+ *
+ * Hard deletes were removing historical game data, scoring history,
+ * and roster relationships in ways we couldn't recover. Until a
+ * comprehensive data-protection plan is in place, the public path
+ * is `setPlayerHidden(id, true)` which soft-hides the row from list
+ * views without dropping any history.
+ *
+ * Kept as a named export so any old call site still type-checks but
+ * fails loudly at runtime — easier to audit than a silent removal.
+ */
+export async function deletePlayer(_id: string): Promise<ActionResult> {
+  return {
+    ok: false,
+    error:
+      "Player deletion is disabled. Use Hide / Unhide instead — it removes the player from list views without losing history.",
+  };
+}
+
+/** Soft-hide / unhide a player. Hidden players still exist in the
+ *  database (and on every game roster they were on), but list views
+ *  filter them out. Admins can unhide via the same toggle. */
+export async function setPlayerHidden(
+  id: string,
+  hidden: boolean,
+): Promise<ActionResult> {
   await requireAdmin();
   await requireAdminView();
-  await db.delete(players).where(eq(players.id, id));
+  await db
+    .update(players)
+    .set({ hiddenAt: hidden ? sql`now()` : null })
+    .where(eq(players.id, id));
   revalidatePath("/roster");
+  revalidatePath(`/players/${id}`);
   revalidatePath("/");
   return { ok: true };
 }

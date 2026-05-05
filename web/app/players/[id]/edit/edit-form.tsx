@@ -2,9 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import type { Player } from "@/lib/db";
-import { deletePlayer, updatePlayer } from "@/lib/actions/roster";
+import { setPlayerHidden, updatePlayer } from "@/lib/actions/roster";
 
 const POSITIONS = ["", "PG", "SG", "SF", "PF", "C", "G", "F"];
 const GRADES = ["Not Rated", "Novice", "Intermediate", "Advanced", "Game Changer", "Pro"];
@@ -16,8 +16,9 @@ export function EditPlayerForm({ player }: { player: Player }) {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [pending, start] = useTransition();
-  const [confirmDel, setConfirmDel] = useState(false);
-  const [deleting, startDel] = useTransition();
+  const [confirmHide, setConfirmHide] = useState(false);
+  const [hiding, startHide] = useTransition();
+  const isHidden = player.hiddenAt != null;
 
   const onSubmit = (formData: FormData) => {
     setError(null);
@@ -34,11 +35,16 @@ export function EditPlayerForm({ player }: { player: Player }) {
     });
   };
 
-  const onDelete = () => {
-    startDel(async () => {
-      const res = await deletePlayer(player.id);
+  const onToggleHidden = () => {
+    setConfirmHide(false);
+    startHide(async () => {
+      const res = await setPlayerHidden(player.id, !isHidden);
       if (res.ok) {
-        router.push("/players");
+        // Hiding sends the admin back to the roster (player is gone
+        // from the list); unhiding stays put so they can keep editing.
+        if (!isHidden) {
+          router.push("/players");
+        }
         router.refresh();
       }
     });
@@ -252,10 +258,22 @@ export function EditPlayerForm({ player }: { player: Player }) {
         <footer className="flex items-center justify-between gap-2 pt-4 border-t border-[color:var(--hairline)] -mx-6 px-6 max-sm:-mx-4 max-sm:px-4 max-sm:flex-col-reverse max-sm:items-stretch">
           <button
             type="button"
-            onClick={() => setConfirmDel(true)}
-            className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[12px] font-bold uppercase tracking-[0.06em] text-[color:var(--down)] hover:bg-[color:var(--down-soft)]"
+            onClick={() => setConfirmHide(true)}
+            className={`inline-flex items-center justify-center gap-2 h-10 px-4 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[12px] font-bold uppercase tracking-[0.06em] hover:bg-[color:var(--surface-2)] ${
+              isHidden
+                ? "text-[color:var(--up)]"
+                : "text-[color:var(--text-2)]"
+            }`}
           >
-            <Trash2 size={14} /> Delete player
+            {isHidden ? (
+              <>
+                <Eye size={14} /> Unhide player
+              </>
+            ) : (
+              <>
+                <EyeOff size={14} /> Hide player
+              </>
+            )}
           </button>
           <div className="flex items-center gap-2 max-sm:flex-col-reverse max-sm:items-stretch">
             <button
@@ -276,40 +294,41 @@ export function EditPlayerForm({ player }: { player: Player }) {
         </footer>
       </form>
 
-      {confirmDel && (
+      {confirmHide && (
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Confirm delete"
+          aria-label={isHidden ? "Unhide player" : "Hide player"}
           className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center px-4 bg-black/60 backdrop-blur-[2px]"
-          onClick={() => setConfirmDel(false)}
+          onClick={() => setConfirmHide(false)}
         >
           <div
             className="w-full max-w-[420px] rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-[18px] font-bold mb-2">
-              Remove {player.firstName} {player.lastName}?
+              {isHidden ? "Unhide" : "Hide"} {player.firstName} {player.lastName}?
             </h3>
             <p className="text-[13px] text-[color:var(--text-3)]">
-              This removes the player from the roster, all leagues, and all game rosters.
-              This action can&apos;t be undone.
+              {isHidden
+                ? "The player will reappear on the roster and in pickers. Their game history was never lost — only the listing was hidden."
+                : "Hiding removes the player from the roster and league pickers, but their game history, scores, and roster assignments stay intact. You can unhide any time."}
             </p>
             <div className="flex items-center justify-end gap-2 mt-5">
               <button
                 type="button"
-                onClick={() => setConfirmDel(false)}
+                onClick={() => setConfirmHide(false)}
                 className="h-10 px-4 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[13px] font-medium hover:bg-[color:var(--surface-2)]"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                disabled={deleting}
-                onClick={onDelete}
-                className="h-10 px-5 rounded-[var(--r-lg)] bg-[color:var(--down)] text-white font-bold text-[12px] tracking-[0.06em] uppercase disabled:opacity-60"
+                disabled={hiding}
+                onClick={onToggleHidden}
+                className="h-10 px-5 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase disabled:opacity-60"
               >
-                {deleting ? "Removing…" : "Remove player"}
+                {hiding ? "Saving…" : isHidden ? "Unhide" : "Hide player"}
               </button>
             </div>
           </div>
