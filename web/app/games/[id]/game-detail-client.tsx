@@ -28,6 +28,14 @@ function SingleScore({ detail }: { detail: GameDetail }) {
   const { game } = detail;
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const [scoreA, setScoreA] = useState<string>(
+    game.scoreA != null ? String(game.scoreA) : "",
+  );
+  const [scoreB, setScoreB] = useState<string>(
+    game.scoreB != null ? String(game.scoreB) : "",
+  );
+  const [gameWinnerId, setGameWinnerId] = useState<string>(game.gameWinner ?? "");
+  const [locked, setLocked] = useState<boolean>(game.locked);
 
   // Eligible game-winners: anyone on the roster of either team
   const eligible = [...detail.rosterA, ...detail.rosterB].sort((a, b) =>
@@ -50,7 +58,8 @@ function SingleScore({ detail }: { detail: GameDetail }) {
           name="scoreA"
           type="number"
           inputMode="numeric"
-          defaultValue={game.scoreA ?? ""}
+          value={scoreA}
+          onChange={(e) => setScoreA(e.target.value)}
           className={inputCx + " w-[100px] num font-[family-name:var(--mono)]"}
         />
       </Field>
@@ -59,14 +68,16 @@ function SingleScore({ detail }: { detail: GameDetail }) {
           name="scoreB"
           type="number"
           inputMode="numeric"
-          defaultValue={game.scoreB ?? ""}
+          value={scoreB}
+          onChange={(e) => setScoreB(e.target.value)}
           className={inputCx + " w-[100px] num font-[family-name:var(--mono)]"}
         />
       </Field>
       <Field label="Game Winner">
         <select
           name="gameWinnerId"
-          defaultValue={game.gameWinner ?? ""}
+          value={gameWinnerId}
+          onChange={(e) => setGameWinnerId(e.target.value)}
           className={selectCx + " min-w-[180px]"}
         >
           <option value="">— None —</option>
@@ -81,7 +92,8 @@ function SingleScore({ detail }: { detail: GameDetail }) {
         <input
           type="checkbox"
           name="locked"
-          defaultChecked={game.locked}
+          checked={locked}
+          onChange={(e) => setLocked(e.target.checked)}
           className="w-4 h-4 accent-[color:var(--brand)]"
         />
         <span className="text-[13px] text-[color:var(--text-2)]">Lock as final</span>
