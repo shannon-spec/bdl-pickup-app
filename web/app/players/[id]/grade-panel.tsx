@@ -136,16 +136,8 @@ export function GradePanel({
                   className="h-7 px-2.5 rounded-full text-[10px] font-bold tracking-[0.04em] transition-colors"
                   style={
                     active
-                      ? {
-                          background: p.text,
-                          color: "white",
-                          boxShadow: `inset 0 0 0 1px ${p.text}`,
-                        }
-                      : {
-                          background: p.bg,
-                          color: p.text,
-                          boxShadow: `inset 0 0 0 1px ${p.ring}`,
-                        }
+                      ? { background: p.text, color: "white" }
+                      : { background: p.bg, color: p.text }
                   }
                   aria-pressed={active}
                 >

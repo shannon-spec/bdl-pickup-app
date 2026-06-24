@@ -1,7 +1,19 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { UserRound } from "lucide-react";
+import {
+  Archive,
+  ChevronDown,
+  CirclePlus,
+  Download,
+  Lock,
+  Settings2,
+  SlidersHorizontal,
+  UserPlus,
+  UserRound,
+  UsersRound,
+} from "lucide-react";
 import type { SessionContext } from "@/lib/queries/session-context";
 import type { View } from "@/lib/cookies/active-view";
 import { LeagueSwitcher } from "./league-switcher";
@@ -11,10 +23,13 @@ export function ContextHeaderClient({
   ctx,
   view,
   options,
+  canManage,
 }: {
   ctx: SessionContext;
   view: View;
   options: View[];
+  /** Commissioner or admin — gates the docked Commissioner Tools bar. */
+  canManage: boolean;
 }) {
   const hasPlayer = !!ctx.user.playerId;
   const hasChips =
@@ -24,10 +39,14 @@ export function ContextHeaderClient({
     !!ctx.user.position;
 
   return (
-    <section
-      className="relative rounded-[16px] bg-[color:var(--ctx-bg)] px-5 py-3.5 max-sm:px-4 flex items-center justify-between gap-5 flex-wrap max-sm:flex-col max-sm:items-stretch"
-      style={{ boxShadow: "inset 4px 0 0 0 var(--brand)" }}
-    >
+    <section>
+      {/* Identity — slate panel */}
+      <div
+        className={`relative bg-[color:var(--ctx-bg)] px-5 py-3.5 max-sm:px-4 flex items-center justify-between gap-5 flex-wrap max-sm:flex-col max-sm:items-stretch ${
+          canManage ? "rounded-t-[16px]" : "rounded-[16px]"
+        }`}
+        style={{ boxShadow: "inset 4px 0 0 0 var(--brand)" }}
+      >
       <div className="flex items-center gap-4 min-w-0 flex-1 pl-1.5">
         {/* Avatar */}
         <div className="relative shrink-0" style={{ width: 72, height: 72 }}>
@@ -93,6 +112,41 @@ export function ContextHeaderClient({
           />
         </div>
       )}
+      </div>
+
+      {/* Commissioner Tools — docked to the bottom of the header on every
+          tab, role-gated to commissioners/admins. */}
+      {canManage && (
+        <div
+          className="relative bg-[color:var(--surface)] rounded-b-[16px] px-5 py-2 max-sm:px-4 flex flex-col gap-1.5"
+          style={{ boxShadow: "inset 4px 0 0 0 var(--brand)" }}
+        >
+          <span className="inline-flex items-center gap-1.5 text-[10.5px] font-bold tracking-[0.12em] uppercase text-[color:var(--brand-ink)]">
+            <Lock size={12} strokeWidth={2.5} /> Commissioner Tools
+          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Link
+              href="/games/new"
+              className="inline-flex items-center gap-1.5 h-8 px-4 rounded-[10px] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white text-[13px] font-bold transition-colors"
+            >
+              Schedule game
+            </Link>
+            <Link
+              href="/players"
+              className="inline-flex items-center gap-1.5 h-8 px-4 rounded-[10px] text-[13px] font-semibold text-[color:var(--text-2)] hover:text-[color:var(--text)] hover:bg-[color:var(--surface-2)] transition-colors shadow-[inset_0_0_0_1px_var(--hairline-2)]"
+            >
+              <UserPlus size={14} strokeWidth={2.25} /> Invite player
+            </Link>
+            <Link
+              href="/leagues/new"
+              className="inline-flex items-center gap-1.5 h-8 px-4 rounded-[10px] text-[13px] font-semibold text-[color:var(--text-2)] hover:text-[color:var(--text)] hover:bg-[color:var(--surface-2)] transition-colors shadow-[inset_0_0_0_1px_var(--hairline-2)]"
+            >
+              <CirclePlus size={14} strokeWidth={2.25} /> Add league
+            </Link>
+            <CommissionerMore leagueId={ctx.activeLeagueId} />
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -112,5 +166,115 @@ function InfoChip({
     >
       {children}
     </span>
+  );
+}
+
+function SoonTag() {
+  return (
+    <span className="ml-auto inline-flex items-center h-4 px-1.5 rounded-full bg-[color:var(--surface-2)] text-[9px] font-bold uppercase tracking-[0.06em] text-[color:var(--text-4)]">
+      Soon
+    </span>
+  );
+}
+
+/** Overflow menu of lower-frequency commissioner actions. */
+function CommissionerMore({ leagueId }: { leagueId: string | null }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const row =
+    "flex items-center gap-2.5 w-full px-3 py-2 text-left text-[13px] font-medium transition-colors";
+  const live = `${row} text-[color:var(--text-2)] hover:bg-[color:var(--surface-2)] hover:text-[color:var(--text)]`;
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className="inline-flex items-center gap-1.5 h-8 px-4 rounded-[10px] text-[13px] font-semibold text-[color:var(--text-2)] hover:text-[color:var(--text)] hover:bg-[color:var(--surface-2)] transition-colors shadow-[inset_0_0_0_1px_var(--hairline-2)]"
+      >
+        More
+        <ChevronDown
+          size={14}
+          strokeWidth={2.25}
+          className={`transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute left-0 top-[calc(100%+6px)] z-[var(--z-popover)] min-w-[212px] rounded-[12px] bg-[color:var(--surface)] py-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.18),0_2px_6px_rgba(0,0,0,0.12),inset_0_0_0_1px_var(--hairline-2)]"
+        >
+          {leagueId && (
+            <Link
+              href={`/leagues/${leagueId}`}
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className={live}
+            >
+              <Settings2 size={15} strokeWidth={2} /> Manage league
+            </Link>
+          )}
+          {leagueId && (
+            <Link
+              href={`/leagues/${leagueId}/edit`}
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className={live}
+            >
+              <SlidersHorizontal size={15} strokeWidth={2} /> League settings
+            </Link>
+          )}
+          <Link
+            href="/admin/commissioners"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className={live}
+          >
+            <UsersRound size={15} strokeWidth={2} /> Manage roles
+          </Link>
+          <button
+            type="button"
+            disabled
+            title="Coming soon"
+            className={`${row} text-[color:var(--text-4)] cursor-not-allowed`}
+          >
+            <Download size={15} strokeWidth={2} /> Export data
+            <SoonTag />
+          </button>
+
+          <div className="my-1.5 mx-2 h-px bg-[color:var(--hairline)]" />
+
+          <button
+            type="button"
+            disabled
+            title="Coming soon"
+            className={`${row} text-[color:var(--down)] opacity-70 cursor-not-allowed`}
+          >
+            <Archive size={15} strokeWidth={2} /> Archive league
+            <SoonTag />
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

@@ -155,16 +155,6 @@ export default async function PlayersPage({
     return { ...p, displayGrade: override };
   });
 
-  // League name for the "in {league}" tag rendered below each pill.
-  const gradeLeagueName = gradeLeagueId
-    ? (
-        await db
-          .select({ name: leaguesTbl.name })
-          .from(leaguesTbl)
-          .where(eq(leaguesTbl.id, gradeLeagueId))
-          .limit(1)
-      )[0]?.name ?? null
-    : null;
   const canInvite = caps.canManage && !isAdminView;
   const manageLeagueIds = isAdminView ? null : commishIds;
   const showAddPlayer = isAdminView;
@@ -221,10 +211,7 @@ export default async function PlayersPage({
 
         <ScopeTabs current={scope} leagues={viewerLeagueTabs} />
 
-        <PlayersGrid
-          players={playersWithGrade}
-          gradeLeagueName={gradeLeagueName}
-        />
+        <PlayersGrid players={playersWithGrade} />
       </PageFrame>
       <MobileBottomBar active="home" />
     </>

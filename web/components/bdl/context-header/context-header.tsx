@@ -17,6 +17,11 @@ export async function ContextHeader() {
   const session = await readSession();
   const caps = await getViewCaps(session);
   return (
-    <ContextHeaderClient ctx={ctx} view={caps.view} options={caps.options} />
+    <ContextHeaderClient
+      ctx={ctx}
+      view={caps.view}
+      options={caps.options}
+      canManage={caps.canManage}
+    />
   );
 }

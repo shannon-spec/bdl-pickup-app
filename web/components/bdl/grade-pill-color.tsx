@@ -11,8 +11,8 @@
  *
  * Backgrounds are semi-transparent so they read on both the light
  * and dark surface; text colors are picked to stay legible on
- * either background. Each tier also gets a 1px inner ring for
- * shape definition independent of the surface contrast.
+ * either background. Flat look — soft fill only, no outline ring;
+ * the bold colored label carries the legibility.
  */
 import type { GradeKey } from "@/lib/queries/player-grades";
 
@@ -75,7 +75,6 @@ export function GradePill({
       style={{
         background: p.bg,
         color: p.text,
-        boxShadow: `inset 0 0 0 1px ${p.ring}`,
       }}
     >
       {grade}
