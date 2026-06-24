@@ -144,6 +144,12 @@ export function ContextHeaderClient({
             >
               <CirclePlus size={14} strokeWidth={2.25} /> Add league
             </Link>
+            <Link
+              href="/teams/new"
+              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-[10px] text-[12px] font-semibold text-[color:var(--text-2)] hover:text-[color:var(--text)] hover:bg-[color:var(--surface-2)] transition-colors shadow-[inset_0_0_0_1px_var(--hairline-2)]"
+            >
+              <UsersRound size={14} strokeWidth={2.25} /> Create team
+            </Link>
             <CommissionerMore leagueId={ctx.activeLeagueId} />
           </div>
         </div>

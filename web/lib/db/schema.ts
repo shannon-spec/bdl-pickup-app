@@ -300,6 +300,66 @@ export const leagueCommissioners = pgTable(
   (t) => [primaryKey({ columns: [t.leagueId, t.playerId] })],
 );
 
+/* ============== TEAMS (travel teams) ============== */
+
+/**
+ * Standalone travel team — a permanent team with its own roster that
+ * plays games against OTHER teams over time (Exhibition or Tournament).
+ * Mirrors the leagues avatar/soft-delete conventions; per-game format
+ * can still override the team default.
+ */
+export const teams = pgTable("teams", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  city: text("city"),
+  state: text("state"),
+  description: text("description"),
+  defaultFormat: gameFormatEnum("default_format").notNull().default("5v5"),
+  // Avatar — same Apple Contact-poster pattern as leagues.
+  avatarKind: text("avatar_kind").notNull().default("monogram"),
+  avatarColor: text("avatar_color").notNull().default("brand"),
+  avatarEmoji: text("avatar_emoji"),
+  createdBy: uuid("created_by").references(() => players.id, {
+    onDelete: "set null",
+  }),
+  hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+export const teamPlayers = pgTable(
+  "team_players",
+  {
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    addedAt: timestamp("added_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.teamId, t.playerId] }),
+    index("tp_player_idx").on(t.playerId),
+  ],
+);
+
+export const teamCommissioners = pgTable(
+  "team_commissioners",
+  {
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ columns: [t.teamId, t.playerId] })],
+);
+
 /* ============== GAMES ============== */
 
 export const games = pgTable(
@@ -904,6 +964,8 @@ export type Player = typeof players.$inferSelect;
 export type NewPlayer = typeof players.$inferInsert;
 export type League = typeof leagues.$inferSelect;
 export type NewLeague = typeof leagues.$inferInsert;
+export type Team = typeof teams.$inferSelect;
+export type NewTeam = typeof teams.$inferInsert;
 export type Game = typeof games.$inferSelect;
 export type NewGame = typeof games.$inferInsert;
 export type GameSubgame = typeof gameSubgames.$inferSelect;

@@ -8,7 +8,13 @@
  *   - everyone else (signed-in players) → read-only
  */
 import { and, eq, inArray } from "drizzle-orm";
-import { db, leagueCommissioners, leaguePlayers, games } from "@/lib/db";
+import {
+  db,
+  leagueCommissioners,
+  leaguePlayers,
+  games,
+  teamCommissioners,
+} from "@/lib/db";
 import { readSession, type Session } from "./session";
 
 export function isAdminLike(s: Session | null): boolean {
@@ -62,6 +68,46 @@ export async function canManageLeague(
 ): Promise<boolean> {
   if (isAdminLike(s)) return true;
   return isCommissionerOf(s, leagueId);
+}
+
+/* ---------- Teams (travel teams) — mirrors the league helpers ---------- */
+
+export async function isTeamCommissionerOf(
+  s: Session | null,
+  teamId: string,
+): Promise<boolean> {
+  if (!s || !s.playerId) return false;
+  const [row] = await db
+    .select({ playerId: teamCommissioners.playerId })
+    .from(teamCommissioners)
+    .where(
+      and(
+        eq(teamCommissioners.teamId, teamId),
+        eq(teamCommissioners.playerId, s.playerId),
+      ),
+    )
+    .limit(1);
+  return !!row;
+}
+
+export async function getMyCommissionerTeamIds(
+  s: Session | null,
+): Promise<string[]> {
+  if (!s || !s.playerId) return [];
+  const rows = await db
+    .select({ teamId: teamCommissioners.teamId })
+    .from(teamCommissioners)
+    .where(eq(teamCommissioners.playerId, s.playerId));
+  return rows.map((r) => r.teamId);
+}
+
+/** True for admin-like OR commissioner of the given team. */
+export async function canManageTeam(
+  s: Session | null,
+  teamId: string,
+): Promise<boolean> {
+  if (isAdminLike(s)) return true;
+  return isTeamCommissionerOf(s, teamId);
 }
 
 /** True for admin-like OR commissioner of the game's league. */
@@ -155,6 +201,13 @@ export async function requireGameManager(gameId: string): Promise<Session> {
   if (!s) throw new Error("Not authenticated.");
   if (await canManageGame(s, gameId)) return s;
   throw new Error("Forbidden — you don't manage this game.");
+}
+
+export async function requireTeamManager(teamId: string): Promise<Session> {
+  const s = await readSession();
+  if (!s) throw new Error("Not authenticated.");
+  if (await canManageTeam(s, teamId)) return s;
+  throw new Error("Forbidden — you don't manage this team.");
 }
 
 /** Owner / super_admin only — for league deletion + super admin mgmt. */
