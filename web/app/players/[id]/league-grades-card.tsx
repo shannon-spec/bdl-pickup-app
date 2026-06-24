@@ -12,7 +12,7 @@ import type { LeagueGradeRow } from "@/lib/queries/player-grades";
  */
 export function LeagueGradesCard({ rows }: { rows: LeagueGradeRow[] }) {
   return (
-    <section className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden">
+    <section className="rounded-[16px] shadow-[inset_0_0_0_1px_var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden">
       <div className="px-6 py-4 border-b border-[color:var(--hairline)] flex items-center gap-2">
         <span aria-hidden className="w-[3px] h-[12px] rounded-sm bg-[color:var(--brand)]" />
         <span className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)]">

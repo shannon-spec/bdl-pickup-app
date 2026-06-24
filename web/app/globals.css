@@ -37,17 +37,18 @@
 }
 
 [data-theme="dark"] {
-  --bg: #000000;
-  --surface: #0F0F0F;
-  --surface-2: #151515;
+  /* Cool slate (blue-gray) rather than pure black. */
+  --bg: #161B22;
+  --surface: #1E252E;
+  --surface-2: #28313B;
 
-  --hairline: #1E1E1E;
-  --hairline-2: #262626;
+  --hairline: #313B46;
+  --hairline-2: #3D4955;
 
-  --text: #FFFFFF;
-  --text-2: #B8B8B6;
-  --text-3: #7A7A77;
-  --text-4: #4A4A47;
+  --text: #F4F6F8;
+  --text-2: #AEB6C0;
+  --text-3: #7C8694;
+  --text-4: #515C69;
 
   --up: #34A853;
   --up-soft: rgba(52,168,83,.14);
@@ -64,8 +65,8 @@
   --brand-ink: #5DAEFF;
   --brand-2: #6E54E0; /* gradient endpoint (sister indigo) */
 
-  --topbar-bg: rgba(0,0,0,.72);
-  --overlay: rgba(0,0,0,.72);
+  --topbar-bg: rgba(22,27,34,.78);
+  --overlay: rgba(13,17,22,.72);
   --mark-inset: rgba(255,255,255,.06);
   --cta-shadow: 0 4px 14px rgba(13,139,255,.30);
   --badge-dot-border: var(--bg);

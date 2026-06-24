@@ -70,7 +70,7 @@ export function GradePanel({
   const displayGrade = agg.crowdGrade ?? adminLevel;
 
   return (
-    <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6">
+    <div className="rounded-[16px] shadow-[inset_0_0_0_1px_var(--hairline-2)] bg-[color:var(--surface)] p-6">
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)] flex items-center gap-2">
           <span aria-hidden className="w-[3px] h-[12px] rounded-sm bg-[color:var(--brand)]" />
@@ -152,7 +152,7 @@ export function GradePanel({
             <button
               type="submit"
               disabled={pending || pick === "" || pick === agg.myVote}
-              className="h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {pending
                 ? "Saving…"
@@ -165,7 +165,7 @@ export function GradePanel({
                 type="button"
                 onClick={onClear}
                 disabled={pending}
-                className="h-10 px-3 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] hover:bg-[color:var(--surface-2)] text-[12px] font-bold tracking-[0.06em] uppercase text-[color:var(--text-3)] transition-colors disabled:opacity-50"
+                className="h-10 px-3 rounded-[var(--r-lg)] shadow-[inset_0_0_0_1px_var(--hairline-2)] bg-[color:var(--surface)] hover:bg-[color:var(--surface-2)] text-[12px] font-bold tracking-[0.06em] uppercase text-[color:var(--text-3)] transition-colors disabled:opacity-50"
               >
                 Clear
               </button>

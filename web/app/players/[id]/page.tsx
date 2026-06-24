@@ -15,7 +15,7 @@ import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
 import { PlayerAvatar } from "@/components/bdl/player-avatar";
-import { StatBlock, StatRow } from "@/components/bdl/stat-block";
+import { StatBlock } from "@/components/bdl/stat-block";
 import { getActiveLeagueId } from "@/lib/cookies/active-league";
 import { getPlayerProfile } from "@/lib/queries/player-profile";
 import {
@@ -151,7 +151,7 @@ export default async function PlayerProfilePage({
               {canDm && (
                 <Link
                   href={`/messages/${player.id}`}
-                  className="inline-flex items-center gap-2 h-10 px-3.5 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[12px] font-bold tracking-[0.06em] uppercase hover:bg-[color:var(--surface-2)] transition-colors"
+                  className="inline-flex items-center gap-2 h-10 px-3.5 rounded-[var(--r-lg)] shadow-[inset_0_0_0_1px_var(--hairline-2)] bg-[color:var(--surface)] text-[12px] font-bold tracking-[0.06em] uppercase hover:bg-[color:var(--surface-2)] transition-colors"
                 >
                   <MessageSquare size={13} /> Message
                 </Link>
@@ -162,77 +162,88 @@ export default async function PlayerProfilePage({
         )}
 
         {/* Career stats */}
-        <section className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-7 pt-6 pb-5 max-sm:px-5">
-          <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)] mb-6">
-            Career · All Leagues
+        <section className="rounded-[16px] shadow-[inset_0_0_0_1px_var(--hairline-2)] bg-[color:var(--surface)] p-5 max-sm:p-4">
+          <div className="flex items-center gap-2.5 mb-3">
+            <span aria-hidden className="w-[3px] h-[12px] rounded-sm bg-[color:var(--brand)]" />
+            <span className="text-[10.5px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
+              Career · All Leagues
+            </span>
           </div>
-          <StatRow>
-            <StatBlock
-              label="Win %"
-              value={profile.totalWinPct !== null ? profile.totalWinPct.toFixed(1) : "—"}
-              unit={profile.totalWinPct !== null ? "%" : undefined}
-              sub={
-                profile.topLeague?.winRank
-                  ? {
-                      text: `#${profile.topLeague.winRank} · ${profile.topLeague.name}`,
-                    }
-                  : { text: `${profile.totalGames} games played` }
-              }
-            />
-            <StatBlock
-              label="Games Played %"
-              value={
-                profile.careerPlayedPct !== null
-                  ? profile.careerPlayedPct.toFixed(1)
-                  : "—"
-              }
-              unit={profile.careerPlayedPct !== null ? "%" : undefined}
-              sub={
-                profile.topLeague?.playedRank
-                  ? {
-                      text: `#${profile.topLeague.playedRank} · ${profile.topLeague.name}`,
-                    }
-                  : {
-                      text: `${profile.totalGames} of ${profile.careerLeagueNights} nights`,
-                    }
-              }
-            />
-            <StatBlock
-              label="Record"
-              value={
-                <span>
-                  {profile.totalWins}
-                  <span className="text-[color:var(--text-4)] font-bold mx-[-2px]">–</span>
-                  {profile.totalLosses}
-                </span>
-              }
-              sub={{ text: `${profile.totalWins + profile.totalLosses} decisions` }}
-            />
-            <StatBlock
-              label="Streak"
-              value={
-                profile.streakType
-                  ? `${profile.streakType}${profile.streakCount}`
-                  : "—"
-              }
-              valueClassName={
-                profile.streakType === "W"
-                  ? "text-[color:var(--up)]"
-                  : profile.streakType === "L"
-                  ? "text-[color:var(--down)]"
-                  : undefined
-              }
-              sub={
-                profile.streakType
-                  ? {
-                      text: `${profile.streakCount} straight ${profile.streakType === "W" ? "win" : "loss"}${profile.streakCount === 1 ? "" : profile.streakType === "W" ? "s" : "es"}`,
-                      tone: profile.streakType === "W" ? "up" : "down",
-                      icon: profile.streakType === "W" ? <ChevronUp size={10} /> : undefined,
-                    }
-                  : { text: "No games yet", tone: "muted" }
-              }
-            />
-          </StatRow>
+          <div className="grid grid-cols-4 gap-3 max-md:grid-cols-2">
+            <div className="rounded-[12px] bg-[color:var(--surface-2)] px-4 py-4">
+              <StatBlock
+                label="Win %"
+                value={profile.totalWinPct !== null ? profile.totalWinPct.toFixed(1) : "—"}
+                unit={profile.totalWinPct !== null ? "%" : undefined}
+                sub={
+                  profile.topLeague?.winRank
+                    ? {
+                        text: `#${profile.topLeague.winRank} · ${profile.topLeague.name}`,
+                      }
+                    : { text: `${profile.totalGames} games played` }
+                }
+              />
+            </div>
+            <div className="rounded-[12px] bg-[color:var(--surface-2)] px-4 py-4">
+              <StatBlock
+                label="Games Played %"
+                value={
+                  profile.careerPlayedPct !== null
+                    ? profile.careerPlayedPct.toFixed(1)
+                    : "—"
+                }
+                unit={profile.careerPlayedPct !== null ? "%" : undefined}
+                sub={
+                  profile.topLeague?.playedRank
+                    ? {
+                        text: `#${profile.topLeague.playedRank} · ${profile.topLeague.name}`,
+                      }
+                    : {
+                        text: `${profile.totalGames} of ${profile.careerLeagueNights} nights`,
+                      }
+                }
+              />
+            </div>
+            <div className="rounded-[12px] bg-[color:var(--surface-2)] px-4 py-4">
+              <StatBlock
+                label="Record"
+                value={
+                  <span>
+                    {profile.totalWins}
+                    <span className="text-[color:var(--text-4)] font-bold mx-[-2px]">–</span>
+                    {profile.totalLosses}
+                  </span>
+                }
+                sub={{ text: `${profile.totalWins + profile.totalLosses} decisions` }}
+              />
+            </div>
+            <div className="rounded-[12px] bg-[color:var(--surface-2)] px-4 py-4">
+              <StatBlock
+                label="Streak"
+                value={
+                  profile.streakType
+                    ? `${profile.streakType}${profile.streakCount}`
+                    : "—"
+                }
+                valueClassName={
+                  profile.streakType === "W"
+                    ? "text-[color:var(--up)]"
+                    : profile.streakType === "L"
+                    ? "text-[color:var(--down)]"
+                    : undefined
+                }
+                sub={
+                  profile.streakType
+                    ? {
+                        text: `${profile.streakCount} straight ${profile.streakType === "W" ? "win" : "loss"}${profile.streakCount === 1 ? "" : profile.streakType === "W" ? "s" : "es"}`,
+                        tone: profile.streakType === "W" ? "up" : "down",
+                        icon: profile.streakType === "W" ? <ChevronUp size={10} /> : undefined,
+                      }
+                    : { text: "No games yet", tone: "muted" }
+                }
+              />
+            </div>
+          </div>
         </section>
 
         {/* BDL Grade card + per-league breakdown share a row on
@@ -279,7 +290,7 @@ export default async function PlayerProfilePage({
         {profile.byLeague.length > 0 && (
           <div>
             <SectionHead title="By League" count={<span>{profile.byLeague.length}</span>} />
-            <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden">
+            <div className="rounded-[16px] shadow-[inset_0_0_0_1px_var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden">
               <div className="grid grid-cols-[1fr_80px_72px_56px_72px_56px] max-sm:grid-cols-[1fr_70px_60px_56px] gap-3 px-5 py-2.5 text-[10px] font-semibold tracking-[0.14em] uppercase text-[color:var(--text-3)] border-b border-[color:var(--hairline)]">
                 <span>League</span>
                 <span className="text-right">Record</span>
@@ -331,7 +342,7 @@ export default async function PlayerProfilePage({
                 <Link
                   key={g.id}
                   href={`/games/${g.id}`}
-                  className="flex flex-col gap-2.5 p-4 rounded-[12px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] min-w-[170px] hover:border-[color:var(--text-4)] transition-colors"
+                  className="flex flex-col gap-2.5 p-4 rounded-[12px] shadow-[inset_0_0_0_1px_var(--hairline-2)] bg-[color:var(--surface)] min-w-[170px] hover:border-[color:var(--text-4)] transition-colors"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[10.5px] font-semibold tracking-[0.12em] uppercase text-[color:var(--text-3)]">
@@ -376,10 +387,6 @@ export default async function PlayerProfilePage({
           </div>
         )}
 
-        {/* Whoop console — self-view only. Shows basketball workout data
-            (strain, HR, calories) from the player's connected Whoop account. */}
-        {isMe && <WhoopConsole playerId={player.id} />}
-
         {/* Cell + email are NEVER displayed publicly. The viewing player
             can confirm their own data; everyone else gets a Message Center
             entry point so we don't leak phone/email outside the app. */}
@@ -393,6 +400,11 @@ export default async function PlayerProfilePage({
             />
           )}
         </div>
+
+        {/* Whoop console — self-view only, kept as the last module. Shows
+            basketball workout data (strain, HR, calories) from the
+            connected Whoop account. */}
+        {isMe && <WhoopConsole playerId={player.id} />}
       </PageFrame>
       <MobileBottomBar active="profile" />
     </>
@@ -440,7 +452,7 @@ function PlayerInfoCard({ player }: { player: PlayerType }) {
   if (!hasAny) return null;
 
   return (
-    <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6">
+    <div className="rounded-[16px] shadow-[inset_0_0_0_1px_var(--hairline-2)] bg-[color:var(--surface)] p-6">
       <div className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)] flex items-center gap-2 mb-5">
         <span aria-hidden className="w-[3px] h-[12px] rounded-sm bg-[color:var(--brand)]" />
         Player Info
@@ -487,7 +499,7 @@ function ContactPrivacyCard({
   const hasAny = !!player.cell || !!player.email;
   if (isMe && !hasAny) {
     return (
-      <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6 flex flex-col gap-3">
+      <div className="rounded-[16px] shadow-[inset_0_0_0_1px_var(--hairline-2)] bg-[color:var(--surface)] p-6 flex flex-col gap-3">
         <div className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)] flex items-center gap-2">
           <span
             aria-hidden
@@ -509,7 +521,7 @@ function ContactPrivacyCard({
   const emailDisplay = player.email ?? "—";
 
   return (
-    <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6 flex flex-col gap-4">
+    <div className="rounded-[16px] shadow-[inset_0_0_0_1px_var(--hairline-2)] bg-[color:var(--surface)] p-6 flex flex-col gap-4">
       <div className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)] flex items-center gap-2">
         <span
           aria-hidden
@@ -535,7 +547,7 @@ function ContactPrivacyCard({
         <div>
           <Link
             href="/messages"
-            className="inline-flex items-center gap-2 h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)]"
+            className="inline-flex items-center gap-2 h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase"
           >
             <MessageSquare size={13} /> Open Message Center
           </Link>
@@ -545,7 +557,7 @@ function ContactPrivacyCard({
           <div>
             <Link
               href={`/messages/${player.id}`}
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)]"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase"
             >
               <MessageSquare size={13} /> Send a private message
             </Link>
@@ -642,7 +654,7 @@ function SelfProfileBar({
   );
 
   return (
-    <section className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-5 py-4 flex flex-col gap-3">
+    <section className="rounded-[16px] shadow-[inset_0_0_0_1px_var(--hairline-2)] bg-[color:var(--surface)] px-5 py-4 flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
           <span
@@ -668,14 +680,14 @@ function SelfProfileBar({
         <div className="flex items-center gap-2 flex-shrink-0">
           <Link
             href="/account"
-            className="inline-flex items-center gap-2 h-9 px-3.5 rounded-full border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[11.5px] font-bold tracking-[0.04em] uppercase text-[color:var(--text-2)] hover:text-[color:var(--text)] hover:bg-[color:var(--surface-2)] transition-colors"
+            className="inline-flex items-center gap-2 h-9 px-3.5 rounded-full shadow-[inset_0_0_0_1px_var(--hairline-2)] bg-[color:var(--surface)] text-[11.5px] font-bold tracking-[0.04em] uppercase text-[color:var(--text-2)] hover:text-[color:var(--text)] hover:bg-[color:var(--surface-2)] transition-colors"
           >
             Account
           </Link>
           {canEdit && (
             <Link
               href={`/players/${player.id}/edit`}
-              className="inline-flex items-center gap-2 h-9 px-3.5 rounded-full bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white text-[11.5px] font-bold tracking-[0.04em] uppercase shadow-[var(--cta-shadow)]"
+              className="inline-flex items-center gap-2 h-9 px-3.5 rounded-full bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white text-[11.5px] font-bold tracking-[0.04em] uppercase"
             >
               <Pencil size={12} /> Edit Profile
             </Link>
