@@ -13,7 +13,6 @@ import { GradePill } from "@/components/bdl/grade-pill";
 import { LeagueAvatar } from "@/components/bdl/league-avatar";
 import { getLeaguesWithStats } from "@/lib/queries/leagues";
 import { formatLabel } from "@/lib/format";
-import { LeaguesPageClient } from "./leagues-client";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Leagues · BDL" };
@@ -41,15 +40,14 @@ export default async function LeaguesPage() {
       <TopBar active="/leagues" />
       <PageFrame>
         <ContextHeader />
-        <LeaguesPageClient canCreate={caps.canManage}>
-          <SectionHead
-            title="Leagues"
-            count={
-              <span>
-                {rows.length} league{rows.length === 1 ? "" : "s"}
-              </span>
-            }
-          />
+        <SectionHead
+          title="Leagues"
+          count={
+            <span>
+              {rows.length} league{rows.length === 1 ? "" : "s"}
+            </span>
+          }
+        />
 
           {rows.length === 0 ? (
             <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-12 text-center text-[color:var(--text-3)] text-[14px]">
@@ -100,7 +98,6 @@ export default async function LeaguesPage() {
               ))}
             </div>
           )}
-        </LeaguesPageClient>
       </PageFrame>
       <MobileBottomBar active="home" />
     </>

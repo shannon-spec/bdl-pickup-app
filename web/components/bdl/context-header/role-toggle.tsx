@@ -29,7 +29,7 @@ export function RoleToggle({
 
   if (options.length === 1) {
     return (
-      <span className="inline-flex items-center h-8 px-3.5 rounded-full bg-[color:var(--brand)] text-white text-[11px] font-bold tracking-[0.06em] uppercase flex-shrink-0">
+      <span className="inline-flex items-center h-6 px-2.5 rounded-full bg-[color:var(--brand)] text-white text-[10px] font-bold tracking-[0.06em] uppercase flex-shrink-0">
         {LABELS[options[0]]}
       </span>
     );
@@ -61,8 +61,8 @@ export function RoleToggle({
             onClick={() => onSelect(o)}
             disabled={pending}
             className={[
-              "h-8 px-3.5 rounded-full",
-              "text-[11px] font-bold tracking-[0.06em] uppercase",
+              "h-6 px-2.5 rounded-full",
+              "text-[10px] font-bold tracking-[0.06em] uppercase",
               "transition-colors",
               selected
                 ? "bg-[color:var(--brand)] text-white"

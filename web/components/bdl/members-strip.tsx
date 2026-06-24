@@ -32,9 +32,9 @@ export async function MembersStrip({ leagueId }: { leagueId?: string }) {
   if (members.length === 0 && !showAdminControls) return null;
 
   return (
-    <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-5 py-4">
+    <div className="rounded-[16px] bg-[color:var(--surface-2)] px-5 py-4">
       <div className="flex items-center justify-between gap-3 mb-3">
-        <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)]">
+        <div className="text-[10.5px] font-semibold tracking-[0.12em] uppercase text-[color:var(--text-3)]">
           Members
         </div>
         <span className="text-[11.5px] text-[color:var(--text-3)] num">
@@ -73,7 +73,7 @@ function MemberPill({ m }: { m: MemberLite }) {
   return (
     <Link
       href={`/players/${m.id}`}
-      className="inline-flex items-center gap-2 h-7 pl-2 pr-3 rounded-full bg-[color:var(--surface-2)] border border-[color:var(--hairline)] text-[11.5px] hover:bg-[color:var(--surface)] hover:border-[color:var(--text-4)] transition-colors"
+      className="inline-flex items-center gap-2 h-7 pl-2 pr-3 rounded-full bg-[color:var(--surface)] text-[11.5px] hover:bg-[color:var(--brand-soft)] transition-colors"
     >
       <span className="font-bold text-[color:var(--text)] hover:text-[color:var(--brand)]">
         {m.firstName} {m.lastName}

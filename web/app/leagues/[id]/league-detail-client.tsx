@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Copy, Eye, EyeOff, Mail, Pencil, Plus, RotateCcw, X } from "lucide-react";
+import { Copy, Eye, EyeOff, Mail, Plus, RotateCcw, X } from "lucide-react";
 import type { LeagueDetail } from "@/lib/queries/leagues";
 import {
   addCommissioner,
@@ -70,18 +70,12 @@ export function LeagueDetailClient({
 
   return (
     <>
-      <div className="flex items-center justify-end gap-2 -mt-2">
-        <Link
-          href={`/leagues/${detail.league.id}/edit`}
-          className="inline-flex items-center gap-2 h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)] transition-colors"
-        >
-          <Pencil size={14} strokeWidth={2.5} /> Edit League
-        </Link>
-        {isAdmin && (
+      {isAdmin && (
+        <div className="flex items-center justify-end gap-2 -mt-2">
           <button
             type="button"
             onClick={() => setConfirmHide(true)}
-            className={`inline-flex items-center gap-2 h-10 px-3.5 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[12px] font-bold tracking-[0.06em] uppercase hover:bg-[color:var(--surface-2)] transition-colors ${
+            className={`inline-flex items-center gap-2 h-10 px-3.5 rounded-[var(--r-lg)] bg-[color:var(--surface)] text-[12px] font-bold tracking-[0.06em] uppercase hover:bg-[color:var(--surface-2)] transition-colors shadow-[inset_0_0_0_1px_var(--hairline-2)] ${
               isHidden
                 ? "text-[color:var(--up)]"
                 : "text-[color:var(--text-2)]"
@@ -97,8 +91,8 @@ export function LeagueDetailClient({
               </>
             )}
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {confirmHide && (
         <div

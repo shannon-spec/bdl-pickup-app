@@ -41,6 +41,7 @@ export default async function LeaderboardPage({
   // For unsigned-in viewers or signed-in users without league access,
   // fall back to the CPA League as the public example.
   const session = await readSession();
+  const meId = session?.playerId ?? null;
   const caps = await getViewCaps(session);
   let scopeLeagueIds: string[] | null = null;
   let isExample = false;
@@ -118,7 +119,7 @@ export default async function LeaderboardPage({
         />
 
         <div className="grid grid-cols-2 gap-3 max-[1100px]:grid-cols-1">
-          <Board
+          <Board meId={meId}
             title="Highest Win %"
             rows={data.topWinPct}
             valueKey="pct"
@@ -126,11 +127,11 @@ export default async function LeaderboardPage({
             isPercent
             featured="win"
           />
-          <Board title="Most Wins" rows={data.topWins} valueKey="wins" valueLabel="W" />
+          <Board meId={meId} title="Most Wins" rows={data.topWins} valueKey="wins" valueLabel="W" />
         </div>
 
         <div className="grid grid-cols-2 gap-3 max-[1100px]:grid-cols-1">
-          <Board
+          <Board meId={meId}
             title="Most Games Played"
             rows={data.topGamesPlayed}
             valueKey="gamesPlayed"
@@ -138,7 +139,7 @@ export default async function LeaderboardPage({
             playedOf={data.totalCompleted}
             featured="brand"
           />
-          <Board
+          <Board meId={meId}
             title="Game Winner Awards · Margin ≤ 10"
             rows={data.topGW}
             valueKey="gameWinnerCount"
@@ -147,18 +148,18 @@ export default async function LeaderboardPage({
         </div>
 
         <div className="grid grid-cols-2 gap-3 max-[1100px]:grid-cols-1">
-          <Board
+          <Board meId={meId}
             title="Heroes · Margin ≤ 3"
             rows={data.topHeroes}
             valueKey="heroCount"
             valueLabel="HERO"
             hero
           />
-          <Board title="Most Losses" rows={data.topLosses} valueKey="losses" valueLabel="L" />
+          <Board meId={meId} title="Most Losses" rows={data.topLosses} valueKey="losses" valueLabel="L" />
         </div>
 
         <div className="grid grid-cols-2 gap-3 max-[1100px]:grid-cols-1">
-          <Board
+          <Board meId={meId}
             title="Lowest Win %"
             rows={data.lowWinPct}
             valueKey="pct"
@@ -184,6 +185,7 @@ function Board({
   hero,
   featured,
   playedOf,
+  meId,
 }: {
   title: string;
   rows: LbPlayer[];
@@ -195,6 +197,8 @@ function Board({
   hero?: boolean;
   /** Tinted "primary" treatment. "win" = green; "brand" = blue. */
   featured?: "win" | "brand";
+  /** Current viewer's player id — their own row name is highlighted. */
+  meId?: string | null;
   /**
    * When set, the GP slot shows "% played" derived from gamesPlayed /
    * playedOf — used by the Most Games Played board to surface
@@ -283,17 +287,30 @@ function Board({
             <Link
               key={p.id}
               href={`/players/${p.id}`}
-              className="grid grid-cols-[28px_1fr_60px_60px_80px] max-sm:grid-cols-[28px_1fr_70px_80px] items-center gap-3 px-5 py-2.5 border-t border-[color:var(--hairline)] first:border-t-0 hover:bg-[color:var(--surface-2)] text-[14px]"
+              className="grid grid-cols-[24px_1fr_60px_60px_80px] max-sm:grid-cols-[24px_1fr_70px_80px] items-center gap-3 px-5 py-1 hover:bg-[color:var(--surface-2)] transition-colors text-[14px]"
             >
               <span
-                className={`font-[family-name:var(--mono)] num ${
-                  i === 0 ? "text-[color:var(--brand-ink)] font-bold" : "text-[color:var(--text-3)]"
+                className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-[6px] text-[11px] font-bold font-[family-name:var(--mono)] num ${
+                  i === 0
+                    ? "bg-[color:var(--brand-soft)] text-[color:var(--brand-ink)]"
+                    : "bg-[color:var(--surface-2)] text-[color:var(--text-3)]"
                 }`}
               >
                 {i + 1}
               </span>
-              <span className="font-bold truncate">
-                {p.firstName} {p.lastName}
+              <span className="inline-flex items-center gap-2 min-w-0">
+                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[color:var(--brand)] text-white font-bold text-[10px] flex-shrink-0">
+                  {`${p.firstName[0] ?? ""}${p.lastName[0] ?? ""}`.toUpperCase()}
+                </span>
+                <span
+                  className={`leading-tight truncate ${
+                    meId && p.id === meId
+                      ? "font-semibold text-[color:var(--brand-ink)]"
+                      : "font-medium"
+                  }`}
+                >
+                  {p.firstName} {p.lastName}
+                </span>
               </span>
               <span className="font-[family-name:var(--mono)] num text-[12px] text-[color:var(--text-3)] text-right">
                 {p.wins}-{p.losses}

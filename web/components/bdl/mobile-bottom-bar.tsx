@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Home, Trophy, Compass, User, Check, Trophy as Leagues } from "lucide-react";
+import { Home, Trophy, Compass, User, Check, Shield as Leagues } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
 import { getViewCaps } from "@/lib/auth/view";
 import { cn } from "@/lib/utils";

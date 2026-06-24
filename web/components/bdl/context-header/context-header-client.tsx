@@ -7,6 +7,7 @@ import {
   ChevronDown,
   CirclePlus,
   Download,
+  KeyRound,
   Lock,
   Settings2,
   SlidersHorizontal,
@@ -127,19 +128,19 @@ export function ContextHeaderClient({
           <div className="flex items-center gap-2 flex-wrap">
             <Link
               href="/games/new"
-              className="inline-flex items-center gap-1.5 h-8 px-4 rounded-[10px] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white text-[13px] font-bold transition-colors"
+              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-[10px] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white text-[12px] font-bold transition-colors"
             >
               Schedule game
             </Link>
             <Link
               href="/players"
-              className="inline-flex items-center gap-1.5 h-8 px-4 rounded-[10px] text-[13px] font-semibold text-[color:var(--text-2)] hover:text-[color:var(--text)] hover:bg-[color:var(--surface-2)] transition-colors shadow-[inset_0_0_0_1px_var(--hairline-2)]"
+              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-[10px] text-[12px] font-semibold text-[color:var(--text-2)] hover:text-[color:var(--text)] hover:bg-[color:var(--surface-2)] transition-colors shadow-[inset_0_0_0_1px_var(--hairline-2)]"
             >
               <UserPlus size={14} strokeWidth={2.25} /> Invite player
             </Link>
             <Link
               href="/leagues/new"
-              className="inline-flex items-center gap-1.5 h-8 px-4 rounded-[10px] text-[13px] font-semibold text-[color:var(--text-2)] hover:text-[color:var(--text)] hover:bg-[color:var(--surface-2)] transition-colors shadow-[inset_0_0_0_1px_var(--hairline-2)]"
+              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-[10px] text-[12px] font-semibold text-[color:var(--text-2)] hover:text-[color:var(--text)] hover:bg-[color:var(--surface-2)] transition-colors shadow-[inset_0_0_0_1px_var(--hairline-2)]"
             >
               <CirclePlus size={14} strokeWidth={2.25} /> Add league
             </Link>
@@ -160,7 +161,7 @@ function InfoChip({
 }) {
   return (
     <span
-      className={`inline-flex items-center h-8 px-3 rounded-[10px] bg-[color:var(--ctx-surface)] text-[13px] font-semibold text-[color:var(--text)] ${
+      className={`inline-flex items-center h-8 px-3 rounded-[10px] bg-[color:var(--ctx-surface)] text-[12px] font-semibold text-[color:var(--text)] ${
         mono ? "font-[family-name:var(--mono)] num" : ""
       }`}
     >
@@ -209,7 +210,7 @@ function CommissionerMore({ leagueId }: { leagueId: string | null }) {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-1.5 h-8 px-4 rounded-[10px] text-[13px] font-semibold text-[color:var(--text-2)] hover:text-[color:var(--text)] hover:bg-[color:var(--surface-2)] transition-colors shadow-[inset_0_0_0_1px_var(--hairline-2)]"
+        className="inline-flex items-center gap-1.5 h-7 px-3 rounded-[10px] text-[12px] font-semibold text-[color:var(--text-2)] hover:text-[color:var(--text)] hover:bg-[color:var(--surface-2)] transition-colors shadow-[inset_0_0_0_1px_var(--hairline-2)]"
       >
         More
         <ChevronDown
@@ -251,6 +252,14 @@ function CommissionerMore({ leagueId }: { leagueId: string | null }) {
             className={live}
           >
             <UsersRound size={15} strokeWidth={2} /> Manage roles
+          </Link>
+          <Link
+            href="/admin/credentials"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className={live}
+          >
+            <KeyRound size={15} strokeWidth={2} /> Manage logins
           </Link>
           <button
             type="button"

@@ -1,6 +1,4 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronRight } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
 import { canManageLeague } from "@/lib/auth/perms";
 import { getViewCaps } from "@/lib/auth/view";
@@ -14,28 +12,13 @@ import { Pill } from "@/components/bdl/pill";
 import { GradePill } from "@/components/bdl/grade-pill";
 import { LeagueAvatar } from "@/components/bdl/league-avatar";
 import { LeagueVenueCard } from "@/components/bdl/league-venue-card";
-import { TeamBadge } from "@/components/bdl/team-badge";
-import { ProbabilityBar } from "@/components/bdl/probability-bar";
+import { NextGameCard } from "@/components/bdl/next-game-card";
 import { getLeagueDetail } from "@/lib/queries/leagues";
 import { formatLabel } from "@/lib/format";
 import { getInvitesForLeague } from "@/lib/queries/invites";
 import { getLeagueNextGame, getMatchupOdds } from "@/lib/queries/games";
 import { isInviteEmailConfigured } from "@/lib/email/invite-email";
 import { LeagueDetailClient, Invites } from "./league-detail-client";
-
-const fmtWD = (d: string | null) => {
-  if (!d) return "—";
-  const dt = new Date(d + "T00:00:00");
-  return `${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][dt.getDay()]} · ${
-    ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][dt.getMonth()]
-  } ${dt.getDate()}`;
-};
-const fmtTime = (t: string | null) => {
-  if (!t) return "";
-  const [h, m] = t.split(":");
-  const hr = Number(h);
-  return `${hr % 12 || 12}:${m} ${hr >= 12 ? "PM" : "AM"}`;
-};
 
 export const dynamic = "force-dynamic";
 
@@ -112,120 +95,21 @@ export default async function LeagueDetailPage({
         {canManage && <LeagueDetailClient detail={detail} isAdmin={isAdmin} />}
 
         {nextGame && (
-          <section
-            className="group relative rounded-[16px] border border-[color:var(--hairline-2)] overflow-hidden"
-            style={{
-              background:
-                "radial-gradient(ellipse at top left, var(--next-game-tint), transparent 60%), var(--surface)",
-            }}
-          >
-            <Link
-              href={`/games/${nextGame.id}`}
-              aria-label={`Game details for ${nextGame.teamAName} vs ${nextGame.teamBName}`}
-              className="absolute inset-0 z-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand)] rounded-[16px]"
-            />
-            <div className="relative z-[1] px-5 py-3.5 flex flex-col gap-2.5 pointer-events-none">
-              <div className="flex items-center gap-2.5 flex-wrap text-[12px]">
-                <Pill tone="brand">
-                  Next · {fmtWD(nextGame.date)}
-                  {nextGame.time ? ` · ${fmtTime(nextGame.time)}` : ""}
-                </Pill>
-                {nextGame.venue && (
-                  <span className="text-[color:var(--text-3)]">{nextGame.venue}</span>
-                )}
-                <Link
-                  href={`/games/${nextGame.id}`}
-                  className="ml-auto pointer-events-auto inline-flex items-center gap-1 text-[11.5px] text-[color:var(--text-3)] hover:text-[color:var(--text)]"
-                >
-                  Game details <ChevronRight size={12} />
-                </Link>
-              </div>
-              <div className="flex items-start gap-3 flex-wrap">
-                <div className="flex flex-col gap-1.5 min-w-0">
-                  <div className="inline-flex items-center gap-2.5">
-                    <TeamBadge team="white" />
-                    <span className="font-extrabold text-[18px] text-[color:var(--text)]">
-                      {nextGame.teamAName}
-                    </span>
-                  </div>
-                  {nextGame.rosterA.length > 0 && (
-                    <ul className="flex flex-col gap-1 pl-[44px]">
-                      {nextGame.rosterA.map((p) => (
-                        <li
-                          key={p.id}
-                          className="text-[12.5px] font-medium text-[color:var(--text)] leading-tight truncate"
-                        >
-                          {p.firstName} {p.lastName}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <span className="text-[color:var(--text-4)] text-[12px] font-medium pt-3">vs</span>
-                <div className="flex flex-col gap-1.5 min-w-0">
-                  <div className="inline-flex items-center gap-2.5">
-                    <TeamBadge team="dark" />
-                    <span className="font-extrabold text-[18px] text-[color:var(--text)]">
-                      {nextGame.teamBName}
-                    </span>
-                  </div>
-                  {nextGame.rosterB.length > 0 && (
-                    <ul className="flex flex-col gap-1 pl-[44px]">
-                      {nextGame.rosterB.map((p) => (
-                        <li
-                          key={p.id}
-                          className="text-[12.5px] font-medium text-[color:var(--text)] leading-tight truncate"
-                        >
-                          {p.firstName} {p.lastName}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-              {odds && (
-                <div className="flex flex-col gap-1.5">
-                  <ProbabilityBar
-                    aLabel={nextGame.teamAName}
-                    bLabel={nextGame.teamBName}
-                    a={odds.probA}
-                    b={odds.probB}
-                    compact
-                  />
-                  {odds.predictedScore && (() => {
-                    const aScore = odds.predictedScore.a;
-                    const bScore = odds.predictedScore.b;
-                    const spread = Math.abs(aScore - bScore);
-                    const favorite =
-                      aScore > bScore
-                        ? nextGame.teamAName
-                        : bScore > aScore
-                          ? nextGame.teamBName
-                          : null;
-                    return (
-                      <>
-                        <div className="flex items-center justify-center gap-2 text-[11px] font-[family-name:var(--mono)] num font-semibold text-[color:var(--text-2)]">
-                          <span className="text-[10px] tracking-[0.14em] uppercase text-[color:var(--text-3)] font-semibold">
-                            Projected
-                          </span>
-                          <span>
-                            {nextGame.teamAName} {aScore}
-                            <span className="mx-1.5 text-[color:var(--text-3)]">—</span>
-                            {bScore} {nextGame.teamBName}
-                          </span>
-                        </div>
-                        <div className="flex justify-center">
-                          <Pill tone="neutral">
-                            Spread · {favorite ? `${favorite} −${spread}` : "Pick"}
-                          </Pill>
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
-          </section>
+          <NextGameCard
+            href={`/games/${nextGame.id}`}
+            label="Next Game"
+            date={nextGame.date}
+            time={nextGame.time}
+            venue={nextGame.venue}
+            teamAName={nextGame.teamAName}
+            teamBName={nextGame.teamBName}
+            probA={odds?.probA ?? null}
+            probB={odds?.probB ?? null}
+            predictedScore={odds?.predictedScore ?? null}
+            rosterA={nextGame.rosterA}
+            rosterB={nextGame.rosterB}
+            meId={session?.playerId ?? null}
+          />
         )}
 
         <LeagueVenueCard

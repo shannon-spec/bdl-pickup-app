@@ -61,8 +61,8 @@ export async function CommissionerStrip({ leagueId }: { leagueId?: string }) {
   if (commissioners.length === 0 && !showAdminControls) return null;
 
   return (
-    <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-5 py-4">
-      <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)] mb-3">
+    <div className="rounded-[16px] bg-[color:var(--surface-2)] px-5 py-4">
+      <div className="text-[10.5px] font-semibold tracking-[0.12em] uppercase text-[color:var(--text-3)] mb-3">
         Commissioner{commissioners.length === 1 ? "" : "s"}
       </div>
       {commissioners.length === 0 ? (
@@ -105,11 +105,10 @@ function Card({
   const showCell = access !== "none" && c.cell !== null;
   const showEmail = access !== "none" && c.email !== null;
   return (
-    <div className="flex items-center gap-3 rounded-full border border-[color:var(--hairline-2)] bg-[color:var(--surface-2)] pl-1 pr-3.5 py-1">
+    <div className="flex items-center gap-3 rounded-full bg-[color:var(--surface)] pl-1 pr-3.5 py-1">
       <Link
         href={`/players/${c.id}`}
-        className="inline-flex items-center justify-center w-7 h-7 rounded-full text-white font-extrabold text-[11px] flex-shrink-0"
-        style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-2))" }}
+        className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[color:var(--brand)] text-white font-extrabold text-[11px] flex-shrink-0"
       >
         {initials(c)}
       </Link>

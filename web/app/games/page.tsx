@@ -14,7 +14,6 @@ import { MembersStrip } from "@/components/bdl/members-strip";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { NextGameCard } from "@/components/bdl/next-game-card";
-import { Plus } from "lucide-react";
 import { GamesListClient } from "./games-list-client";
 import {
   getGamesList,
@@ -240,16 +239,6 @@ export default async function GamesPage({
             <CommissionerStrip leagueId={filter.leagueId ?? undefined} />
             <MembersStrip leagueId={filter.leagueId ?? undefined} />
           </>
-        )}
-        {caps.canManage && (
-          <div className="flex items-center justify-end -mt-2">
-            <Link
-              href="/games/new"
-              className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)] transition-colors"
-            >
-              <Plus size={14} strokeWidth={2.5} /> Schedule Game
-            </Link>
-          </div>
         )}
         {renderListing()}
       </PageFrame>

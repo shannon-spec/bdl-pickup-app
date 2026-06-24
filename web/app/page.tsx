@@ -557,28 +557,30 @@ function LbRow({
   return (
     <Link
       href={`/players/${row.player.id}`}
-      className={`grid items-center gap-3 py-2.5 px-1.5 grid-cols-[28px_1fr_80px_80px] max-sm:grid-cols-[28px_1fr_80px] border-t border-[color:var(--hairline)] first:border-t-0 hover:bg-[color:var(--surface-2)] transition-colors ${
-        row.isMe ? "bg-[color:var(--surface-2)] border-l-2 border-l-[color:var(--brand)] pl-2.5" : ""
+      className={`grid items-center gap-3 py-1 px-1.5 grid-cols-[24px_1fr_80px_80px] max-sm:grid-cols-[24px_1fr_80px] rounded-[6px] transition-colors ${
+        row.isMe ? "bg-[color:var(--brand-soft)]" : "hover:bg-[color:var(--surface-2)]"
       }`}
     >
       <span
-        className={`font-[family-name:var(--mono)] text-[13px] num ${
-          rank === 1 ? "text-[color:var(--brand-ink)]" : "text-[color:var(--text-3)]"
+        className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-[6px] text-[11px] font-bold font-[family-name:var(--mono)] num ${
+          rank === 1
+            ? "bg-[color:var(--brand-soft)] text-[color:var(--brand-ink)]"
+            : "bg-[color:var(--surface-2)] text-[color:var(--text-3)]"
         }`}
       >
         {rank}
       </span>
-      <span className="inline-flex items-center gap-2.5 min-w-0">
-        <span
-          className="inline-flex items-center justify-center w-7 h-7 rounded-full text-white font-bold text-[11px]"
-          style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-2))" }}
-        >
+      <span className="inline-flex items-center gap-2 min-w-0">
+        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[color:var(--brand)] text-white font-bold text-[10px] flex-shrink-0">
           {initials}
         </span>
-        <span className="font-semibold text-[color:var(--text)] truncate hover:text-[color:var(--brand)]">
-          {row.isMe && (
-            <span className="text-[color:var(--brand)] font-extrabold mr-1.5">•</span>
-          )}
+        <span
+          className={`text-[14px] leading-tight truncate hover:text-[color:var(--brand)] ${
+            row.isMe
+              ? "font-semibold text-[color:var(--brand-ink)]"
+              : "font-medium text-[color:var(--text)]"
+          }`}
+        >
           {row.player.firstName} {row.player.lastName}
         </span>
       </span>
