@@ -1,5 +1,5 @@
 import { alias } from "drizzle-orm/pg-core";
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lt, ne, sql } from "drizzle-orm";
 import {
   db,
   games,
@@ -212,6 +212,48 @@ export async function getGameDetail(id: string): Promise<GameDetail | null> {
  * matchup if it's been locked in. Returns empty arrays if no roster
  * is set yet.
  */
+/**
+ * Summary of the most recent game in this game's league that happened
+ * before it (by date) — used to offer "load previous game's teams".
+ * Returns null when there's no league, no prior game, or that game had
+ * no A/B rosters set.
+ */
+export async function getPreviousGameSummary(gameId: string): Promise<{
+  id: string;
+  date: string | null;
+  rosterCount: number;
+} | null> {
+  const [cur] = await db
+    .select({ leagueId: games.leagueId, gameDate: games.gameDate })
+    .from(games)
+    .where(eq(games.id, gameId))
+    .limit(1);
+  if (!cur?.leagueId) return null;
+
+  const [prev] = await db
+    .select({ id: games.id, date: games.gameDate })
+    .from(games)
+    .where(
+      and(
+        eq(games.leagueId, cur.leagueId),
+        ne(games.id, gameId),
+        cur.gameDate ? lt(games.gameDate, cur.gameDate) : undefined,
+      ),
+    )
+    .orderBy(desc(games.gameDate), desc(games.gameTime))
+    .limit(1);
+  if (!prev) return null;
+
+  const [{ c }] = await db
+    .select({ c: sql<number>`count(*)::int` })
+    .from(gameRoster)
+    .where(
+      and(eq(gameRoster.gameId, prev.id), inArray(gameRoster.side, ["A", "B"])),
+    );
+  if (!c) return null;
+  return { id: prev.id, date: prev.date, rosterCount: Number(c) };
+}
+
 export async function getGameRosterLite(gameId: string): Promise<{
   A: Pick<Player, "id" | "firstName" | "lastName">[];
   B: Pick<Player, "id" | "firstName" | "lastName">[];

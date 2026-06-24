@@ -18,12 +18,13 @@ import {
   getGameDetail,
   getPlayerWinPctsForLeague,
   getMatchupOdds,
+  getPreviousGameSummary,
 } from "@/lib/queries/games";
 import {
   GameScore,
   GameMetaEditor,
   RosterRow,
-  AddRoster,
+  RosterBuilder,
   DangerZone,
 } from "./game-detail-client";
 
@@ -65,9 +66,14 @@ export default async function GameDetailPage({
     !!session &&
     caps.canManage &&
     (await canManageGame(session, id));
+  // Invite Manager is admin-only (commissioners no longer see it).
+  const canManageInvites = canEdit && caps.view === "admin";
 
   const detail = await getGameDetail(id);
   if (!detail) notFound();
+
+  // For the "load previous game's teams" shortcut on the roster editor.
+  const previousGame = canEdit ? await getPreviousGameSummary(id) : null;
 
   const { game } = detail;
   const completed =
@@ -239,30 +245,6 @@ export default async function GameDetailPage({
           {canEdit && <GameScore detail={detail} />}
         </div>
 
-        {canEdit && (
-          <Link
-            href={`/games/${game.id}/invites`}
-            className="flex items-center justify-between gap-3 rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-5 py-4 hover:bg-[color:var(--surface-2)] transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <span className="inline-flex items-center justify-center w-10 h-10 rounded-[12px] bg-[color:var(--brand-soft)] text-[color:var(--brand)]">
-                <Send size={18} />
-              </span>
-              <div className="flex flex-col leading-tight">
-                <span className="font-extrabold text-[15px] text-[color:var(--text)]">
-                  Invite Manager
-                </span>
-                <span className="text-[11.5px] text-[color:var(--text-3)]">
-                  Send, track, and manage invites for this game
-                </span>
-              </div>
-            </div>
-            <span className="text-[11px] font-bold tracking-[0.08em] uppercase text-[color:var(--brand)]">
-              Open →
-            </span>
-          </Link>
-        )}
-
         {detail.subgames.length > 0 && (
           <SeriesBreakdown
             teamA={game.teamAName ?? "White"}
@@ -273,38 +255,80 @@ export default async function GameDetailPage({
 
         {canEdit && <GameMetaEditor detail={detail} />}
 
-        <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
-          <div className="flex flex-col gap-3">
-            <TeamSectionHead
-              variant="white"
-              name={game.teamAName ?? "White"}
-              count={detail.rosterA.length}
-            />
-            <RosterPanel detail={detail} side="A" canEdit={canEdit} winPcts={winPcts} />
+        {canEdit ? (
+          <RosterBuilder
+            gameId={game.id}
+            teamAName={game.teamAName ?? "White"}
+            teamBName={game.teamBName ?? "Dark"}
+            format={game.format}
+            eligible={detail.eligible}
+            rosterA={detail.rosterA}
+            rosterB={detail.rosterB}
+            winPcts={Object.fromEntries(winPcts)}
+            previousGame={previousGame}
+          />
+        ) : (
+          <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
+            <div className="flex flex-col gap-3">
+              <TeamSectionHead
+                variant="white"
+                name={game.teamAName ?? "White"}
+                count={detail.rosterA.length}
+              />
+              <RosterPanel detail={detail} side="A" canEdit={canEdit} winPcts={winPcts} />
+            </div>
+            <div className="flex flex-col gap-3">
+              <TeamSectionHead
+                variant="dark"
+                name={game.teamBName ?? "Dark"}
+                count={detail.rosterB.length}
+              />
+              <RosterPanel detail={detail} side="B" canEdit={canEdit} winPcts={winPcts} />
+            </div>
           </div>
-          <div className="flex flex-col gap-3">
-            <TeamSectionHead
-              variant="dark"
-              name={game.teamBName ?? "Dark"}
-              count={detail.rosterB.length}
-            />
-            <RosterPanel detail={detail} side="B" canEdit={canEdit} winPcts={winPcts} />
-          </div>
-        </div>
-
-        <TeamSectionHead variant="invited" name="Invited" count={detail.invited.length} />
-        <RosterPanel detail={detail} side="invited" canEdit={canEdit} winPcts={winPcts} />
+        )}
 
         {canEdit && (
           <>
-            <AddRoster
-              gameId={game.id}
-              eligible={detail.eligible}
-              allLeagues={detail.allLeagues}
-              currentLeagueId={game.leagueId ?? null}
-              teamAName={game.teamAName ?? "White"}
-              teamBName={game.teamBName ?? "Dark"}
-            />
+            {canManageInvites && (
+              <Link
+                href={`/games/${game.id}/invites`}
+                className="flex items-center justify-between gap-3 rounded-[16px] bg-[color:var(--surface)] px-5 py-4 hover:bg-[color:var(--surface-2)] transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex items-center justify-center w-10 h-10 rounded-[12px] bg-[color:var(--brand-soft)] text-[color:var(--brand)]">
+                    <Send size={18} />
+                  </span>
+                  <div className="flex flex-col leading-tight">
+                    <span className="font-extrabold text-[15px] text-[color:var(--text)]">
+                      Invite Manager
+                    </span>
+                    <span className="text-[11.5px] text-[color:var(--text-3)]">
+                      Send, track, and manage invites for this game
+                    </span>
+                  </div>
+                </div>
+                <span className="text-[11px] font-bold tracking-[0.08em] uppercase text-[color:var(--brand)]">
+                  Open →
+                </span>
+              </Link>
+            )}
+
+            {canManageInvites && (
+              <>
+                <TeamSectionHead
+                  variant="invited"
+                  name="Invited"
+                  count={detail.invited.length}
+                />
+                <RosterPanel
+                  detail={detail}
+                  side="invited"
+                  canEdit={canEdit}
+                  winPcts={winPcts}
+                />
+              </>
+            )}
 
             <DangerZone gameId={game.id} />
           </>

@@ -3,16 +3,19 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Copy, Pencil, Plus, Trash2 } from "lucide-react";
 import type { GameDetail } from "@/lib/queries/games";
 import {
+  clearGameRoster,
   deleteGame,
+  loadPreviousGameRoster,
   setGameRosterPlayer,
   setGameScore,
   setSeriesScore,
   updateGame,
 } from "@/lib/actions/games";
 import { PctPill } from "@/components/bdl/pct-pill";
+import { TeamBadge } from "@/components/bdl/team-badge";
 
 const isSeriesFormat = (f: string | null | undefined) =>
   f === "series" || f === "5v5-series" || f === "3v3-series";
@@ -362,45 +365,282 @@ export function RosterRow({
   );
 };
 
-export function AddRoster({
+type WinRec = { wins: number; losses: number; pct: number | null };
+
+function teamAvg(
+  list: { id: string }[],
+  winPcts: Record<string, WinRec>,
+): number | null {
+  const vals = list
+    .map((p) => winPcts[p.id]?.pct)
+    .filter((v): v is number => v !== null && v !== undefined);
+  if (vals.length === 0) return null;
+  return vals.reduce((a, b) => a + b, 0) / vals.length;
+}
+
+/** Per-player win-rate pill — green ≥50%, coral below. */
+function WinPill({ pct }: { pct: number }) {
+  const up = pct >= 50;
+  return (
+    <span
+      className="inline-flex items-center justify-center min-w-[54px] h-6 px-2 rounded-full font-[family-name:var(--mono)] num text-[11.5px] font-extrabold"
+      style={{
+        background: up ? "var(--up-soft)" : "var(--down-soft)",
+        color: up ? "var(--up)" : "var(--down)",
+      }}
+    >
+      {pct.toFixed(1)}%
+    </span>
+  );
+}
+
+function BuilderRow({
   gameId,
-  eligible,
-  allLeagues,
-  currentLeagueId,
-  teamAName,
-  teamBName,
+  index,
+  player,
+  rec,
 }: {
   gameId: string;
-  eligible: { id: string; firstName: string; lastName: string }[];
-  allLeagues: { id: string; name: string }[];
-  currentLeagueId: string | null;
+  index: number;
+  player: { id: string; firstName: string; lastName: string };
+  rec?: WinRec;
+}) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  return (
+    <div className="flex items-center gap-2.5 py-1">
+      <span className="shrink-0 inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-[6px] bg-[color:var(--surface-2)] text-[color:var(--text-3)] text-[11px] font-bold font-[family-name:var(--mono)] num">
+        {index}
+      </span>
+      <Link
+        href={`/players/${player.id}`}
+        className="flex-1 min-w-0 font-medium text-[14px] truncate hover:text-[color:var(--brand)]"
+      >
+        {player.firstName} {player.lastName}
+      </Link>
+      {rec && (
+        <span className="font-[family-name:var(--mono)] num text-[12px] text-[color:var(--text-4)]">
+          {rec.wins}–{rec.losses}
+        </span>
+      )}
+      {rec?.pct != null && <WinPill pct={rec.pct} />}
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() =>
+          start(async () => {
+            try {
+              const res = await setGameRosterPlayer(gameId, player.id, null);
+              if (res.ok) router.refresh();
+            } catch {
+              /* ignore — next render reflects the truth */
+            }
+          })
+        }
+        aria-label={`Remove ${player.firstName} ${player.lastName}`}
+        className="w-7 h-7 inline-flex items-center justify-center rounded-[var(--r-md)] text-[color:var(--text-4)] hover:text-[color:var(--down)] hover:bg-[color:var(--down-soft)] disabled:opacity-60 transition-colors"
+      >
+        <Trash2 size={14} />
+      </button>
+    </div>
+  );
+}
+
+function TeamColumn({
+  gameId,
+  team,
+  name,
+  list,
+  avg,
+  perSide,
+  winPcts,
+  divider,
+}: {
+  gameId: string;
+  team: "white" | "dark";
+  name: string;
+  list: { id: string; firstName: string; lastName: string }[];
+  avg: number | null;
+  perSide: number;
+  winPcts: Record<string, WinRec>;
+  divider: boolean;
+}) {
+  const remaining = Math.max(0, perSide - list.length);
+  return (
+    <div
+      className="p-4 flex flex-col gap-0.5"
+      style={divider ? { boxShadow: "inset -1px 0 0 0 var(--hairline)" } : undefined}
+    >
+      <div className="flex items-center justify-between gap-3 pb-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <TeamBadge team={team} size={32} className="shrink-0" />
+          <div className="flex flex-col leading-tight min-w-0">
+            <span className="font-bold text-[15px] text-[color:var(--text)] truncate">
+              {name}
+            </span>
+            <span className="text-[11px] text-[color:var(--text-3)]">
+              {list.length} {list.length === 1 ? "player" : "players"}
+            </span>
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          <div className="font-extrabold num text-[16px] text-[color:var(--text)]">
+            {avg !== null ? `${avg.toFixed(1)}%` : "—"}
+          </div>
+          <div className="text-[9.5px] uppercase tracking-[0.12em] font-semibold text-[color:var(--text-3)]">
+            Avg Win
+          </div>
+        </div>
+      </div>
+
+      {list.map((p, i) => (
+        <BuilderRow
+          key={p.id}
+          gameId={gameId}
+          index={i + 1}
+          player={p}
+          rec={winPcts[p.id]}
+        />
+      ))}
+
+      {remaining > 0 && (
+        <div
+          className="mt-1 rounded-[10px] px-3 py-2.5 text-center text-[12px] text-[color:var(--text-3)]"
+          style={{ outline: "1px dashed var(--hairline-2)", outlineOffset: "-1px" }}
+        >
+          Add {remaining} more to fill the {perSide}-on-{perSide} roster
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function RosterBuilder({
+  gameId,
+  teamAName,
+  teamBName,
+  format,
+  eligible,
+  rosterA,
+  rosterB,
+  winPcts,
+  previousGame,
+}: {
+  gameId: string;
   teamAName: string;
   teamBName: string;
+  format: string;
+  eligible: { id: string; firstName: string; lastName: string }[];
+  rosterA: { id: string; firstName: string; lastName: string }[];
+  rosterB: { id: string; firstName: string; lastName: string }[];
+  winPcts: Record<string, WinRec>;
+  previousGame?: { id: string; date: string | null; rosterCount: number } | null;
 }) {
   const router = useRouter();
   const [playerId, setPlayerId] = useState("");
-  const [side, setSide] = useState<"A" | "B" | "invited">("A");
-  const [pending, start] = useTransition();
+  const [side, setSide] = useState<"A" | "B">("A");
+  const [adding, startAdd] = useTransition();
+  const [loadingPrev, startLoad] = useTransition();
+  const [clearing, startClear] = useTransition();
+  const [confirmClear, setConfirmClear] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  void allLeagues;
-  void currentLeagueId;
+  const perSide = format.startsWith("3v3") ? 3 : 5;
+  const whiteAvg = teamAvg(rosterA, winPcts);
+  const darkAvg = teamAvg(rosterB, winPcts);
+  const total = (whiteAvg ?? 0) + (darkAvg ?? 0);
+  const whiteShare = total > 0 ? ((whiteAvg ?? 0) / total) * 100 : 50;
+  const hasRoster = rosterA.length + rosterB.length > 0;
 
-  if (eligible.length === 0) {
-    return (
-      <div className="text-[12px] text-[color:var(--text-3)]">
-        Everyone in this league is already on the roster.
-      </div>
-    );
-  }
+  const add = () =>
+    startAdd(async () => {
+      if (!playerId) return;
+      setError(null);
+      try {
+        const res = await setGameRosterPlayer(gameId, playerId, side);
+        if (res.ok) {
+          setPlayerId("");
+          router.refresh();
+        } else setError(res.error);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Could not add player.");
+      }
+    });
+
+  const loadPrev = () =>
+    startLoad(async () => {
+      setError(null);
+      setConfirmClear(false);
+      try {
+        const res = await loadPreviousGameRoster(gameId);
+        if (res.ok) router.refresh();
+        else setError(res.error);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Could not load teams.");
+      }
+    });
+
+  const clearAll = () => {
+    if (!confirmClear) {
+      setConfirmClear(true);
+      return;
+    }
+    startClear(async () => {
+      setError(null);
+      try {
+        const res = await clearGameRoster(gameId);
+        setConfirmClear(false);
+        if (res.ok) router.refresh();
+        else setError(res.error);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Could not clear roster.");
+      }
+    });
+  };
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2 max-sm:flex-col max-sm:items-stretch">
+    <div className="rounded-[16px] bg-[color:var(--surface)] overflow-hidden shadow-[inset_0_0_0_1px_var(--hairline-2)]">
+      {/* Header band */}
+      <div className="flex items-center justify-between gap-3 px-5 py-3.5 flex-wrap shadow-[inset_0_-1px_0_0_var(--hairline)]">
+        <span className="font-extrabold text-[16px] text-[color:var(--text)]">
+          Build game rosters
+        </span>
+        <div className="flex items-center gap-2 flex-wrap">
+          {previousGame && (
+            <button
+              type="button"
+              onClick={loadPrev}
+              disabled={loadingPrev}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--r-md)] text-[12px] font-semibold text-[color:var(--text-2)] hover:text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-soft)] transition-colors disabled:opacity-60 shadow-[inset_0_0_0_1px_var(--hairline-2)]"
+            >
+              <Copy size={13} strokeWidth={2.25} />
+              {loadingPrev ? "Loading…" : `Load previous teams · ${previousGame.rosterCount}`}
+            </button>
+          )}
+          {hasRoster && (
+            <button
+              type="button"
+              onClick={clearAll}
+              disabled={clearing}
+              className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--r-md)] text-[12px] font-semibold transition-colors disabled:opacity-60 ${
+                confirmClear
+                  ? "bg-[color:var(--down-soft)] text-[color:var(--down)]"
+                  : "text-[color:var(--text-2)] hover:text-[color:var(--down)] shadow-[inset_0_0_0_1px_var(--hairline-2)]"
+              }`}
+            >
+              <Trash2 size={13} strokeWidth={2.25} />
+              {clearing ? "Clearing…" : confirmClear ? "Confirm clear all?" : "Clear all"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Add controls band */}
+      <div className="flex items-center gap-2 px-5 py-3 bg-[color:var(--surface-2)] flex-wrap max-sm:flex-col max-sm:items-stretch shadow-[inset_0_-1px_0_0_var(--hairline)]">
         <select
           value={playerId}
           onChange={(e) => setPlayerId(e.target.value)}
-          className="flex-1 h-10 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-3 text-[14px] outline-none cursor-pointer"
+          className="flex-1 min-w-[180px] h-10 rounded-[var(--r-lg)] bg-[color:var(--surface)] px-3 text-[14px] outline-none cursor-pointer shadow-[inset_0_0_0_1px_var(--hairline-2)]"
         >
           <option value="">Select a league member…</option>
           {eligible.map((p) => (
@@ -409,48 +649,92 @@ export function AddRoster({
             </option>
           ))}
         </select>
-        <select
-          value={side}
-          onChange={(e) => setSide(e.target.value as typeof side)}
-          className="h-10 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-3 text-[14px] outline-none cursor-pointer"
-        >
-          <option value="A">{teamAName}</option>
-          <option value="B">{teamBName}</option>
-          <option value="invited">Invited</option>
-        </select>
+        <div className="inline-flex items-center gap-1 p-1 rounded-[var(--r-lg)] bg-[color:var(--surface)] shadow-[inset_0_0_0_1px_var(--hairline-2)]">
+          <button
+            type="button"
+            onClick={() => setSide("A")}
+            className={`h-8 px-3.5 rounded-[8px] text-[12px] font-bold transition-colors ${
+              side === "A"
+                ? "bg-[color:var(--surface-2)] text-[color:var(--text)] shadow-[inset_0_0_0_1px_var(--hairline-2)]"
+                : "text-[color:var(--text-3)] hover:text-[color:var(--text)]"
+            }`}
+          >
+            {teamAName}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSide("B")}
+            className={`h-8 px-3.5 rounded-[8px] text-[12px] font-bold transition-colors ${
+              side === "B"
+                ? "text-[color:var(--tb-dark-fg)]"
+                : "text-[color:var(--text-3)] hover:text-[color:var(--text)]"
+            }`}
+            style={side === "B" ? { background: "var(--tb-dark-bg)" } : undefined}
+          >
+            {teamBName}
+          </button>
+        </div>
         <button
           type="button"
-          disabled={!playerId || pending}
-          onClick={() =>
-            start(async () => {
-              if (!playerId) return;
-              setError(null);
-              try {
-                const res = await setGameRosterPlayer(gameId, playerId, side);
-                if (res.ok) {
-                  setPlayerId("");
-                  router.refresh();
-                } else {
-                  setError(res.error);
-                }
-              } catch (e) {
-                setError(e instanceof Error ? e.message : "Could not add player.");
-              }
-            })
-          }
-          className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase disabled:opacity-60"
+          disabled={!playerId || adding}
+          onClick={add}
+          className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.04em] uppercase disabled:opacity-60"
         >
-          <Plus size={14} strokeWidth={2.5} /> {pending ? "Adding…" : "Add"}
+          <Plus size={14} strokeWidth={2.5} /> {adding ? "Adding…" : "Add player"}
         </button>
       </div>
+
+      {/* Team strength bar */}
+      <div className="px-5 py-3 shadow-[inset_0_-1px_0_0_var(--hairline)]">
+        <div className="flex items-center justify-between gap-2 text-[12px]">
+          <span className="font-semibold num text-[color:var(--brand-ink)]">
+            {teamAName} · {whiteAvg !== null ? `${whiteAvg.toFixed(1)}%` : "—"} avg
+          </span>
+          <span className="text-[10px] uppercase tracking-[0.12em] font-semibold text-[color:var(--text-3)]">
+            Team Strength
+          </span>
+          <span className="num font-semibold text-[color:var(--text-2)]">
+            {teamBName} · {darkAvg !== null ? `${darkAvg.toFixed(1)}%` : "—"} avg
+          </span>
+        </div>
+        <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-[color:var(--hairline)]">
+          <div style={{ width: `${whiteShare}%` }} className="bg-[color:var(--brand)]" />
+          <div style={{ width: `${100 - whiteShare}%`, background: "var(--tb-dark-bg)" }} />
+        </div>
+      </div>
+
+      {/* Teams */}
+      <div className="grid grid-cols-2 max-md:grid-cols-1">
+        <TeamColumn
+          gameId={gameId}
+          team="white"
+          name={teamAName}
+          list={rosterA}
+          avg={whiteAvg}
+          perSide={perSide}
+          winPcts={winPcts}
+          divider
+        />
+        <TeamColumn
+          gameId={gameId}
+          team="dark"
+          name={teamBName}
+          list={rosterB}
+          avg={darkAvg}
+          perSide={perSide}
+          winPcts={winPcts}
+          divider={false}
+        />
+      </div>
+
       {error && (
-        <div className="text-[12px] text-[color:var(--down)] bg-[color:var(--down-soft)] rounded-[var(--r-md)] px-3 py-2">
+        <div className="mx-5 mb-4 text-[12px] text-[color:var(--down)] bg-[color:var(--down-soft)] rounded-[var(--r-md)] px-3 py-2">
           {error}
         </div>
       )}
     </div>
   );
-};
+}
 
 export function GameMetaEditor({ detail }: { detail: GameDetail }) {
   const router = useRouter();

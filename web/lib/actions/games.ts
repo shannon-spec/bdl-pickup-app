@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db, games, gameRoster, gameSubgames, leagues } from "@/lib/db";
 import { requireGameManager, requireLeagueManager } from "@/lib/auth/perms";
@@ -283,6 +283,79 @@ export async function setSeriesScore(
   revalidatePath("/games");
   revalidatePath("/");
   return { ok: true };
+}
+
+/**
+ * Copy the A/B team rosters from this league's most recent prior game
+ * onto this game (upsert — keeps anyone already added, doesn't touch
+ * the Invited list). Admin/commissioner gated like every roster edit.
+ */
+export async function loadPreviousGameRoster(
+  gameId: string,
+): Promise<ActionResult<{ loaded: number }>> {
+  const gate = await gateGameManager(gameId);
+  if (!gate.ok) return gate;
+
+  const [cur] = await db
+    .select({ leagueId: games.leagueId, gameDate: games.gameDate })
+    .from(games)
+    .where(eq(games.id, gameId))
+    .limit(1);
+  if (!cur) return { ok: false, error: "Game not found." };
+  if (!cur.leagueId) {
+    return { ok: false, error: "This game isn't tied to a league." };
+  }
+
+  const [prev] = await db
+    .select({ id: games.id })
+    .from(games)
+    .where(
+      and(
+        eq(games.leagueId, cur.leagueId),
+        ne(games.id, gameId),
+        cur.gameDate ? lt(games.gameDate, cur.gameDate) : undefined,
+      ),
+    )
+    .orderBy(desc(games.gameDate), desc(games.gameTime))
+    .limit(1);
+  if (!prev) return { ok: false, error: "No previous game to copy from." };
+
+  const prevRoster = await db
+    .select({ playerId: gameRoster.playerId, side: gameRoster.side })
+    .from(gameRoster)
+    .where(
+      and(eq(gameRoster.gameId, prev.id), inArray(gameRoster.side, ["A", "B"])),
+    );
+  if (prevRoster.length === 0) {
+    return { ok: false, error: "The previous game has no team rosters." };
+  }
+
+  for (const r of prevRoster) {
+    await db
+      .insert(gameRoster)
+      .values({ gameId, playerId: r.playerId, side: r.side })
+      .onConflictDoUpdate({
+        target: [gameRoster.gameId, gameRoster.playerId],
+        set: { side: r.side },
+      });
+  }
+
+  revalidatePath(`/games/${gameId}`);
+  return { ok: true, data: { loaded: prevRoster.length } };
+}
+
+/** Remove every player from this game's roster (White, Dark, Invited). */
+export async function clearGameRoster(
+  gameId: string,
+): Promise<ActionResult<{ cleared: number }>> {
+  const gate = await gateGameManager(gameId);
+  if (!gate.ok) return gate;
+  const removed = await db
+    .delete(gameRoster)
+    .where(eq(gameRoster.gameId, gameId))
+    .returning({ playerId: gameRoster.playerId });
+  revalidatePath(`/games/${gameId}`);
+  return { ok: true, data: { cleared: removed.length } };
 }
 
 export async function setGameRosterPlayer(
