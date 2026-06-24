@@ -13,9 +13,7 @@ import { CommissionerStrip } from "@/components/bdl/commissioner-strip";
 import { MembersStrip } from "@/components/bdl/members-strip";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
-import { Pill } from "@/components/bdl/pill";
-import { TeamBadge } from "@/components/bdl/team-badge";
-import { ProbabilityBar } from "@/components/bdl/probability-bar";
+import { NextGameCard } from "@/components/bdl/next-game-card";
 import { Plus } from "lucide-react";
 import { GamesListClient } from "./games-list-client";
 import {
@@ -27,20 +25,6 @@ import { getLeaguesWithStats } from "@/lib/queries/leagues";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Games · BDL" };
-
-const fmtDate = (d: string | null) => {
-  if (!d) return "—";
-  const dt = new Date(d + "T00:00:00");
-  return `${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][dt.getDay()]} · ${
-    ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][dt.getMonth()]
-  } ${dt.getDate()}, ${dt.getFullYear()}`;
-};
-const fmtTime = (t: string | null) => {
-  if (!t) return "";
-  const [h, m] = t.split(":");
-  const hr = Number(h);
-  return `${hr % 12 || 12}:${m} ${hr >= 12 ? "PM" : "AM"}`;
-};
 
 export default async function GamesPage({
   searchParams,
@@ -127,6 +111,17 @@ export default async function GamesPage({
   const heroRoster = heroGame
     ? await getGameRosterLite(heroGame.id)
     : { A: [], B: [] };
+
+  // Which side (if any) the signed-in player is rostered on — drives the
+  // "You're in" status in the hero module.
+  const myPlayerId = session?.playerId ?? null;
+  const heroMySide: "A" | "B" | null = myPlayerId
+    ? heroRoster.A.some((p) => p.id === myPlayerId)
+      ? "A"
+      : heroRoster.B.some((p) => p.id === myPlayerId)
+        ? "B"
+        : null
+    : null;
 
   // Blended matchup odds for the hero game (last-8 team trend +
   // average roster win %). Same algorithm as /games/[id].
@@ -266,120 +261,25 @@ export default async function GamesPage({
     return (
       <>
         {heroGame && (
-          <section
-            className="relative rounded-[16px] border border-[color:var(--hairline-2)] overflow-hidden"
-            style={{
-              background:
-                "radial-gradient(ellipse at top left, var(--next-game-tint), transparent 60%), var(--surface)",
-            }}
-          >
-            <Link
-              href={`/games/${heroGame.id}`}
-              aria-label={`Game details for ${heroGame.teamAName} vs ${heroGame.teamBName}`}
-              className="absolute inset-0 z-0 rounded-[16px]"
-            />
-            <div className="absolute top-2.5 right-2.5 z-10">
-              <Pill tone="brand">Next up</Pill>
-            </div>
-            <div className="relative z-[1] px-5 py-4 flex flex-col gap-2.5 pointer-events-none">
-              <div className="flex items-center gap-2.5 flex-wrap text-[12px] pr-[110px]">
-                <Pill tone="brand">
-                  Next · {fmtDate(heroGame.gameDate)}
-                  {heroGame.gameTime ? ` · ${fmtTime(heroGame.gameTime)}` : ""}
-                </Pill>
-                {heroGame.leagueName && (
-                  <span className="text-[color:var(--text-3)]">{heroGame.leagueName}</span>
-                )}
-                {heroGame.venue && (
-                  <span className="text-[color:var(--text-3)]">· {heroGame.venue}</span>
-                )}
-              </div>
-              <div className="flex items-start gap-3 flex-wrap">
-                <div className="flex flex-col gap-1.5 min-w-0">
-                  <div className="inline-flex items-center gap-2.5">
-                    <TeamBadge team="white" />
-                    <span className="font-extrabold text-[18px] text-[color:var(--text)]">
-                      {heroGame.teamAName}
-                    </span>
-                  </div>
-                  {heroRoster.A.length > 0 && (
-                    <ul className="flex flex-col gap-1 pl-[68px]">
-                      {heroRoster.A.map((p) => (
-                        <li
-                          key={p.id}
-                          className="text-[12.5px] font-medium text-[color:var(--text)] leading-tight truncate"
-                        >
-                          {p.firstName} {p.lastName}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <span className="text-[color:var(--text-4)] text-[12px] font-medium pt-3">vs</span>
-                <div className="flex flex-col gap-1.5 min-w-0">
-                  <div className="inline-flex items-center gap-2.5">
-                    <TeamBadge team="dark" />
-                    <span className="font-extrabold text-[18px] text-[color:var(--text)]">
-                      {heroGame.teamBName}
-                    </span>
-                  </div>
-                  {heroRoster.B.length > 0 && (
-                    <ul className="flex flex-col gap-1 pl-[68px]">
-                      {heroRoster.B.map((p) => (
-                        <li
-                          key={p.id}
-                          className="text-[12.5px] font-medium text-[color:var(--text)] leading-tight truncate"
-                        >
-                          {p.firstName} {p.lastName}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-              {heroProb && (
-                <div className="flex flex-col gap-1.5">
-                  <ProbabilityBar
-                    aLabel={heroGame.teamAName}
-                    bLabel={heroGame.teamBName}
-                    a={heroProb.probA}
-                    b={heroProb.probB}
-                    compact
-                  />
-                  {heroProb.predictedScore && (() => {
-                    const aScore = heroProb.predictedScore.a;
-                    const bScore = heroProb.predictedScore.b;
-                    const spread = Math.abs(aScore - bScore);
-                    const favorite =
-                      aScore > bScore
-                        ? heroGame.teamAName
-                        : bScore > aScore
-                          ? heroGame.teamBName
-                          : null;
-                    return (
-                      <>
-                        <div className="flex items-center justify-center gap-2 text-[11px] font-[family-name:var(--mono)] num font-semibold text-[color:var(--text-2)]">
-                          <span className="text-[10px] tracking-[0.14em] uppercase text-[color:var(--text-3)] font-semibold">
-                            Projected
-                          </span>
-                          <span>
-                            {heroGame.teamAName} {aScore}
-                            <span className="mx-1.5 text-[color:var(--text-3)]">—</span>
-                            {bScore} {heroGame.teamBName}
-                          </span>
-                        </div>
-                        <div className="flex justify-center">
-                          <Pill tone="neutral">
-                            Spread · {favorite ? `${favorite} −${spread}` : "Pick"}
-                          </Pill>
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
-          </section>
+          <NextGameCard
+            href={`/games/${heroGame.id}`}
+            label="Next up"
+            date={heroGame.gameDate}
+            time={heroGame.gameTime}
+            venue={heroGame.venue}
+            leagueName={heroGame.leagueName}
+            teamAName={heroGame.teamAName}
+            teamBName={heroGame.teamBName}
+            mySide={heroMySide}
+            showStatus={heroMySide !== null}
+            canEdit={caps.canManage}
+            probA={heroProb?.probA ?? null}
+            probB={heroProb?.probB ?? null}
+            predictedScore={heroProb?.predictedScore ?? null}
+            rosterA={heroRoster.A}
+            rosterB={heroRoster.B}
+            meId={session?.playerId ?? null}
+          />
         )}
 
         {teamStats && teamStats.totalCompleted > 0 && (

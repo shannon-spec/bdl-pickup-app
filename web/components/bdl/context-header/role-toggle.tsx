@@ -29,7 +29,7 @@ export function RoleToggle({
 
   if (options.length === 1) {
     return (
-      <span className="inline-flex items-center h-7 px-1 text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-3)] flex-shrink-0">
+      <span className="inline-flex items-center h-8 px-3.5 rounded-full bg-[color:var(--brand)] text-white text-[11px] font-bold tracking-[0.06em] uppercase flex-shrink-0">
         {LABELS[options[0]]}
       </span>
     );
@@ -48,7 +48,7 @@ export function RoleToggle({
       role="tablist"
       aria-label="View as"
       aria-busy={pending}
-      className="inline-flex items-center gap-1.5 flex-wrap"
+      className="inline-flex items-center gap-2 flex-wrap"
     >
       {options.map((o) => {
         const selected = o === view;
@@ -61,12 +61,12 @@ export function RoleToggle({
             onClick={() => onSelect(o)}
             disabled={pending}
             className={[
-              "h-7 px-3 rounded-full",
-              "text-[10.5px] font-bold tracking-[0.06em] uppercase",
+              "h-8 px-3.5 rounded-full",
+              "text-[11px] font-bold tracking-[0.06em] uppercase",
               "transition-colors",
               selected
-                ? "bg-[color:var(--brand)] text-white border border-[color:var(--brand)]"
-                : "bg-[color:var(--brand-soft)] border border-[color:var(--brand-soft)] text-[color:var(--brand-ink,var(--brand))] opacity-70 hover:opacity-100",
+                ? "bg-[color:var(--brand)] text-white"
+                : "bg-[color:var(--ctx-surface)] text-[color:var(--text-2)] hover:text-[color:var(--text)]",
               "disabled:opacity-60",
             ].join(" ")}
           >

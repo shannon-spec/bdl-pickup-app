@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, ChevronRight, ChevronUp, Check, Pencil } from "lucide-react";
+import { ArrowUpRight, ChevronRight, ChevronUp, Pencil } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
 import { canManageLeague } from "@/lib/auth/perms";
 import { getViewCaps } from "@/lib/auth/view";
@@ -8,9 +8,9 @@ import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { CommissionerStrip } from "@/components/bdl/commissioner-strip";
 import { MembersStrip } from "@/components/bdl/members-strip";
+import { NextGameCard } from "@/components/bdl/next-game-card";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
-import { StatBlock, StatRow } from "@/components/bdl/stat-block";
-import { TeamBadge } from "@/components/bdl/team-badge";
+import { StatBlock } from "@/components/bdl/stat-block";
 import { Pill } from "@/components/bdl/pill";
 import { HeroTag, isHeroGame } from "@/components/bdl/hero-tag";
 import { LeagueAvatar } from "@/components/bdl/league-avatar";
@@ -41,12 +41,6 @@ const fmtWD = (dateStr: string | null) => {
   } ${d.getDate()}`;
 };
 const fmtWDUpper = (s: string | null) => fmtWD(s).toUpperCase();
-const fmtTime = (timeStr: string | null) => {
-  if (!timeStr) return "";
-  const [h, m] = timeStr.split(":");
-  const hr = Number(h);
-  return `${hr % 12 || 12}:${m} ${hr >= 12 ? "PM" : "AM"}`;
-};
 
 export default async function Home() {
   const session = await readSession();
@@ -140,175 +134,35 @@ export default async function Home() {
             missing with a CTA. */}
         <ProfileNudge player={me} />
 
-        {/* Next Game — full refresh: a beige outer card holding stacked
-            white sub-cards (matchup · win probability · projected/spread ·
-            rosters). White = brand blue, Dark = neutral. The Commissioner
+        {/* Next Game — shared module (see NextGameCard). The Commissioner
             strip now lives down by the Members section. */}
-        {nextGame && (() => {
-          const ps = nextGame.predictedScore;
-          const spread = ps ? Math.abs(ps.a - ps.b) : null;
-          const favorite =
-            ps && ps.a !== ps.b
-              ? ps.a > ps.b
-                ? nextGame.teamAName
-                : nextGame.teamBName
-              : null;
-          return (
-          <section className="group relative rounded-[16px] bg-[color:var(--surface-2)] overflow-hidden">
-            <Link
-              href={`/games/${nextGame.id}`}
-              aria-label={`Game details for ${nextGame.teamAName} vs ${nextGame.teamBName}`}
-              className="absolute inset-0 z-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand)] rounded-[16px]"
-            />
-            <div className="relative z-[1] p-5 max-sm:p-4 flex flex-col gap-4 pointer-events-none">
-              {/* Header — label · when/where, with status (and edit) on the right */}
-              <div className="flex items-center gap-3 flex-wrap">
-                <Pill tone="brand">Next Game</Pill>
-                <span className="text-[13px] font-medium text-[color:var(--text-2)]">
-                  {fmtWD(nextGame.date)}
-                  {nextGame.time ? ` · ${fmtTime(nextGame.time)}` : ""}
-                  {nextGame.venue ? ` · ${nextGame.venue}` : ""}
-                </span>
-                <div className="ml-auto flex items-center gap-2.5">
-                  <Link
-                    href="/games"
-                    className="pointer-events-auto inline-flex items-center gap-1 text-[12px] text-[color:var(--text-3)] hover:text-[color:var(--text)]"
-                  >
-                    All games <ChevronRight size={12} />
-                  </Link>
-                  {canEditNextGame && (
-                    <Link
-                      href={`/games/${nextGame.id}`}
-                      className="pointer-events-auto inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[color:var(--surface)] hover:bg-[color:var(--brand-soft)] border border-[color:var(--hairline-2)] text-[10.5px] font-bold uppercase tracking-[0.08em] text-[color:var(--text-2)] hover:text-[color:var(--brand-ink)]"
-                    >
-                      <Pencil size={10.5} /> Edit
-                    </Link>
-                  )}
-                  {nextGame.mySide ? (
-                    <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[color:var(--up)]">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[color:var(--up)]" />
-                      You&apos;re in
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[color:var(--brand)] text-white text-[10.5px] font-bold uppercase tracking-[0.08em] shadow-[var(--cta-shadow)]">
-                      <Check size={11} strokeWidth={3} /> I&apos;m In
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Matchup — White (left) vs Dark (right) */}
-              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <TeamBadge team="white" size={52} className="shrink-0" />
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-[22px] max-sm:text-[18px] text-[color:var(--text)] truncate">
-                        {nextGame.teamAName}
-                      </span>
-                      {nextGame.mySide === "A" && <YouTag />}
-                    </div>
-                    <div className="text-[12.5px] font-[family-name:var(--mono)] num text-[color:var(--text-3)]">
-                      {nextGame.teamARecord.w}–{nextGame.teamARecord.l} last 5
-                    </div>
-                  </div>
-                </div>
-                <span className="text-[color:var(--text-4)] text-[13px] font-semibold tracking-[0.08em]">
-                  VS
-                </span>
-                <div className="flex items-center gap-3 min-w-0 flex-row-reverse">
-                  <TeamBadge team="dark" size={52} className="shrink-0" />
-                  <div className="min-w-0 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      {nextGame.mySide === "B" && <YouTag />}
-                      <span className="font-bold text-[22px] max-sm:text-[18px] text-[color:var(--text)] truncate">
-                        {nextGame.teamBName}
-                      </span>
-                    </div>
-                    <div className="text-[12.5px] font-[family-name:var(--mono)] num text-[color:var(--text-3)]">
-                      {nextGame.teamBRecord.w}–{nextGame.teamBRecord.l} last 5
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Win probability */}
-              <div className="rounded-[12px] bg-[color:var(--surface)] px-4 py-3.5">
-                <div className="flex items-center justify-between gap-2 text-[13px]">
-                  <span className="font-semibold num text-[color:var(--brand-ink)]">
-                    {nextGame.teamAName} {Math.round(nextGame.probA)}%
-                  </span>
-                  <span className="text-[10.5px] uppercase tracking-[0.12em] font-semibold text-[color:var(--text-3)]">
-                    Win Probability
-                  </span>
-                  <span className="font-semibold num text-[color:var(--text-2)]">
-                    {nextGame.teamBName} {Math.round(nextGame.probB)}%
-                  </span>
-                </div>
-                <div className="mt-2.5 flex h-2 overflow-hidden rounded-full bg-[color:var(--hairline)]">
-                  <div style={{ width: `${nextGame.probA}%` }} className="bg-[color:var(--brand)]" />
-                  <div style={{ width: `${nextGame.probB}%` }} className="bg-[color:var(--text-4)]" />
-                </div>
-              </div>
-
-              {/* Projected + Spread */}
-              {(ps || spread != null) && (
-                <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
-                  {ps && (
-                    <div className="rounded-[12px] bg-[color:var(--surface)] px-4 py-3.5">
-                      <div className="text-[10.5px] uppercase tracking-[0.12em] font-semibold text-[color:var(--text-3)] mb-1.5">
-                        Projected
-                      </div>
-                      <div className="font-bold num text-[28px] max-sm:text-[24px] leading-none">
-                        <span className="text-[color:var(--brand-ink)]">{ps.a}</span>
-                        <span className="mx-2 text-[color:var(--text-4)]">—</span>
-                        <span className="text-[color:var(--text)]">{ps.b}</span>
-                      </div>
-                    </div>
-                  )}
-                  {spread != null && (
-                    <div className="rounded-[12px] bg-[color:var(--surface)] px-4 py-3.5">
-                      <div className="text-[10.5px] uppercase tracking-[0.12em] font-semibold text-[color:var(--text-3)] mb-1.5">
-                        Spread
-                      </div>
-                      <div className="font-bold text-[28px] max-sm:text-[24px] leading-none text-[color:var(--text)]">
-                        {favorite ? (
-                          <>
-                            {favorite} <span className="num text-[color:var(--brand-ink)]">−{spread}</span>
-                          </>
-                        ) : (
-                          "Pick"
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Rosters */}
-              <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
-                <RosterCard
-                  team="white"
-                  name={nextGame.teamAName}
-                  players={nextGame.rosterA}
-                  meId={me?.id ?? null}
-                />
-                <RosterCard
-                  team="dark"
-                  name={nextGame.teamBName}
-                  players={nextGame.rosterB}
-                  meId={me?.id ?? null}
-                />
-              </div>
-            </div>
-          </section>
-          );
-        })()}
+        {nextGame && (
+          <NextGameCard
+            href={`/games/${nextGame.id}`}
+            date={nextGame.date}
+            time={nextGame.time}
+            venue={nextGame.venue}
+            teamAName={nextGame.teamAName}
+            teamBName={nextGame.teamBName}
+            teamARecord={nextGame.teamARecord}
+            teamBRecord={nextGame.teamBRecord}
+            mySide={nextGame.mySide}
+            showStatus
+            canEdit={canEditNextGame}
+            allGamesHref="/games"
+            probA={nextGame.probA}
+            probB={nextGame.probB}
+            predictedScore={nextGame.predictedScore}
+            rosterA={nextGame.rosterA}
+            rosterB={nextGame.rosterB}
+            meId={me?.id ?? null}
+          />
+        )}
 
         {/* Hero */}
-        <section className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-7 pt-6 pb-5 max-sm:px-5 max-sm:pt-5 max-sm:pb-4">
-          <div className="flex items-center justify-between gap-3 mb-6 max-sm:flex-col max-sm:items-start max-sm:gap-1.5">
-            <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)]">
+        <section className="rounded-[16px] bg-[color:var(--surface-2)] p-4 max-sm:p-3">
+          <div className="flex items-center justify-between gap-3 mb-3 px-1 max-sm:flex-col max-sm:items-start max-sm:gap-1.5">
+            <div className="text-[10.5px] font-semibold tracking-[0.12em] uppercase text-[color:var(--text-3)]">
               Your Season ·{" "}
               <span className="text-[color:var(--text-2)]">{currentLeague.name}</span>
             </div>
@@ -321,7 +175,7 @@ export default async function Home() {
               {canEditNextGame && (
                 <Link
                   href={`/leagues/${currentLeague.id}/edit`}
-                  className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[10.5px] font-bold tracking-[0.05em] uppercase text-[color:var(--text-2)] hover:text-[color:var(--text)] hover:bg-[color:var(--surface-2)] transition-colors"
+                  className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-[color:var(--surface)] text-[10.5px] font-bold tracking-[0.05em] uppercase text-[color:var(--text-2)] hover:text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-soft)] transition-colors"
                 >
                   <Pencil size={11} strokeWidth={2.25} /> Edit league
                 </Link>
@@ -329,65 +183,73 @@ export default async function Home() {
             </div>
           </div>
 
-          <StatRow>
-            <StatBlock
-              label="Win %"
-              value={stats.winPct !== null ? stats.winPct.toFixed(1) : "—"}
-              unit={stats.winPct !== null ? "%" : undefined}
-              sub={
-                stats.last5Delta !== null
-                  ? {
-                      text: `${stats.last5Delta >= 0 ? "+" : ""}${stats.last5Delta} last 5G`,
-                      tone: stats.last5Delta >= 0 ? "up" : "down",
-                      icon: <ChevronUp size={10} style={{ transform: stats.last5Delta < 0 ? "rotate(180deg)" : undefined }} />,
-                    }
-                  : { text: "Not enough games yet", tone: "muted" }
-              }
-            />
-            <StatBlock
-              label="Record"
-              value={
-                <span>
-                  {stats.wins}
-                  <span className="text-[color:var(--text-4)] font-bold mx-[-2px]">–</span>
-                  {stats.losses}
-                </span>
-              }
-              sub={{ text: `${stats.played} game${stats.played === 1 ? "" : "s"} played` }}
-            />
-            <StatBlock
-              label="Games Played"
-              value={stats.gamesPlayedPct !== null ? String(stats.gamesPlayedPct) : "—"}
-              unit={stats.gamesPlayedPct !== null ? "%" : undefined}
-              sub={{
-                text: `${stats.myCompletedCount} of ${stats.leagueCompletedCount} league nights`,
-              }}
-            />
-            <StatBlock
-              label="Streak"
-              value={stats.streakType ? `${stats.streakType}${stats.streakCount}` : "—"}
-              valueClassName={
-                stats.streakType === "W"
-                  ? "text-[color:var(--up)]"
-                  : stats.streakType === "L"
-                  ? "text-[color:var(--down)]"
-                  : undefined
-              }
-              sub={
-                stats.streakType
-                  ? {
-                      text: `${stats.streakCount} straight ${stats.streakType === "W" ? "win" : "loss"}${stats.streakCount === 1 ? "" : stats.streakType === "W" ? "s" : "es"}`,
-                      tone: stats.streakType === "W" ? "up" : "down",
-                    }
-                  : { text: "No games yet", tone: "muted" }
-              }
-            />
-          </StatRow>
+          <div className="grid grid-cols-4 gap-3 max-md:grid-cols-2">
+            <StatCard>
+              <StatBlock
+                label="Win %"
+                value={stats.winPct !== null ? stats.winPct.toFixed(1) : "—"}
+                unit={stats.winPct !== null ? "%" : undefined}
+                sub={
+                  stats.last5Delta !== null
+                    ? {
+                        text: `${stats.last5Delta >= 0 ? "+" : ""}${stats.last5Delta} last 5G`,
+                        tone: stats.last5Delta >= 0 ? "up" : "down",
+                        icon: <ChevronUp size={10} style={{ transform: stats.last5Delta < 0 ? "rotate(180deg)" : undefined }} />,
+                      }
+                    : { text: "Not enough games yet", tone: "muted" }
+                }
+              />
+            </StatCard>
+            <StatCard>
+              <StatBlock
+                label="Record"
+                value={
+                  <span>
+                    {stats.wins}
+                    <span className="text-[color:var(--text-4)] font-bold mx-[-2px]">–</span>
+                    {stats.losses}
+                  </span>
+                }
+                sub={{ text: `${stats.played} game${stats.played === 1 ? "" : "s"} played` }}
+              />
+            </StatCard>
+            <StatCard>
+              <StatBlock
+                label="Games Played"
+                value={stats.gamesPlayedPct !== null ? String(stats.gamesPlayedPct) : "—"}
+                unit={stats.gamesPlayedPct !== null ? "%" : undefined}
+                sub={{
+                  text: `${stats.myCompletedCount} of ${stats.leagueCompletedCount} league nights`,
+                }}
+              />
+            </StatCard>
+            <StatCard>
+              <StatBlock
+                label="Streak"
+                value={stats.streakType ? `${stats.streakType}${stats.streakCount}` : "—"}
+                valueClassName={
+                  stats.streakType === "W"
+                    ? "text-[color:var(--up)]"
+                    : stats.streakType === "L"
+                    ? "text-[color:var(--down)]"
+                    : undefined
+                }
+                sub={
+                  stats.streakType
+                    ? {
+                        text: `${stats.streakCount} straight ${stats.streakType === "W" ? "win" : "loss"}${stats.streakCount === 1 ? "" : stats.streakType === "W" ? "s" : "es"}`,
+                        tone: stats.streakType === "W" ? "up" : "down",
+                      }
+                    : { text: "No games yet", tone: "muted" }
+                }
+              />
+            </StatCard>
+          </div>
         </section>
 
         {/* Last 5 */}
         {lastFive.length > 0 && (
-          <div>
+          <section className="rounded-[16px] bg-[color:var(--surface-2)] p-4">
             <SectionHead
               title="Your Last 5"
               right={
@@ -411,7 +273,7 @@ export default async function Home() {
                   key={g.id}
                   href={`/games/${g.id}`}
                   aria-label={`Open game on ${fmtWDUpper(g.date)} vs ${g.opName}`}
-                  className="group relative flex flex-col gap-2.5 p-4 rounded-[12px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] hover:bg-[color:var(--surface-2)] hover:border-[color:var(--text-4)] transition-colors min-w-[170px]"
+                  className="group relative flex flex-col gap-2.5 p-4 rounded-[12px] bg-[color:var(--surface)] hover:shadow-[0_2px_10px_rgba(0,0,0,0.06)] transition-shadow min-w-[170px]"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[10.5px] font-semibold tracking-[0.12em] uppercase text-[color:var(--text-3)]">
@@ -451,12 +313,12 @@ export default async function Home() {
                 </Link>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
         {/* Split: leaderboard + activity */}
         <div className="grid grid-cols-2 gap-4 max-[1100px]:grid-cols-1">
-          <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-5 pt-4 pb-3">
+          <div className="rounded-[16px] bg-[color:var(--surface-2)] p-4">
             <SectionHead
               title="League Leaders"
               right={
@@ -469,18 +331,18 @@ export default async function Home() {
               }
             />
             {leaderboard.length === 0 ? (
-              <div className="text-[13px] text-[color:var(--text-3)] py-3">
+              <div className="mt-3 rounded-[12px] bg-[color:var(--surface)] px-4 py-3 text-[13px] text-[color:var(--text-3)]">
                 No qualifying players yet.
               </div>
             ) : (
-              <div className="mt-2 flex flex-col">
+              <div className="mt-3 rounded-[12px] bg-[color:var(--surface)] px-2 py-1.5 flex flex-col">
                 {leaderboard.map((row, i) => (
                   <LbRow key={row.player.id} rank={i + 1} row={row} />
                 ))}
               </div>
             )}
           </div>
-          <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-5 pt-4 pb-3">
+          <div className="rounded-[16px] bg-[color:var(--surface-2)] p-4">
             <SectionHead
               title="Recent Activity"
               right={
@@ -493,11 +355,11 @@ export default async function Home() {
               }
             />
             {activity.length === 0 ? (
-              <div className="text-[13px] text-[color:var(--text-3)] py-3">
+              <div className="mt-3 rounded-[12px] bg-[color:var(--surface)] px-4 py-3 text-[13px] text-[color:var(--text-3)]">
                 No activity yet.
               </div>
             ) : (
-              <div className="mt-2 flex flex-col">
+              <div className="mt-3 rounded-[12px] bg-[color:var(--surface)] px-2 py-1.5 flex flex-col">
                 {activity.map((a) => {
                   const showHero =
                     isHeroGame({
@@ -587,6 +449,15 @@ function ChevRightSm() {
   return <ChevronRight size={13} />;
 }
 
+/** White inner stat card for the Your Season frame. */
+function StatCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-[12px] bg-[color:var(--surface)] px-4 py-4">
+      {children}
+    </div>
+  );
+}
+
 /**
  * Slim "round out your profile" nudge for the player home page.
  * Only renders when the player still has gaps — the header above
@@ -661,58 +532,6 @@ function EmptyCard({
   );
 }
 
-function YouTag() {
-  return (
-    <span className="shrink-0 text-[10px] font-semibold tracking-[0.08em] uppercase px-1.5 py-0.5 rounded-full bg-[color:var(--brand-soft)] text-[color:var(--brand-ink)]">
-      You
-    </span>
-  );
-}
-
-function RosterCard({
-  team,
-  name,
-  players,
-  meId,
-}: {
-  team: "white" | "dark";
-  name: string;
-  players: { id: string; firstName: string; lastName: string }[];
-  meId: string | null;
-}) {
-  return (
-    <div className="rounded-[12px] bg-[color:var(--surface)] px-4 py-3.5">
-      <div
-        className={`text-[10.5px] uppercase tracking-[0.12em] font-bold mb-2.5 ${
-          team === "white" ? "text-[color:var(--brand-ink)]" : "text-[color:var(--text-2)]"
-        }`}
-      >
-        {name} · Roster
-      </div>
-      {players.length > 0 ? (
-        <ul className="flex flex-col gap-1.5">
-          {players.map((p) => {
-            const isMe = p.id === meId;
-            return (
-              <li
-                key={p.id}
-                className={`text-[14px] leading-tight truncate ${
-                  isMe
-                    ? "font-semibold text-[color:var(--brand-ink)]"
-                    : "font-medium text-[color:var(--text)]"
-                }`}
-              >
-                {p.firstName} {p.lastName}
-              </li>
-            );
-          })}
-        </ul>
-      ) : (
-        <p className="text-[13px] text-[color:var(--text-3)]">No players yet</p>
-      )}
-    </div>
-  );
-}
 
 
 function LbRow({

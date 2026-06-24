@@ -1,8 +1,6 @@
 import { readSession } from "@/lib/auth/session";
 import { getViewCaps } from "@/lib/auth/view";
 import { getSessionContext } from "@/lib/queries/session-context";
-import { getUnreadMessageCount } from "@/lib/queries/messages";
-import { getUnreadAnnouncementCount } from "@/lib/queries/announcements";
 import { ContextHeaderClient } from "./context-header-client";
 
 /**
@@ -10,25 +8,15 @@ import { ContextHeaderClient } from "./context-header-client";
  * hands it to the client subcomponents (LeagueSwitcher + RoleToggle).
  *
  * Renders nothing if there's no session (e.g. on /login or /invite/*),
- * so it's safe to drop into a layout.
+ * so it's safe to drop into a layout. Messaging access lives in the
+ * top-bar bell, so the header no longer carries a Message button.
  */
 export async function ContextHeader() {
   const ctx = await getSessionContext();
   if (!ctx) return null;
   const session = await readSession();
   const caps = await getViewCaps(session);
-  // Combined badge — match the top-bar bell so both light up
-  // together on any unread item (DM or league announcement).
-  const unreadMessages = ctx.user.playerId
-    ? (await getUnreadMessageCount(ctx.user.playerId)) +
-      (await getUnreadAnnouncementCount(ctx.user.playerId))
-    : 0;
   return (
-    <ContextHeaderClient
-      ctx={ctx}
-      view={caps.view}
-      options={caps.options}
-      unreadMessages={unreadMessages}
-    />
+    <ContextHeaderClient ctx={ctx} view={caps.view} options={caps.options} />
   );
 }

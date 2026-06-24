@@ -77,6 +77,10 @@
   --tb-dark-bg: #0E0E0C;  --tb-dark-fg: #F5F4EF;
 
   --gold: #E8B838;
+
+  /* Context header — cool slate panel + white-ish chips/avatar on top. */
+  --ctx-bg: #1A2027;
+  --ctx-surface: #232B34;
 }
 
 [data-theme="light"] {
@@ -120,6 +124,10 @@
   --tb-dark-bg: #0E0E0C;  --tb-dark-fg: #F5F4EF;
 
   --gold: #C99A1F;
+
+  /* Context header — cool slate panel + white chips/avatar on top. */
+  --ctx-bg: #E9ECF1;
+  --ctx-surface: #FFFFFF;
 }
 
 /* Default theme (SSR-safe) — light-first. ThemeProvider overrides client-side. */
@@ -141,6 +149,7 @@
   --tb-white-bg: #FFFFFF; --tb-white-fg: #0E0E0C;
   --tb-dark-bg: #0E0E0C;  --tb-dark-fg: #F5F4EF;
   --gold: #C99A1F;
+  --ctx-bg: #E9ECF1; --ctx-surface: #FFFFFF;
 }
 
 /* ====================================================================

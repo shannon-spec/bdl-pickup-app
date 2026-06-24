@@ -81,11 +81,10 @@ export function LeagueSwitcher({
         className={[
           "inline-flex items-center gap-2.5 rounded-full",
           "h-10 pl-1 pr-3.5",
-          "bg-[color:var(--surface)] data-[open]:bg-[color:var(--surface-2)]",
-          "border border-[color:var(--hairline-2)]",
+          "bg-[color:var(--ctx-surface)]",
           "text-[14px] font-medium text-[color:var(--text)]",
-          "hover:bg-[color:var(--surface-2)] hover:border-[color:var(--text-4)]",
-          "transition-colors",
+          "hover:opacity-90",
+          "transition-opacity",
           "max-sm:w-full max-sm:justify-start",
         ].join(" ")}
     >
