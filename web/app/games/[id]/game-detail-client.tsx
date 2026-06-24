@@ -104,7 +104,7 @@ function SingleScore({ detail }: { detail: GameDetail }) {
       <button
         type="submit"
         disabled={pending}
-        className="h-10 px-5 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)] disabled:opacity-60"
+        className="h-10 px-5 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[13px] disabled:opacity-60"
       >
         {pending ? "Saving…" : "Save score"}
       </button>
@@ -258,7 +258,7 @@ function SeriesScore({ detail }: { detail: GameDetail }) {
         <button
           type="button"
           onClick={addRow}
-          className="h-9 px-3 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] hover:bg-[color:var(--surface-2)] text-[12px] font-bold tracking-[0.06em] uppercase"
+          className="h-9 px-3 rounded-[var(--r-md)] bg-[color:var(--surface)] hover:bg-[color:var(--surface-2)] text-[12px] font-semibold text-[color:var(--text-2)] shadow-[inset_0_0_0_1px_var(--hairline-2)]"
         >
           + Add game
         </button>
@@ -288,7 +288,7 @@ function SeriesScore({ detail }: { detail: GameDetail }) {
         <button
           type="submit"
           disabled={pending}
-          className="h-10 px-5 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)] disabled:opacity-60 ml-auto"
+          className="h-10 px-5 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[13px] disabled:opacity-60 ml-auto"
         >
           {pending ? "Saving…" : "Save series"}
         </button>
@@ -678,7 +678,7 @@ export function RosterBuilder({
           type="button"
           disabled={!playerId || adding}
           onClick={add}
-          className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.04em] uppercase disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[13px] disabled:opacity-60"
         >
           <Plus size={14} strokeWidth={2.5} /> {adding ? "Adding…" : "Add player"}
         </button>
@@ -854,7 +854,7 @@ export function GameMetaEditor({ detail }: { detail: GameDetail }) {
             <button
               type="submit"
               disabled={pending}
-              className="h-10 px-5 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[12px] tracking-[0.06em] uppercase shadow-[var(--cta-shadow)] disabled:opacity-60"
+              className="h-10 px-5 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[13px] disabled:opacity-60"
             >
               {pending ? "Saving…" : "Save changes"}
             </button>
@@ -921,7 +921,7 @@ export function DangerZone({ gameId }: { gameId: string }) {
                     if (res.ok) router.push("/games");
                   })
                 }
-                className="h-10 px-5 rounded-[var(--r-lg)] bg-[color:var(--down)] text-white font-bold text-[12px] tracking-[0.06em] uppercase disabled:opacity-60"
+                className="h-10 px-5 rounded-[var(--r-lg)] bg-[color:var(--down)] text-white font-bold text-[13px] disabled:opacity-60"
               >
                 {pending ? "Deleting…" : "Delete game"}
               </button>
