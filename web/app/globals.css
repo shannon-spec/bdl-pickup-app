@@ -393,3 +393,15 @@
   .ftr-bottom { flex-direction: column; align-items: flex-start; gap: 8px; }
   .ftr-meta   { gap: 10px; }
 }
+
+/* ====================================================================
+   FLAT UI — remove every border app-wide (cards, panels, buttons,
+   chips, inputs/selects, and row dividers). Accessibility focus
+   indicators use `outline` / `ring` (box-shadow), not `border`, so
+   they are unaffected. Faux 1px outlines drawn with inset box-shadow
+   (e.g. TeamBadge) are likewise untouched.
+   To restore borders, delete this block.
+   ==================================================================== */
+*, *::before, *::after {
+  border-width: 0 !important;
+}

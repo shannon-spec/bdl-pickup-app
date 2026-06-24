@@ -11,7 +11,6 @@ import { MembersStrip } from "@/components/bdl/members-strip";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { StatBlock, StatRow } from "@/components/bdl/stat-block";
 import { TeamBadge } from "@/components/bdl/team-badge";
-import { ProbabilityBar } from "@/components/bdl/probability-bar";
 import { Pill } from "@/components/bdl/pill";
 import { HeroTag, isHeroGame } from "@/components/bdl/hero-tag";
 import { LeagueAvatar } from "@/components/bdl/league-avatar";
@@ -141,128 +140,170 @@ export default async function Home() {
             missing with a CTA. */}
         <ProfileNudge player={me} />
 
-        {/* Next Game + Commissioners — paired two-column band on
-            desktop, stacked on narrow viewports. When there's no
-            upcoming game, the Commissioner strip stretches to full
-            width by itself instead of leaving an awkward empty col. */}
-        {nextGame ? (
-          <div className="grid grid-cols-2 gap-4 max-[900px]:grid-cols-1 items-stretch">
-          <section
-            className="group relative rounded-[16px] border border-[color:var(--hairline-2)] overflow-hidden hover:border-[color:var(--hairline-2)]"
-            style={{
-              background:
-                "radial-gradient(ellipse at top left, var(--next-game-tint), transparent 60%), var(--surface)",
-            }}
-          >
+        {/* Next Game — full refresh: a beige outer card holding stacked
+            white sub-cards (matchup · win probability · projected/spread ·
+            rosters). White = brand blue, Dark = neutral. The Commissioner
+            strip now lives down by the Members section. */}
+        {nextGame && (() => {
+          const ps = nextGame.predictedScore;
+          const spread = ps ? Math.abs(ps.a - ps.b) : null;
+          const favorite =
+            ps && ps.a !== ps.b
+              ? ps.a > ps.b
+                ? nextGame.teamAName
+                : nextGame.teamBName
+              : null;
+          return (
+          <section className="group relative rounded-[16px] bg-[color:var(--surface-2)] overflow-hidden">
             <Link
               href={`/games/${nextGame.id}`}
               aria-label={`Game details for ${nextGame.teamAName} vs ${nextGame.teamBName}`}
               className="absolute inset-0 z-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand)] rounded-[16px]"
             />
-            <div className="absolute top-2.5 right-2.5 z-10 flex items-center gap-1.5">
-              {nextGame.mySide ? (
-                <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[color:var(--up-soft)] text-[color:var(--up)] text-[10.5px] font-bold uppercase tracking-[0.08em]">
-                  <Check size={11} strokeWidth={3} /> In
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[color:var(--brand)] text-white text-[10.5px] font-bold uppercase tracking-[0.08em] shadow-[var(--cta-shadow)]">
-                  <Check size={11} strokeWidth={3} /> I&apos;m In
-                </span>
-              )}
-              {canEditNextGame && (
-                <Link
-                  href={`/games/${nextGame.id}`}
-                  className="relative z-10 inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[color:var(--surface-2)] hover:bg-[color:var(--brand-soft)] border border-[color:var(--hairline-2)] text-[10.5px] font-bold uppercase tracking-[0.08em] text-[color:var(--text-2)] hover:text-[color:var(--brand-ink)]"
-                >
-                  <Pencil size={10.5} /> Edit
-                </Link>
-              )}
-            </div>
-            <div className="relative z-[1] px-5 py-3.5 flex flex-col gap-2.5 pointer-events-none">
-              <div className="flex items-center gap-2.5 flex-wrap text-[12px] pr-[120px]">
-                <Pill tone="brand">
-                  Next · {fmtWD(nextGame.date)}
+            <div className="relative z-[1] p-5 max-sm:p-4 flex flex-col gap-4 pointer-events-none">
+              {/* Header — label · when/where, with status (and edit) on the right */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <Pill tone="brand">Next Game</Pill>
+                <span className="text-[13px] font-medium text-[color:var(--text-2)]">
+                  {fmtWD(nextGame.date)}
                   {nextGame.time ? ` · ${fmtTime(nextGame.time)}` : ""}
-                </Pill>
-                {nextGame.venue && (
-                  <span className="text-[color:var(--text-3)]">{nextGame.venue}</span>
-                )}
-                <Link
-                  href="/games"
-                  className="ml-auto pointer-events-auto inline-flex items-center gap-1 text-[11.5px] text-[color:var(--text-3)] hover:text-[color:var(--text)]"
-                >
-                  All games <ChevronRight size={12} />
-                </Link>
-              </div>
-              <div className="flex items-start gap-3 flex-wrap">
-                <div className="flex flex-col gap-1.5 min-w-0">
-                  <TeamPick
-                    name={nextGame.teamAName}
-                    record={`${nextGame.teamARecord.w}-${nextGame.teamARecord.l} last 5`}
-                    team="white"
-                    me={nextGame.mySide === "A"}
-                  />
-                  {nextGame.rosterA.length > 0 && (
-                    <RosterList players={nextGame.rosterA} />
+                  {nextGame.venue ? ` · ${nextGame.venue}` : ""}
+                </span>
+                <div className="ml-auto flex items-center gap-2.5">
+                  <Link
+                    href="/games"
+                    className="pointer-events-auto inline-flex items-center gap-1 text-[12px] text-[color:var(--text-3)] hover:text-[color:var(--text)]"
+                  >
+                    All games <ChevronRight size={12} />
+                  </Link>
+                  {canEditNextGame && (
+                    <Link
+                      href={`/games/${nextGame.id}`}
+                      className="pointer-events-auto inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[color:var(--surface)] hover:bg-[color:var(--brand-soft)] border border-[color:var(--hairline-2)] text-[10.5px] font-bold uppercase tracking-[0.08em] text-[color:var(--text-2)] hover:text-[color:var(--brand-ink)]"
+                    >
+                      <Pencil size={10.5} /> Edit
+                    </Link>
                   )}
-                </div>
-                <span className="text-[color:var(--text-4)] text-[12px] font-medium pt-3">vs</span>
-                <div className="flex flex-col gap-1.5 min-w-0">
-                  <TeamPick
-                    name={nextGame.teamBName}
-                    record={`${nextGame.teamBRecord.w}-${nextGame.teamBRecord.l} last 5`}
-                    team="dark"
-                    me={nextGame.mySide === "B"}
-                  />
-                  {nextGame.rosterB.length > 0 && (
-                    <RosterList players={nextGame.rosterB} />
+                  {nextGame.mySide ? (
+                    <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[color:var(--up)]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[color:var(--up)]" />
+                      You&apos;re in
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[color:var(--brand)] text-white text-[10.5px] font-bold uppercase tracking-[0.08em] shadow-[var(--cta-shadow)]">
+                      <Check size={11} strokeWidth={3} /> I&apos;m In
+                    </span>
                   )}
                 </div>
               </div>
-              <ProbabilityBar
-                aLabel={nextGame.teamAName}
-                bLabel={nextGame.teamBName}
-                a={nextGame.probA}
-                b={nextGame.probB}
-                compact
-              />
-              {nextGame.predictedScore && (() => {
-                const aScore = nextGame.predictedScore.a;
-                const bScore = nextGame.predictedScore.b;
-                const spread = Math.abs(aScore - bScore);
-                const favorite =
-                  aScore > bScore
-                    ? nextGame.teamAName
-                    : bScore > aScore
-                      ? nextGame.teamBName
-                      : null;
-                return (
-                  <div className="flex flex-col gap-1 mt-1.5">
-                    <div className="flex items-center justify-center gap-2 text-[11px] font-[family-name:var(--mono)] num font-semibold text-[color:var(--text-2)]">
-                      <span className="text-[10px] tracking-[0.14em] uppercase text-[color:var(--text-3)] font-semibold">
-                        Projected
+
+              {/* Matchup — White (left) vs Dark (right) */}
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <TeamBadge team="white" size={52} className="shrink-0" />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-[22px] max-sm:text-[18px] text-[color:var(--text)] truncate">
+                        {nextGame.teamAName}
                       </span>
-                      <span>
-                        {nextGame.teamAName} {aScore}
-                        <span className="mx-1.5 text-[color:var(--text-3)]">—</span>
-                        {bScore} {nextGame.teamBName}
-                      </span>
+                      {nextGame.mySide === "A" && <YouTag />}
                     </div>
-                    <div className="flex justify-center">
-                      <Pill tone="neutral">
-                        Spread · {favorite ? `${favorite} −${spread}` : "Pick"}
-                      </Pill>
+                    <div className="text-[12.5px] font-[family-name:var(--mono)] num text-[color:var(--text-3)]">
+                      {nextGame.teamARecord.w}–{nextGame.teamARecord.l} last 5
                     </div>
                   </div>
-                );
-              })()}
+                </div>
+                <span className="text-[color:var(--text-4)] text-[13px] font-semibold tracking-[0.08em]">
+                  VS
+                </span>
+                <div className="flex items-center gap-3 min-w-0 flex-row-reverse">
+                  <TeamBadge team="dark" size={52} className="shrink-0" />
+                  <div className="min-w-0 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      {nextGame.mySide === "B" && <YouTag />}
+                      <span className="font-bold text-[22px] max-sm:text-[18px] text-[color:var(--text)] truncate">
+                        {nextGame.teamBName}
+                      </span>
+                    </div>
+                    <div className="text-[12.5px] font-[family-name:var(--mono)] num text-[color:var(--text-3)]">
+                      {nextGame.teamBRecord.w}–{nextGame.teamBRecord.l} last 5
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Win probability */}
+              <div className="rounded-[12px] bg-[color:var(--surface)] px-4 py-3.5">
+                <div className="flex items-center justify-between gap-2 text-[13px]">
+                  <span className="font-semibold num text-[color:var(--brand-ink)]">
+                    {nextGame.teamAName} {Math.round(nextGame.probA)}%
+                  </span>
+                  <span className="text-[10.5px] uppercase tracking-[0.12em] font-semibold text-[color:var(--text-3)]">
+                    Win Probability
+                  </span>
+                  <span className="font-semibold num text-[color:var(--text-2)]">
+                    {nextGame.teamBName} {Math.round(nextGame.probB)}%
+                  </span>
+                </div>
+                <div className="mt-2.5 flex h-2 overflow-hidden rounded-full bg-[color:var(--hairline)]">
+                  <div style={{ width: `${nextGame.probA}%` }} className="bg-[color:var(--brand)]" />
+                  <div style={{ width: `${nextGame.probB}%` }} className="bg-[color:var(--text-4)]" />
+                </div>
+              </div>
+
+              {/* Projected + Spread */}
+              {(ps || spread != null) && (
+                <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
+                  {ps && (
+                    <div className="rounded-[12px] bg-[color:var(--surface)] px-4 py-3.5">
+                      <div className="text-[10.5px] uppercase tracking-[0.12em] font-semibold text-[color:var(--text-3)] mb-1.5">
+                        Projected
+                      </div>
+                      <div className="font-bold num text-[28px] max-sm:text-[24px] leading-none">
+                        <span className="text-[color:var(--brand-ink)]">{ps.a}</span>
+                        <span className="mx-2 text-[color:var(--text-4)]">—</span>
+                        <span className="text-[color:var(--text)]">{ps.b}</span>
+                      </div>
+                    </div>
+                  )}
+                  {spread != null && (
+                    <div className="rounded-[12px] bg-[color:var(--surface)] px-4 py-3.5">
+                      <div className="text-[10.5px] uppercase tracking-[0.12em] font-semibold text-[color:var(--text-3)] mb-1.5">
+                        Spread
+                      </div>
+                      <div className="font-bold text-[28px] max-sm:text-[24px] leading-none text-[color:var(--text)]">
+                        {favorite ? (
+                          <>
+                            {favorite} <span className="num text-[color:var(--brand-ink)]">−{spread}</span>
+                          </>
+                        ) : (
+                          "Pick"
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Rosters */}
+              <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
+                <RosterCard
+                  team="white"
+                  name={nextGame.teamAName}
+                  players={nextGame.rosterA}
+                  meId={me?.id ?? null}
+                />
+                <RosterCard
+                  team="dark"
+                  name={nextGame.teamBName}
+                  players={nextGame.rosterB}
+                  meId={me?.id ?? null}
+                />
+              </div>
             </div>
           </section>
-            <CommissionerStrip leagueId={currentLeague.id} />
-          </div>
-        ) : (
-          <CommissionerStrip leagueId={currentLeague.id} />
-        )}
+          );
+        })()}
 
         {/* Hero */}
         <section className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-7 pt-6 pb-5 max-sm:px-5 max-sm:pt-5 max-sm:pb-4">
@@ -491,6 +532,8 @@ export default async function Home() {
           </div>
         </div>
 
+        <CommissionerStrip leagueId={currentLeague.id} />
+
         <MembersStrip leagueId={currentLeague.id} />
 
         {/* Discover — bottom-of-page wayfinding to other leagues. */}
@@ -618,52 +661,55 @@ function EmptyCard({
   );
 }
 
-function RosterList({
-  players,
-}: {
-  players: { id: string; firstName: string; lastName: string }[];
-}) {
+function YouTag() {
   return (
-    <ul className="flex flex-col gap-1 pl-[52px]">
-      {players.map((p) => (
-        <li
-          key={p.id}
-          className="text-[12.5px] font-medium text-[color:var(--text)] leading-tight truncate"
-        >
-          {p.firstName} {p.lastName}
-        </li>
-      ))}
-    </ul>
+    <span className="shrink-0 text-[10px] font-semibold tracking-[0.08em] uppercase px-1.5 py-0.5 rounded-full bg-[color:var(--brand-soft)] text-[color:var(--brand-ink)]">
+      You
+    </span>
   );
 }
 
-function TeamPick({
-  name,
-  record,
+function RosterCard({
   team,
-  me,
+  name,
+  players,
+  meId,
 }: {
-  name: string;
-  record: string;
   team: "white" | "dark";
-  me?: boolean;
+  name: string;
+  players: { id: string; firstName: string; lastName: string }[];
+  meId: string | null;
 }) {
   return (
-    <div className="inline-flex items-center gap-2.5">
-      <TeamBadge team={team} />
-      <div className="flex flex-col gap-0.5">
-        <div className="font-bold text-[17px] text-[color:var(--text)] inline-flex items-center gap-1.5">
-          {name}
-          {me && (
-            <span className="text-[10px] font-semibold tracking-[0.08em] uppercase px-1.5 py-0.5 rounded-full bg-[color:var(--brand-soft)] text-[color:var(--brand-ink)]">
-              You
-            </span>
-          )}
-        </div>
-        <div className="text-[11.5px] font-[family-name:var(--mono)] text-[color:var(--text-3)] num">
-          {record}
-        </div>
+    <div className="rounded-[12px] bg-[color:var(--surface)] px-4 py-3.5">
+      <div
+        className={`text-[10.5px] uppercase tracking-[0.12em] font-bold mb-2.5 ${
+          team === "white" ? "text-[color:var(--brand-ink)]" : "text-[color:var(--text-2)]"
+        }`}
+      >
+        {name} · Roster
       </div>
+      {players.length > 0 ? (
+        <ul className="flex flex-col gap-1.5">
+          {players.map((p) => {
+            const isMe = p.id === meId;
+            return (
+              <li
+                key={p.id}
+                className={`text-[14px] leading-tight truncate ${
+                  isMe
+                    ? "font-semibold text-[color:var(--brand-ink)]"
+                    : "font-medium text-[color:var(--text)]"
+                }`}
+              >
+                {p.firstName} {p.lastName}
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="text-[13px] text-[color:var(--text-3)]">No players yet</p>
+      )}
     </div>
   );
 }
