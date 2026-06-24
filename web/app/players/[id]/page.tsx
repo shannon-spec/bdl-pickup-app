@@ -331,18 +331,12 @@ export default async function PlayerProfilePage({
         {profile.lastN.length > 0 && (
           <div>
             <SectionHead title="Last 10" count={<span>{profile.lastN.length}</span>} />
-            <div
-              className="grid gap-3 overflow-x-auto"
-              style={{
-                gridAutoFlow: "column",
-                gridAutoColumns: "minmax(170px, 1fr)",
-              }}
-            >
+            <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(170px,1fr))]">
               {profile.lastN.map((g) => (
                 <Link
                   key={g.id}
                   href={`/games/${g.id}`}
-                  className="flex flex-col gap-2.5 p-4 rounded-[12px] shadow-[inset_0_0_0_1px_var(--hairline-2)] bg-[color:var(--surface)] min-w-[170px] hover:border-[color:var(--text-4)] transition-colors"
+                  className="flex flex-col gap-2.5 p-4 rounded-[12px] shadow-[inset_0_0_0_1px_var(--hairline-2)] bg-[color:var(--surface)] hover:shadow-[inset_0_0_0_1.5px_var(--text-4)] transition-shadow"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[10.5px] font-semibold tracking-[0.12em] uppercase text-[color:var(--text-3)]">
