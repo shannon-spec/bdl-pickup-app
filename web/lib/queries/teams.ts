@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, isNull, inArray, and, sql } from "drizzle-orm";
 import {
   db,
   teams,
@@ -7,6 +7,61 @@ import {
   players,
 } from "@/lib/db";
 import type { Session } from "@/lib/auth/session";
+
+export type TeamCard = {
+  id: string;
+  name: string;
+  city: string | null;
+  state: string | null;
+  defaultFormat: string;
+  avatarKind: string;
+  avatarColor: string;
+  avatarEmoji: string | null;
+  rosterCount: number;
+};
+
+/**
+ * Team cards for the /teams list. Admins see every non-hidden team;
+ * commissioners see the teams they manage.
+ */
+export async function getTeamCards(opts: {
+  all?: boolean;
+  commissionerPlayerId?: string | null;
+}): Promise<TeamCard[]> {
+  let ids: string[] | null = null;
+  if (!opts.all) {
+    if (!opts.commissionerPlayerId) return [];
+    const mine = await db
+      .select({ teamId: teamCommissioners.teamId })
+      .from(teamCommissioners)
+      .where(eq(teamCommissioners.playerId, opts.commissionerPlayerId));
+    ids = mine.map((r) => r.teamId);
+    if (ids.length === 0) return [];
+  }
+
+  const rows = await db
+    .select({
+      id: teams.id,
+      name: teams.name,
+      city: teams.city,
+      state: teams.state,
+      defaultFormat: teams.defaultFormat,
+      avatarKind: teams.avatarKind,
+      avatarColor: teams.avatarColor,
+      avatarEmoji: teams.avatarEmoji,
+      rosterCount: sql<number>`(
+        SELECT count(*)::int FROM team_players tp WHERE tp.team_id = ${teams.id}
+      )`,
+    })
+    .from(teams)
+    .where(
+      ids
+        ? and(isNull(teams.hiddenAt), inArray(teams.id, ids))
+        : isNull(teams.hiddenAt),
+    )
+    .orderBy(asc(teams.name));
+  return rows;
+}
 
 export type TeamRosterMember = {
   id: string;

@@ -11,6 +11,7 @@ import {
   Lock,
   Settings2,
   SlidersHorizontal,
+  Users,
   UserPlus,
   UserRound,
   UsersRound,
@@ -266,6 +267,14 @@ function CommissionerMore({ leagueId }: { leagueId: string | null }) {
             className={live}
           >
             <KeyRound size={15} strokeWidth={2} /> Manage logins
+          </Link>
+          <Link
+            href="/teams"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className={live}
+          >
+            <Users size={15} strokeWidth={2} /> Teams
           </Link>
           <button
             type="button"
