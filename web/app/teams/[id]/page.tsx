@@ -87,7 +87,7 @@ function TeamGameCard({ g, teamId }: { g: TeamGameRow; teamId: string }) {
   return (
     <a
       href={`/games/${g.id}`}
-      className="flex items-center justify-between gap-3 rounded-[12px] bg-[color:var(--surface)] px-4 py-3 shadow-[inset_0_0_0_1px_var(--hairline-2)] hover:shadow-[inset_0_0_0_1.5px_var(--text-4)] transition-shadow"
+      className="flex items-center justify-between gap-3 rounded-[12px] bg-[color:var(--surface)] px-4 py-3 hover:shadow-[0_2px_10px_rgba(0,0,0,0.06)] transition-shadow"
     >
       <div className="flex flex-col min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
@@ -210,7 +210,7 @@ export default async function TeamDetailPage({
         </Link>
 
         {/* Header */}
-        <section className="rounded-[16px] bg-[color:var(--surface)] px-5 py-4 shadow-[inset_0_0_0_1px_var(--hairline-2)] flex items-center gap-4 flex-wrap">
+        <section className="rounded-[16px] bg-[color:var(--surface-2)] px-5 py-4 flex items-center gap-4 flex-wrap">
           <LeagueAvatar
             kind={team.avatarKind}
             color={team.avatarColor}
@@ -235,7 +235,7 @@ export default async function TeamDetailPage({
           {canManage && (
             <Link
               href={`/teams/${id}/edit`}
-              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--r-lg)] bg-[color:var(--surface)] text-[12px] font-bold text-[color:var(--text-2)] hover:text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-soft)] transition-colors shadow-[inset_0_0_0_1px_var(--hairline-2)]"
+              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--r-lg)] bg-[color:var(--surface)] text-[12px] font-bold text-[color:var(--text-2)] hover:text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-soft)] transition-colors"
             >
               <Pencil size={13} /> Edit team
             </Link>
@@ -249,14 +249,14 @@ export default async function TeamDetailPage({
         )}
 
         {/* Roster */}
-        <section className="rounded-[16px] bg-[color:var(--surface)] p-4 shadow-[inset_0_0_0_1px_var(--hairline-2)]">
+        <section className="rounded-[16px] bg-[color:var(--surface-2)] p-4">
           <SectionHead title="Roster" count={<span>{roster.length}</span>} />
           {roster.length === 0 ? (
             <div className="mt-3 text-[13px] text-[color:var(--text-3)]">
               No players yet.{canManage ? " Add players below." : ""}
             </div>
           ) : (
-            <ul className="mt-3 grid grid-cols-2 gap-x-6 gap-y-0.5 max-sm:grid-cols-1">
+            <ul className="mt-3 grid grid-cols-2 gap-x-6 gap-y-0.5 max-sm:grid-cols-1 rounded-[12px] bg-[color:var(--surface)] p-3">
               {roster.map((p, i) => (
                 <li key={p.id}>
                   <Link
@@ -282,7 +282,7 @@ export default async function TeamDetailPage({
         </section>
 
         {/* Games */}
-        <section className="rounded-[16px] bg-[color:var(--surface)] p-4 shadow-[inset_0_0_0_1px_var(--hairline-2)]">
+        <section className="rounded-[16px] bg-[color:var(--surface-2)] p-4">
           <SectionHead
             title="Games"
             count={<span>{teamGames.length}</span>}
@@ -311,7 +311,7 @@ export default async function TeamDetailPage({
         </section>
 
         {/* Roster game data */}
-        <section className="rounded-[16px] bg-[color:var(--surface)] p-4 shadow-[inset_0_0_0_1px_var(--hairline-2)]">
+        <section className="rounded-[16px] bg-[color:var(--surface-2)] p-4">
           <SectionHead
             title="Roster Game Data"
             count={
@@ -356,7 +356,7 @@ export default async function TeamDetailPage({
               No completed games yet — play a game and enter a score.
             </div>
           ) : (
-            <div className="mt-3 rounded-[12px] bg-[color:var(--surface)] shadow-[inset_0_0_0_1px_var(--hairline)] overflow-hidden">
+            <div className="mt-3 rounded-[12px] bg-[color:var(--surface)] overflow-hidden">
               <div className="grid grid-cols-[28px_1fr_64px_64px_72px] max-sm:grid-cols-[28px_1fr_64px_72px] items-center gap-3 px-4 py-2 text-[10px] font-semibold tracking-[0.12em] uppercase text-[color:var(--text-3)] shadow-[inset_0_-1px_0_0_var(--hairline)]">
                 <span>#</span>
                 <span>Player</span>
@@ -418,7 +418,7 @@ export default async function TeamDetailPage({
 
         {/* Danger zone */}
         {canManage && (
-          <section className="rounded-[16px] bg-[color:var(--surface)] px-5 py-4 shadow-[inset_0_0_0_1px_var(--hairline-2)] flex items-center justify-between gap-3 flex-wrap">
+          <section className="rounded-[16px] bg-[color:var(--surface-2)] px-5 py-4 flex items-center justify-between gap-3 flex-wrap">
             <div className="flex flex-col gap-0.5 min-w-0">
               <span className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
                 Danger Zone
