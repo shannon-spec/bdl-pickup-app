@@ -110,6 +110,10 @@ export type GameDetail = {
   rosterB: Pick<Player, "id" | "firstName" | "lastName">[];
   invited: Pick<Player, "id" | "firstName" | "lastName">[];
   eligible: Pick<Player, "id" | "firstName" | "lastName">[];
+  /** Team-game only: eligible pool for side A (team A roster). */
+  eligibleA: Pick<Player, "id" | "firstName" | "lastName">[];
+  /** Team-game only: eligible pool for side B (team B roster). */
+  eligibleB: Pick<Player, "id" | "firstName" | "lastName">[];
   allLeagues: { id: string; name: string }[];
   subgames: GameSubgameRow[];
 };
@@ -161,6 +165,10 @@ export async function getGameDetail(id: string): Promise<GameDetail | null> {
   // game that's the league's members; for a team-vs-team game it's the
   // combined rosters of both teams.
   let eligible: Pick<Player, "id" | "firstName" | "lastName">[] = [];
+  // For team-vs-team games, the eligible pool split by side (team A roster
+  // vs team B roster) so the UI can offer "add all" per team.
+  const eligibleA: Pick<Player, "id" | "firstName" | "lastName">[] = [];
+  const eligibleB: Pick<Player, "id" | "firstName" | "lastName">[] = [];
   const onRoster = new Set([
     ...rosterA.map((p) => p.id),
     ...rosterB.map((p) => p.id),
@@ -181,16 +189,27 @@ export async function getGameDetail(id: string): Promise<GameDetail | null> {
   } else if (g.teamAId || g.teamBId) {
     const teamIds = [g.teamAId, g.teamBId].filter(Boolean) as string[];
     const memberRows = await db
-      .selectDistinct({
+      .select({
         id: players.id,
         firstName: players.firstName,
         lastName: players.lastName,
+        teamId: teamPlayers.teamId,
       })
       .from(players)
       .innerJoin(teamPlayers, eq(teamPlayers.playerId, players.id))
       .where(inArray(teamPlayers.teamId, teamIds))
       .orderBy(asc(players.lastName), asc(players.firstName));
-    eligible = memberRows.filter((p) => !onRoster.has(p.id));
+    const seen = new Set<string>();
+    for (const r of memberRows) {
+      if (onRoster.has(r.id)) continue;
+      const slim = { id: r.id, firstName: r.firstName, lastName: r.lastName };
+      if (r.teamId === g.teamAId) eligibleA.push(slim);
+      else if (r.teamId === g.teamBId) eligibleB.push(slim);
+      if (!seen.has(r.id)) {
+        seen.add(r.id);
+        eligible.push(slim);
+      }
+    }
   }
 
   const allLeagues = await db
@@ -217,6 +236,8 @@ export async function getGameDetail(id: string): Promise<GameDetail | null> {
     rosterB,
     invited,
     eligible,
+    eligibleA,
+    eligibleB,
     allLeagues,
     subgames,
   };

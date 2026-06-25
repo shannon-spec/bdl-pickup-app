@@ -268,6 +268,9 @@ export default async function GameDetailPage({
             teamBName={game.teamBName ?? "Dark"}
             format={game.format}
             eligible={detail.eligible}
+            eligibleA={detail.eligibleA}
+            eligibleB={detail.eligibleB}
+            isTeamGame={!game.leagueId && !!(game.teamAId || game.teamBId)}
             rosterA={detail.rosterA}
             rosterB={detail.rosterB}
             winPcts={Object.fromEntries(winPcts)}

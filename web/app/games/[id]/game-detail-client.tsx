@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Copy, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Copy, Pencil, Plus, Trash2, Users } from "lucide-react";
 import type { GameDetail } from "@/lib/queries/games";
 import {
   clearGameRoster,
@@ -521,6 +521,9 @@ export function RosterBuilder({
   teamBName,
   format,
   eligible,
+  eligibleA = [],
+  eligibleB = [],
+  isTeamGame = false,
   rosterA,
   rosterB,
   winPcts,
@@ -531,6 +534,9 @@ export function RosterBuilder({
   teamBName: string;
   format: string;
   eligible: { id: string; firstName: string; lastName: string }[];
+  eligibleA?: { id: string; firstName: string; lastName: string }[];
+  eligibleB?: { id: string; firstName: string; lastName: string }[];
+  isTeamGame?: boolean;
   rosterA: { id: string; firstName: string; lastName: string }[];
   rosterB: { id: string; firstName: string; lastName: string }[];
   winPcts: Record<string, WinRec>;
@@ -540,6 +546,7 @@ export function RosterBuilder({
   const [playerId, setPlayerId] = useState("");
   const [side, setSide] = useState<"A" | "B">("A");
   const [adding, startAdd] = useTransition();
+  const [addingAll, startAddAll] = useTransition();
   const [loadingPrev, startLoad] = useTransition();
   const [clearing, startClear] = useTransition();
   const [confirmClear, setConfirmClear] = useState(false);
@@ -564,6 +571,27 @@ export function RosterBuilder({
         } else setError(res.error);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Could not add player.");
+      }
+    });
+
+  // Team games only: drop the whole selected team's roster onto that side.
+  const sideEligible = side === "A" ? eligibleA : eligibleB;
+  const addAll = () =>
+    startAddAll(async () => {
+      if (sideEligible.length === 0) return;
+      setError(null);
+      try {
+        for (const p of sideEligible) {
+          const res = await setGameRosterPlayer(gameId, p.id, side);
+          if (!res.ok) {
+            setError(res.error);
+            break;
+          }
+        }
+        setPlayerId("");
+        router.refresh();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Could not add players.");
       }
     });
 
@@ -676,12 +704,26 @@ export function RosterBuilder({
         </div>
         <button
           type="button"
-          disabled={!playerId || adding}
+          disabled={!playerId || adding || addingAll}
           onClick={add}
           className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[13px] disabled:opacity-60"
         >
           <Plus size={14} strokeWidth={2.5} /> {adding ? "Adding…" : "Add player"}
         </button>
+        {isTeamGame && (
+          <button
+            type="button"
+            disabled={sideEligible.length === 0 || adding || addingAll}
+            onClick={addAll}
+            title={`Add all ${side === "A" ? teamAName : teamBName} players`}
+            className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--surface)] text-[color:var(--brand-ink)] font-bold text-[13px] hover:bg-[color:var(--brand-soft)] transition-colors disabled:opacity-60 shadow-[inset_0_0_0_1px_var(--hairline-2)]"
+          >
+            <Users size={14} strokeWidth={2.5} />
+            {addingAll
+              ? "Adding…"
+              : `Add all${sideEligible.length ? ` (${sideEligible.length})` : ""}`}
+          </button>
+        )}
       </div>
 
       {/* Team strength bar */}
