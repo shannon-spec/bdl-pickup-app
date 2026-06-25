@@ -8,7 +8,9 @@ import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
 import { LeagueAvatar } from "@/components/bdl/league-avatar";
 import { getLeaguesWithStats } from "@/lib/queries/leagues";
-import { db, leaguePlayers } from "@/lib/db";
+import { getTeamCards, type TeamCard } from "@/lib/queries/teams";
+import { formatLabel } from "@/lib/format";
+import { db, leaguePlayers, teamPlayers } from "@/lib/db";
 import { eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
@@ -20,19 +22,29 @@ export default async function DiscoverPage() {
   const session = await readSession();
 
   const allLeagues = await getLeaguesWithStats();
+  const allTeams = await getTeamCards({ all: true });
 
-  // Which leagues is the signed-in player in?
+  // Which leagues / teams is the signed-in player in?
   const memberSet = new Set<string>();
+  const teamMemberSet = new Set<string>();
   if (session?.playerId) {
     const memberships = await db
       .select({ leagueId: leaguePlayers.leagueId })
       .from(leaguePlayers)
       .where(eq(leaguePlayers.playerId, session.playerId));
     for (const m of memberships) memberSet.add(m.leagueId);
+
+    const teamMemberships = await db
+      .select({ teamId: teamPlayers.teamId })
+      .from(teamPlayers)
+      .where(eq(teamPlayers.playerId, session.playerId));
+    for (const m of teamMemberships) teamMemberSet.add(m.teamId);
   }
 
   const yours = allLeagues.filter((l) => memberSet.has(l.id));
   const others = allLeagues.filter((l) => !memberSet.has(l.id));
+  const yourTeams = allTeams.filter((t) => teamMemberSet.has(t.id));
+  const otherTeams = allTeams.filter((t) => !teamMemberSet.has(t.id));
 
   return (
     <>
@@ -46,9 +58,15 @@ export default async function DiscoverPage() {
           count={
             <span>
               {allLeagues.length} league{allLeagues.length === 1 ? "" : "s"}
+              {" · "}
+              {allTeams.length} team{allTeams.length === 1 ? "" : "s"}
             </span>
           }
         />
+
+        <div className="text-[12px] font-bold tracking-[0.04em] uppercase text-[color:var(--text-2)] mt-1">
+          Leagues
+        </div>
 
         {yours.length > 0 && (
           <>
@@ -81,9 +99,96 @@ export default async function DiscoverPage() {
             No leagues to discover yet.
           </div>
         )}
+
+        <div className="text-[12px] font-bold tracking-[0.04em] uppercase text-[color:var(--text-2)] mt-4">
+          Teams
+        </div>
+
+        {yourTeams.length > 0 && (
+          <>
+            <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)] mt-1">
+              Your teams
+            </div>
+            <Grid>
+              {yourTeams.map((t) => (
+                <TeamCardView key={t.id} t={t} mine />
+              ))}
+            </Grid>
+          </>
+        )}
+
+        {otherTeams.length > 0 && (
+          <>
+            <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)] mt-2">
+              {yourTeams.length > 0 ? "Other teams" : "All teams"}
+            </div>
+            <Grid>
+              {otherTeams.map((t) => (
+                <TeamCardView key={t.id} t={t} />
+              ))}
+            </Grid>
+          </>
+        )}
+
+        {allTeams.length === 0 && (
+          <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-12 text-center text-[color:var(--text-3)] text-[14px]">
+            No teams to discover yet.
+          </div>
+        )}
       </PageFrame>
       <MobileBottomBar active="discover" />
     </>
+  );
+}
+
+function TeamCardView({ t, mine }: { t: TeamCard; mine?: boolean }) {
+  const place = [t.city, t.state].filter(Boolean).join(", ");
+  return (
+    <Link
+      href={`/teams/${t.id}`}
+      className={`group rounded-[14px] border p-4 flex flex-col gap-3 transition-colors ${
+        mine
+          ? "border-[color:var(--brand)]"
+          : "border-[color:var(--hairline-2)] bg-[color:var(--surface)] hover:border-[color:var(--text-4)]"
+      }`}
+      style={
+        mine
+          ? {
+              background:
+                "radial-gradient(ellipse at top right, var(--brand-soft), transparent 60%), var(--surface)",
+            }
+          : undefined
+      }
+    >
+      <LeagueAvatar
+        kind={t.avatarKind}
+        color={t.avatarColor}
+        emoji={t.avatarEmoji}
+        abbr={(t.name[0] ?? "?").toUpperCase()}
+        size={36}
+      />
+      <div>
+        <div className="font-bold text-[16px]">{t.name}</div>
+        <div className="text-[12px] text-[color:var(--text-3)] mt-0.5">
+          {place || "Travel team"}
+        </div>
+      </div>
+      <div className="flex items-center justify-between mt-auto pt-1 gap-2 flex-wrap">
+        <div className="flex gap-1.5 flex-wrap">
+          {mine && (
+            <Pill tone="win" dot>
+              You&apos;re on
+            </Pill>
+          )}
+          <Pill tone="neutral">{t.rosterCount} players</Pill>
+          <Pill tone="brand">{formatLabel(t.defaultFormat)}</Pill>
+        </div>
+        <ChevronRight
+          size={16}
+          className="text-[color:var(--text-3)] group-hover:text-[color:var(--text)]"
+        />
+      </div>
+    </Link>
   );
 }
 
