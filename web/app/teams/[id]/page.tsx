@@ -267,9 +267,6 @@ export default async function TeamDetailPage({
               ))}
             </ul>
           )}
-          {canManage && (
-            <TeamRosterControls teamId={id} members={roster} eligible={eligible} />
-          )}
         </section>
 
         {/* Games */}
@@ -301,10 +298,10 @@ export default async function TeamDetailPage({
           )}
         </section>
 
-        {/* Cumulative leaderboard */}
+        {/* Roster game data */}
         <section className="rounded-[16px] bg-[color:var(--surface)] p-4 shadow-[inset_0_0_0_1px_var(--hairline-2)]">
           <SectionHead
-            title="Leaderboard"
+            title="Roster Game Data"
             count={
               <span>
                 {leaderboard.totalGames} game{leaderboard.totalGames === 1 ? "" : "s"}
@@ -394,6 +391,15 @@ export default async function TeamDetailPage({
                   </Link>
                 );
               })}
+            </div>
+          )}
+
+          {canManage && (
+            <div className="mt-4 pt-4 shadow-[inset_0_1px_0_0_var(--hairline)]">
+              <span className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
+                Roster Admin
+              </span>
+              <TeamRosterControls teamId={id} members={roster} eligible={eligible} />
             </div>
           )}
         </section>
