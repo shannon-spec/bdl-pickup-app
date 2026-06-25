@@ -51,6 +51,25 @@ function Chip({
   );
 }
 
+function StatTile({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-[12px] bg-[color:var(--surface)] px-4 py-3 flex flex-col items-center justify-center gap-0.5 text-center">
+      <span className="text-[10px] font-semibold tracking-[0.12em] uppercase text-[color:var(--text-3)]">
+        {label}
+      </span>
+      <span className="font-extrabold text-[20px] tracking-[-0.02em] num font-[family-name:var(--mono)]">
+        {children}
+      </span>
+    </div>
+  );
+}
+
 function TeamGameCard({ g, teamId }: { g: TeamGameRow; teamId: string }) {
   const isA = g.teamAId === teamId;
   const oppName = isA ? g.teamBName : g.teamAName;
@@ -193,6 +212,48 @@ export default async function TeamDetailPage({
   const place = [team.city, team.state].filter(Boolean).join(", ");
   const abbr = (team.name.trim()[0] ?? "?").toUpperCase();
 
+  // Hero console: team-wide aggregates across completed games.
+  let wins = 0;
+  let losses = 0;
+  let marginSum = 0;
+  let decidedCount = 0;
+  let pointsTotal = 0;
+  let minutesTotal = 0;
+  for (const g of teamGames) {
+    const isA = g.teamAId === id;
+    const sA = g.scoreA;
+    const sB = g.scoreB;
+    const decided =
+      g.winTeam ??
+      (sA !== null && sB !== null
+        ? sA > sB
+          ? "A"
+          : sB > sA
+            ? "B"
+            : "Tie"
+        : null);
+    if (decided === null) continue;
+    const myScore = isA ? sA : sB;
+    const oppScore = isA ? sB : sA;
+    if (myScore !== null && oppScore !== null) {
+      marginSum += myScore - oppScore;
+      decidedCount++;
+    }
+    if (decided !== "Tie") {
+      if ((decided === "A") === isA) wins++;
+      else losses++;
+    }
+    if (g.gameLengthMinutes && g.gameLengthMinutes > 0 && myScore !== null) {
+      pointsTotal += myScore;
+      minutesTotal += g.gameLengthMinutes;
+    }
+  }
+  const decidedTotal = wins + losses;
+  const winPct = decidedTotal > 0 ? (wins / decidedTotal) * 100 : null;
+  const avgMargin = decidedCount > 0 ? marginSum / decidedCount : null;
+  const teamPpm = minutesTotal > 0 ? pointsTotal / minutesTotal : null;
+  const hasStats = decidedCount > 0 || decidedTotal > 0;
+
   return (
     <>
       <TopBar active="/teams" />
@@ -245,6 +306,24 @@ export default async function TeamDetailPage({
             </Link>
           )}
         </section>
+
+        {/* Hero console — team-wide stat strip */}
+        {hasStats && (
+          <section className="rounded-[16px] bg-[color:var(--surface-2)] p-2 grid grid-cols-4 gap-2 max-sm:grid-cols-2">
+            <StatTile label="Record">{wins}–{losses}</StatTile>
+            <StatTile label="Win %">
+              {winPct !== null ? `${winPct.toFixed(1)}%` : "—"}
+            </StatTile>
+            <StatTile label="Avg Margin">
+              {avgMargin !== null
+                ? `${avgMargin > 0 ? "+" : ""}${avgMargin.toFixed(1)}`
+                : "—"}
+            </StatTile>
+            <StatTile label="PPM">
+              {teamPpm !== null ? teamPpm.toFixed(2) : "—"}
+            </StatTile>
+          </section>
+        )}
 
         {team.description && (
           <p className="text-[13.5px] leading-relaxed text-[color:var(--text-2)] -mt-1">
