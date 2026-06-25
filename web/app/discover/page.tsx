@@ -86,11 +86,11 @@ export default async function DiscoverPage() {
             <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)] mt-2">
               {yours.length > 0 ? "Other leagues" : "All leagues"}
             </div>
-            <Grid>
+            <div className="flex flex-col gap-1.5">
               {others.map((l) => (
-                <LeagueCard key={l.id} l={l} />
+                <LeagueListRow key={l.id} l={l} />
               ))}
-            </Grid>
+            </div>
           </>
         )}
 
@@ -188,6 +188,49 @@ function TeamCardView({ t, mine }: { t: TeamCard; mine?: boolean }) {
           className="text-[color:var(--text-3)] group-hover:text-[color:var(--text)]"
         />
       </div>
+    </Link>
+  );
+}
+
+function LeagueListRow({
+  l,
+}: {
+  l: Awaited<ReturnType<typeof getLeaguesWithStats>>[number];
+}) {
+  const cap = l.maxPlayers ?? null;
+  const spots =
+    cap !== null && cap !== undefined ? Math.max(0, cap - l.playerCount) : null;
+  return (
+    <Link
+      href={`/leagues/${l.id}`}
+      className="group flex items-center gap-3 rounded-[12px] bg-[color:var(--surface)] px-4 py-2.5 shadow-[inset_0_0_0_1px_var(--hairline-2)] hover:shadow-[inset_0_0_0_1.5px_var(--text-4)] transition-shadow"
+    >
+      <LeagueAvatar
+        kind={l.avatarKind}
+        color={l.avatarColor}
+        emoji={l.avatarEmoji}
+        abbr={(l.name[0] ?? "?").toUpperCase()}
+        size={32}
+      />
+      <div className="flex flex-col min-w-0 flex-1">
+        <span className="font-bold text-[14px] truncate">{l.name}</span>
+        <span className="text-[11.5px] text-[color:var(--text-3)] truncate">
+          {l.season ? `${l.season} · ` : ""}
+          {l.schedule || l.location || "Open league"}
+        </span>
+      </div>
+      <div className="flex items-center gap-1.5 flex-shrink-0 max-sm:hidden">
+        <Pill tone="neutral">{l.playerCount} players</Pill>
+        {spots !== null && (
+          <Pill tone="neutral">
+            {spots} spot{spots === 1 ? "" : "s"}
+          </Pill>
+        )}
+      </div>
+      <ChevronRight
+        size={16}
+        className="text-[color:var(--text-3)] group-hover:text-[color:var(--text)] flex-shrink-0"
+      />
     </Link>
   );
 }
