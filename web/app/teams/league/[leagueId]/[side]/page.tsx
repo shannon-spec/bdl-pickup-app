@@ -46,13 +46,13 @@ export default async function LeagueSideTeamPage({
   const hero = computeHeroStats(view.games, view.sideKey);
 
   // Displayed roster = the managed regular roster PLUS anyone who's played
-  // more than 50% of this side's games (in the active year), deduped.
+  // more than 40% of this side's games (in the active year), deduped.
   const onRoster = new Set(view.roster.map((p) => p.id));
   const total = leaderboard.totalGames;
   const autoPlayers =
     total > 0
       ? leaderboard.players
-          .filter((p) => !onRoster.has(p.id) && p.gamesPlayed / total > 0.5)
+          .filter((p) => !onRoster.has(p.id) && p.gamesPlayed / total > 0.4)
           .map((p) => ({
             id: p.id,
             firstName: p.firstName,

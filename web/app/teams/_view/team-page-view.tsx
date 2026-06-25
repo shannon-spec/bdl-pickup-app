@@ -373,11 +373,11 @@ export function TeamPageView(props: TeamPageViewProps) {
                             title={`${played.toFixed(0)}% of games played`}
                             className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none whitespace-nowrap"
                             style={{
-                              background: "linear-gradient(180deg, #EBEDF0, #C7CCD4)",
-                              color: "#3A3F47",
+                              background: "linear-gradient(180deg, #F6F7F9, #E2E5EA)",
+                              color: "#6B7280",
                             }}
                           >
-                            {played.toFixed(0)}% played
+                            {played.toFixed(0)}%
                           </span>
                         )}
                         {st && (
