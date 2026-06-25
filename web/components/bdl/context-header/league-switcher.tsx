@@ -175,7 +175,7 @@ export function LeagueSwitcher({
               to   { opacity: 1; transform: translateY(0) scale(1); }
             }
           `}</style>
-          {leagues.map((l) => {
+          {!showingTeam && leagues.map((l) => {
             const selected = !showingTeam && l.id === activeLeagueId;
             const longMeta = [l.season, l.cadence, l.timeOfDay].filter(Boolean).join(" · ");
             return (
@@ -214,7 +214,7 @@ export function LeagueSwitcher({
             );
           })}
 
-          {teamList.length > 0 && (
+          {showingTeam && teamList.length > 0 && (
             <div className="shadow-[inset_0_1px_0_0_var(--hairline)]">
               <div className="px-4 pt-2.5 pb-1 text-[10px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-4)]">
                 Teams
@@ -254,7 +254,15 @@ export function LeagueSwitcher({
 
           <div className="shadow-[inset_0_1px_0_0_var(--hairline)]">
             <Link
-              href={canCreate ? "/leagues/new" : "/discover"}
+              href={
+                showingTeam
+                  ? canCreate
+                    ? "/teams/new"
+                    : "/teams"
+                  : canCreate
+                    ? "/leagues/new"
+                    : "/discover"
+              }
               onClick={() => setOpen(false)}
               className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[color:var(--surface-2)] transition-colors"
             >
@@ -265,7 +273,13 @@ export function LeagueSwitcher({
                 <Plus size={14} />
               </span>
               <span className="text-[13.5px] font-medium text-[color:var(--text-2)]">
-                {canCreate ? "Create another league" : "Join another league"}
+                {showingTeam
+                  ? canCreate
+                    ? "Create another team"
+                    : "All teams"
+                  : canCreate
+                    ? "Create another league"
+                    : "Join another league"}
               </span>
             </Link>
           </div>
