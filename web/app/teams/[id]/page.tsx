@@ -113,11 +113,6 @@ function TeamGameCard({ g, teamId }: { g: TeamGameRow; teamId: string }) {
       <div className="flex items-center gap-3 flex-shrink-0">
         {completed ? (
           <>
-            {ppm && (
-              <span className="font-[family-name:var(--mono)] num text-[11px] text-[color:var(--text-3)] whitespace-nowrap">
-                {ppm} PPM
-              </span>
-            )}
             <span className="font-[family-name:var(--mono)] num font-extrabold text-[18px]">
               {myScore}–{oppScore}
             </span>
@@ -139,6 +134,11 @@ function TeamGameCard({ g, teamId }: { g: TeamGameRow; teamId: string }) {
               >
                 {result}
               </Pill>
+            )}
+            {ppm && (
+              <span className="font-[family-name:var(--mono)] num text-[11px] text-[color:var(--text-3)] whitespace-nowrap">
+                {ppm} PPM
+              </span>
             )}
           </>
         ) : (
