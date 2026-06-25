@@ -113,6 +113,65 @@ export async function createGame(formData: FormData): Promise<ActionResult<{ id:
   return { ok: true, data: { id: row.id } };
 }
 
+const gameSlotSchema = z.object({
+  gameDate: z.string().min(1, "Date required."),
+  gameTime: z.string().optional().or(z.literal("")),
+  venue: z.string().trim().max(120).optional().or(z.literal("")),
+});
+
+const leagueGamesSchema = z.object({
+  leagueId: z.string().uuid("Pick a league."),
+  format: z.enum(FORMATS).default("5v5"),
+  gameLengthMinutes: gameLengthField,
+  slots: z.array(gameSlotSchema).min(1, "Add at least one game.").max(50),
+});
+
+/** Schedule one or many league games in a single submit. Each slot becomes
+ *  its own game; all share the league, format, and length. */
+export async function createLeagueGames(
+  input: unknown,
+): Promise<ActionResult<{ ids: string[] }>> {
+  const parsed = leagueGamesSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "Validation failed.",
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+  const v = parsed.data;
+  await requireLeagueManager(v.leagueId);
+  await requireManageView();
+  const [league] = await db
+    .select({ name: leagues.name, teamA: leagues.teamAName, teamB: leagues.teamBName })
+    .from(leagues)
+    .where(eq(leagues.id, v.leagueId))
+    .limit(1);
+  if (!league) return { ok: false, error: "League not found." };
+
+  const lengthVal = gameLengthValue(v.gameLengthMinutes);
+  const rows = await db
+    .insert(games)
+    .values(
+      v.slots.map((s) => ({
+        leagueId: v.leagueId,
+        leagueName: league.name,
+        gameDate: s.gameDate,
+        gameTime: nullable(s.gameTime),
+        venue: nullable(s.venue),
+        format: v.format,
+        gameLengthMinutes: lengthVal,
+        teamAName: league.teamA ?? "White",
+        teamBName: league.teamB ?? "Dark",
+      })),
+    )
+    .returning({ id: games.id });
+
+  revalidatePath("/games");
+  revalidatePath("/");
+  return { ok: true, data: { ids: rows.map((r) => r.id) } };
+}
+
 const TOURNAMENT_ROUNDS = [
   "Seeding Game",
   "Quarterfinals",

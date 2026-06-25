@@ -57,8 +57,8 @@ export default async function NewGamePage() {
             Schedule a game
           </h1>
           <p className="text-[13px] text-[color:var(--text-3)] mt-1">
-            Pick a league and time. Once it&apos;s on the calendar you can
-            build the roster from the game page.
+            Schedule a single game or add several dates at once. Build each
+            roster from the game page after it&apos;s on the calendar.
           </p>
         </div>
 
