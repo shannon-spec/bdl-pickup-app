@@ -1,12 +1,5 @@
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
-import {
-  db,
-  players,
-  leagues,
-  leaguePlayers,
-  games,
-  gameRoster,
-} from "@/lib/db";
+import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
+import { db, players, leagues, games, gameRoster } from "@/lib/db";
 
 export type LbPlayer = {
   id: string;
@@ -33,6 +26,168 @@ export type LeaderboardData = {
   leagueOptions: { id: string; name: string }[];
   yearOptions: string[];
 };
+
+export type TeamLeaderboardData = {
+  players: LbPlayer[];
+  totalGames: number;
+  tournamentOptions: string[];
+  yearOptions: string[];
+};
+
+/**
+ * Cumulative per-player stats for one team, across all its games (either
+ * side). Only players who played on THIS team's side are counted — the
+ * opponent's roster is ignored. Optionally filtered by tournament + year.
+ * Reuses the same win/loss attribution as getLeaderboard.
+ */
+export async function getTeamLeaderboard(
+  teamId: string,
+  opts: { tournamentName?: string | null; year?: string | null } = {},
+): Promise<TeamLeaderboardData> {
+  const yearPrefix =
+    opts.year && opts.year !== "all" ? `${opts.year}-` : null;
+  const tourney =
+    opts.tournamentName && opts.tournamentName !== "all"
+      ? opts.tournamentName
+      : null;
+
+  const teamGames = await db
+    .select()
+    .from(games)
+    .where(
+      and(
+        or(eq(games.teamAId, teamId), eq(games.teamBId, teamId)),
+        tourney ? eq(games.tournamentName, tourney) : undefined,
+        yearPrefix
+          ? sql`${games.gameDate}::text LIKE ${yearPrefix + "%"}`
+          : undefined,
+      ),
+    );
+
+  const completed = teamGames.filter(
+    (g) => (g.scoreA !== null && g.scoreB !== null) || g.winTeam !== null,
+  );
+  // Per game: which side is THIS team on?
+  const teamSideById = new Map<string, "A" | "B">(
+    completed.map((g) => [g.id, g.teamAId === teamId ? "A" : "B"]),
+  );
+  const completedById = new Map(completed.map((g) => [g.id, g]));
+  const completedIds = completed.map((g) => g.id);
+
+  const rosterRows = completedIds.length
+    ? await db
+        .select({
+          gameId: gameRoster.gameId,
+          playerId: gameRoster.playerId,
+          side: gameRoster.side,
+        })
+        .from(gameRoster)
+        .where(
+          and(
+            inArray(gameRoster.gameId, completedIds),
+            inArray(gameRoster.side, ["A", "B"]),
+          ),
+        )
+    : [];
+
+  const playerRows = await db
+    .select({
+      id: players.id,
+      firstName: players.firstName,
+      lastName: players.lastName,
+    })
+    .from(players)
+    .orderBy(asc(players.lastName));
+  const playerMap = new Map(playerRows.map((p) => [p.id, p]));
+
+  const stats = new Map<
+    string,
+    { wins: number; losses: number; gamesPlayed: number; gameWinnerCount: number; heroCount: number }
+  >();
+  const teamSidePlayers = new Map<string, Set<string>>(); // gameId -> team-side playerIds
+  for (const r of rosterRows) {
+    const teamSide = teamSideById.get(r.gameId);
+    if (!teamSide || r.side !== teamSide) continue; // only this team's lineup
+    const g = completedById.get(r.gameId);
+    if (!g) continue;
+    const win =
+      g.winTeam ??
+      (g.scoreA !== null && g.scoreB !== null
+        ? g.scoreA > g.scoreB
+          ? "A"
+          : g.scoreB > g.scoreA
+            ? "B"
+            : "Tie"
+        : null);
+    if (!win) continue;
+    (teamSidePlayers.get(r.gameId) ?? teamSidePlayers.set(r.gameId, new Set()).get(r.gameId)!).add(
+      r.playerId,
+    );
+    const cur = stats.get(r.playerId) ?? {
+      wins: 0,
+      losses: 0,
+      gamesPlayed: 0,
+      gameWinnerCount: 0,
+      heroCount: 0,
+    };
+    cur.gamesPlayed++;
+    if (win === "Tie") {
+      // tie: gp only
+    } else if (teamSide === win) {
+      cur.wins++;
+    } else {
+      cur.losses++;
+    }
+    stats.set(r.playerId, cur);
+  }
+  // Game winner + hero — credit only if the winner played on this team's side.
+  for (const g of completed) {
+    if (!g.gameWinner) continue;
+    if (g.scoreA === null || g.scoreB === null) continue;
+    if (!teamSidePlayers.get(g.id)?.has(g.gameWinner)) continue;
+    const diff = Math.abs(g.scoreA - g.scoreB);
+    if (diff > 10) continue;
+    const cur = stats.get(g.gameWinner);
+    if (!cur) continue;
+    cur.gameWinnerCount++;
+    if (diff <= 3) cur.heroCount++;
+  }
+
+  const players_: LbPlayer[] = [];
+  for (const [id, s] of stats) {
+    const p = playerMap.get(id);
+    if (!p) continue;
+    const total = s.wins + s.losses;
+    players_.push({
+      id,
+      firstName: p.firstName,
+      lastName: p.lastName,
+      wins: s.wins,
+      losses: s.losses,
+      gamesPlayed: s.gamesPlayed,
+      gameWinnerCount: s.gameWinnerCount,
+      heroCount: s.heroCount,
+      pct: total > 0 ? (s.wins / total) * 100 : 0,
+    });
+  }
+  players_.sort((a, b) => b.pct - a.pct || b.wins - a.wins || b.gamesPlayed - a.gamesPlayed);
+
+  const tournamentOptions = Array.from(
+    new Set(teamGames.map((g) => g.tournamentName).filter(Boolean) as string[]),
+  ).sort();
+  const yearOptions = Array.from(
+    new Set(teamGames.map((g) => g.gameDate?.slice(0, 4)).filter(Boolean) as string[]),
+  )
+    .sort()
+    .reverse();
+
+  return {
+    players: players_,
+    totalGames: completed.length,
+    tournamentOptions,
+    yearOptions,
+  };
+}
 
 export async function getLeaderboard(opts: {
   leagueId?: string | null;
