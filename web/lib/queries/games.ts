@@ -30,6 +30,7 @@ export type GameListRow = {
   locked: boolean;
   gameWinner: string | null;
   gameWinnerName: string | null;
+  hasStats: boolean;
 };
 
 export type GamesFilter = {
@@ -62,6 +63,16 @@ export async function getGamesList(filter: GamesFilter = {}): Promise<GameListRo
     .leftJoin(heroPlayer, eq(heroPlayer.id, games.gameWinner))
     .where(filter.leagueId ? eq(games.leagueId, filter.leagueId) : undefined)
     .orderBy(desc(games.gameDate));
+
+  // Which of these games have any saved box-score rows.
+  const statGameIds = new Set(
+    (
+      await db
+        .selectDistinct({ gameId: gameStats.gameId })
+        .from(gameStats)
+    ).map((r) => r.gameId),
+  );
+
   const all: GameListRow[] = rows.map((r) => ({
     id: r.id,
     leagueId: r.leagueId,
@@ -79,6 +90,7 @@ export async function getGamesList(filter: GamesFilter = {}): Promise<GameListRo
     gameWinner: r.gameWinner,
     gameWinnerName:
       r.heroFirst && r.heroLast ? `${r.heroFirst} ${r.heroLast}` : null,
+    hasStats: statGameIds.has(r.id),
   }));
 
   const completed = (g: GameListRow) =>

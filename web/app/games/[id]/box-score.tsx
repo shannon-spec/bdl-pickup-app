@@ -198,7 +198,10 @@ export function BoxScore({
   const b = players.filter((p) => p.side === "B");
 
   return (
-    <section className="rounded-[16px] bg-[color:var(--surface-2)] p-4">
+    <section
+      id="box-score"
+      className="scroll-mt-24 rounded-[16px] bg-[color:var(--surface-2)] p-4"
+    >
       <span className="text-[10.5px] font-bold tracking-[0.16em] uppercase text-[color:var(--brand-ink)]">
         Box Score
       </span>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { BarChart3, ChevronDown, ChevronRight } from "lucide-react";
 import { Pill } from "@/components/bdl/pill";
 import { HeroTag, isHeroGame } from "@/components/bdl/hero-tag";
 import type { GameListRow } from "@/lib/queries/games";
@@ -50,13 +50,20 @@ export function GamesListClient({ rows }: { rows: GameListRow[] }) {
                   scoreB: g.scoreB,
                 }) && !!g.gameWinnerName;
               return (
-                <Link
+                <div
                   key={g.id}
-                  href={`/games/${g.id}`}
-                  className="grid grid-cols-[160px_1fr_auto_auto] max-sm:grid-cols-[1fr_auto] gap-4 items-center px-5 py-3 border-t border-[color:var(--hairline)] first:border-t-0 hover:bg-[color:var(--surface-2)] transition-colors text-[14px]"
+                  className="relative grid grid-cols-[160px_1fr_auto_auto] max-sm:grid-cols-[1fr_auto] gap-4 items-center px-5 py-3 border-t border-[color:var(--hairline)] first:border-t-0 hover:bg-[color:var(--surface-2)] transition-colors text-[14px]"
                 >
-                  <div className="font-bold text-[12.5px]">{fmtDate(g.gameDate)}</div>
-                  <div className="min-w-0 max-sm:col-span-2 max-sm:order-3 flex items-center gap-2 flex-wrap">
+                  {/* Whole-row link sits behind the cells. */}
+                  <Link
+                    href={`/games/${g.id}`}
+                    aria-label="Open game"
+                    className="absolute inset-0 z-0"
+                  />
+                  <div className="font-bold text-[12.5px] pointer-events-none relative z-[1]">
+                    {fmtDate(g.gameDate)}
+                  </div>
+                  <div className="min-w-0 max-sm:col-span-2 max-sm:order-3 flex items-center gap-2 flex-wrap pointer-events-none relative z-[1]">
                     <span className="text-[color:var(--text-3)] text-[12px]">
                       {g.leagueName}
                     </span>
@@ -65,7 +72,7 @@ export function GamesListClient({ rows }: { rows: GameListRow[] }) {
                     <TeamLabel side="B" winTeam={g.winTeam} name={g.teamBName} />
                     {isHero && <HeroTag name={g.gameWinnerName!} size="sm" />}
                   </div>
-                  <div className="font-[family-name:var(--mono)] text-[13px] num">
+                  <div className="font-[family-name:var(--mono)] text-[13px] num pointer-events-none relative z-[1]">
                     {g.scoreA !== null && g.scoreB !== null ? (
                       <>
                         <span className={g.winTeam === "A" ? "" : "text-[color:var(--text-3)]"}>
@@ -80,21 +87,33 @@ export function GamesListClient({ rows }: { rows: GameListRow[] }) {
                       <span className="text-[color:var(--text-3)]">—</span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 justify-self-end">
-                    {completed ? (
-                      g.locked ? (
-                        <Pill tone="win" dot>
-                          Final
-                        </Pill>
-                      ) : (
-                        <Pill tone="neutral">Open</Pill>
-                      )
-                    ) : (
-                      <Pill tone="neutral">Upcoming</Pill>
+                  <div className="flex items-center gap-2 justify-self-end relative z-[1]">
+                    {g.hasStats && (
+                      <Link
+                        href={`/games/${g.id}#box-score`}
+                        title="View box score"
+                        aria-label="View box score"
+                        className="pointer-events-auto inline-flex items-center justify-center w-7 h-7 rounded-full text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-soft)] transition-colors"
+                      >
+                        <BarChart3 size={15} strokeWidth={2.25} />
+                      </Link>
                     )}
-                    <ChevronRight size={14} className="text-[color:var(--text-3)]" />
+                    <span className="pointer-events-none flex items-center gap-2">
+                      {completed ? (
+                        g.locked ? (
+                          <Pill tone="win" dot>
+                            Final
+                          </Pill>
+                        ) : (
+                          <Pill tone="neutral">Open</Pill>
+                        )
+                      ) : (
+                        <Pill tone="neutral">Upcoming</Pill>
+                      )}
+                      <ChevronRight size={14} className="text-[color:var(--text-3)]" />
+                    </span>
                   </div>
-                </Link>
+                </div>
               );
             })}
           </div>
