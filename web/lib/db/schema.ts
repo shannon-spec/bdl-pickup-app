@@ -386,6 +386,8 @@ export const games = pgTable(
     gameTime: time("game_time"),
     venue: text("venue"),
     format: gameFormatEnum("format").notNull().default("5v5"),
+    /** Scheduled game length in minutes (regulation clock). Null = unset. */
+    gameLengthMinutes: integer("game_length_minutes"),
     teamAName: text("team_a_name").notNull().default("White"),
     teamBName: text("team_b_name").notNull().default("Dark"),
     scoreA: integer("score_a"),

@@ -822,6 +822,24 @@ export function GameMetaEditor({ detail }: { detail: GameDetail }) {
               <option value="3v3-series">3 v 3 — series</option>
             </select>
           </Field>
+          <Field label="Game length">
+            <select
+              name="gameLengthMinutes"
+              defaultValue={
+                game.gameLengthMinutes != null
+                  ? String(game.gameLengthMinutes)
+                  : ""
+              }
+              className={selectCx}
+            >
+              <option value="">—</option>
+              {["20", "24", "30", "32", "36", "40", "44", "48"].map((m) => (
+                <option key={m} value={m}>
+                  {m} min
+                </option>
+              ))}
+            </select>
+          </Field>
           <Field label="Team A name">
             <input
               name="teamAName"

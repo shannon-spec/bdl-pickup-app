@@ -11,6 +11,8 @@ const FORMATS = [
   { v: "3v3-series", l: "3 V 3 — Series" },
 ];
 
+const GAME_LENGTHS = ["20", "24", "30", "32", "36", "40", "44", "48"];
+
 export function NewGameClient({
   leagues,
 }: {
@@ -91,6 +93,16 @@ export function NewGameClient({
           {FORMATS.map((f) => (
             <option key={f.v} value={f.v}>
               {f.l}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Game length">
+        <select name="gameLengthMinutes" defaultValue="" className={selectCx}>
+          <option value="">—</option>
+          {GAME_LENGTHS.map((m) => (
+            <option key={m} value={m}>
+              {m} min
             </option>
           ))}
         </select>

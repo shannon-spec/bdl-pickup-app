@@ -17,12 +17,24 @@ export type ActionResult<T = unknown> =
 
 const FORMATS = ["5v5", "5v5-series", "3v3", "3v3-series"] as const;
 
+/** Allowed scheduled game lengths, in minutes. Empty string = unset. */
+const GAME_LENGTHS = ["20", "24", "30", "32", "36", "40", "44", "48"] as const;
+const gameLengthField = z
+  .enum(GAME_LENGTHS)
+  .optional()
+  .or(z.literal(""));
+const gameLengthValue = (s?: string) => {
+  const t = (s ?? "").trim();
+  return t.length === 0 ? null : parseInt(t, 10);
+};
+
 const gameSchema = z.object({
   leagueId: z.string().uuid("Pick a league."),
   gameDate: z.string().min(1, "Date required."),
   gameTime: z.string().optional().or(z.literal("")),
   venue: z.string().trim().max(120).optional().or(z.literal("")),
   format: z.enum(FORMATS).default("5v5"),
+  gameLengthMinutes: gameLengthField,
   teamAName: z.string().trim().min(1).max(40).optional().or(z.literal("")),
   teamBName: z.string().trim().min(1).max(40).optional().or(z.literal("")),
 });
@@ -91,6 +103,7 @@ export async function createGame(formData: FormData): Promise<ActionResult<{ id:
       gameTime: nullable(v.gameTime),
       venue: nullable(v.venue),
       format: v.format,
+      gameLengthMinutes: gameLengthValue(v.gameLengthMinutes),
       teamAName: league.teamA ?? "White",
       teamBName: league.teamB ?? "Dark",
     })
@@ -115,6 +128,7 @@ const teamGameSchema = z
     gameTime: z.string().optional().or(z.literal("")),
     venue: z.string().trim().max(120).optional().or(z.literal("")),
     format: z.enum(FORMATS).default("5v5"),
+    gameLengthMinutes: gameLengthField,
     gameType: z.enum(["exhibition", "tournament"]).default("exhibition"),
     tournamentName: z.string().trim().max(120).optional().or(z.literal("")),
     tournamentRound: z.enum(TOURNAMENT_ROUNDS).optional().or(z.literal("")),
@@ -172,6 +186,7 @@ export async function createTeamGame(
       gameTime: nullable(v.gameTime),
       venue: nullable(v.venue),
       format: v.format,
+      gameLengthMinutes: gameLengthValue(v.gameLengthMinutes),
       teamAName: teamA.name,
       teamBName: teamB.name,
     })
@@ -188,6 +203,7 @@ const teamGameEditSchema = z
     gameTime: z.string().optional().or(z.literal("")),
     venue: z.string().trim().max(120).optional().or(z.literal("")),
     format: z.enum(FORMATS).default("5v5"),
+    gameLengthMinutes: gameLengthField,
     teamAName: z.string().trim().min(1).max(40).optional().or(z.literal("")),
     teamBName: z.string().trim().min(1).max(40).optional().or(z.literal("")),
     gameType: z.enum(["exhibition", "tournament"]).default("exhibition"),
@@ -241,6 +257,7 @@ export async function updateGame(
         gameTime: nullable(v.gameTime),
         venue: nullable(v.venue),
         format: v.format,
+        gameLengthMinutes: gameLengthValue(v.gameLengthMinutes),
         ...(tA ? { teamAName: tA } : {}),
         ...(tB ? { teamBName: tB } : {}),
         gameType: v.gameType,
@@ -275,6 +292,7 @@ export async function updateGame(
       gameTime: nullable(v.gameTime),
       venue: nullable(v.venue),
       format: v.format,
+      gameLengthMinutes: gameLengthValue(v.gameLengthMinutes),
       ...(tA ? { teamAName: tA } : {}),
       ...(tB ? { teamBName: tB } : {}),
     })

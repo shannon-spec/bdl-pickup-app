@@ -23,7 +23,8 @@
     "db:migrate:messages": "dotenv -e .env.local -- tsx scripts/migrate-messages.ts",
     "db:migrate:encrypt-pii": "dotenv -e .env.local -- tsx scripts/migrate-encrypt-pii.ts",
     "db:migrate:teams": "node --env-file=.env.local scripts/migrate-teams.mjs",
-    "db:migrate:team-games": "node --env-file=.env.local scripts/migrate-team-games.mjs"
+    "db:migrate:team-games": "node --env-file=.env.local scripts/migrate-team-games.mjs",
+    "db:migrate:game-length": "node --env-file=.env.local scripts/migrate-game-length.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

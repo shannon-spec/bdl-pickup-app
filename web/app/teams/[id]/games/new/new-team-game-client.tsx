@@ -111,9 +111,21 @@ export function NewTeamGameClient({
         </Row>
       )}
 
-      <Field label="Venue">
-        <input name="venue" className={inputCx} placeholder="Gym name" />
-      </Field>
+      <Row>
+        <Field label="Venue">
+          <input name="venue" className={inputCx} placeholder="Gym name" />
+        </Field>
+        <Field label="Game length">
+          <select name="gameLengthMinutes" defaultValue="" className={selectCx}>
+            <option value="">—</option>
+            {["20", "24", "30", "32", "36", "40", "44", "48"].map((m) => (
+              <option key={m} value={m}>
+                {m} min
+              </option>
+            ))}
+          </select>
+        </Field>
+      </Row>
 
       {error && (
         <div className="text-[12px] text-[color:var(--down)] bg-[color:var(--down-soft)] rounded-[var(--r-md)] px-3 py-2">
