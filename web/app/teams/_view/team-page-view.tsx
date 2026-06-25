@@ -7,6 +7,7 @@ import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { LeagueAvatar } from "@/components/bdl/league-avatar";
 import { Pill } from "@/components/bdl/pill";
 import type { TeamGameRow } from "@/lib/queries/teams";
+import { RevealList } from "./reveal-list";
 
 const fmtDate = (d: string | null) => {
   if (!d) return "TBD";
@@ -431,11 +432,14 @@ export function TeamPageView(props: TeamPageViewProps) {
               No games scheduled yet.
             </div>
           ) : (
-            <div className="mt-3 flex flex-col gap-2">
-              {games.map((g) => (
+            <RevealList
+              className="mt-3 flex flex-col gap-2"
+              initial={25}
+              step={25}
+              items={games.map((g) => (
                 <TeamGameCard key={g.id} g={g} teamId={gamesTeamId} />
               ))}
-            </div>
+            />
           )}
         </section>
 
