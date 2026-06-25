@@ -57,8 +57,8 @@ export default async function NewGamePage() {
             Schedule a game
           </h1>
           <p className="text-[13px] text-[color:var(--text-3)] mt-1">
-            Pick a league and time. Once it&apos;s on the calendar
-            you&apos;ll go straight into the Invite Manager to fill the roster.
+            Pick a league and time. Once it&apos;s on the calendar you can
+            build the roster from the game page.
           </p>
         </div>
 
