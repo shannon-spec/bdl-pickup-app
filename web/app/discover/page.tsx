@@ -122,11 +122,11 @@ export default async function DiscoverPage() {
             <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)] mt-2">
               {yourTeams.length > 0 ? "Other teams" : "All teams"}
             </div>
-            <Grid>
+            <div className="flex flex-col gap-1.5">
               {otherTeams.map((t) => (
-                <TeamCardView key={t.id} t={t} />
+                <TeamListRow key={t.id} t={t} />
               ))}
-            </Grid>
+            </div>
           </>
         )}
 
@@ -188,6 +188,38 @@ function TeamCardView({ t, mine }: { t: TeamCard; mine?: boolean }) {
           className="text-[color:var(--text-3)] group-hover:text-[color:var(--text)]"
         />
       </div>
+    </Link>
+  );
+}
+
+function TeamListRow({ t }: { t: TeamCard }) {
+  const place = [t.city, t.state].filter(Boolean).join(", ");
+  return (
+    <Link
+      href={`/teams/${t.id}`}
+      className="group flex items-center gap-3 rounded-[12px] bg-[color:var(--surface)] px-4 py-2.5 shadow-[inset_0_0_0_1px_var(--hairline-2)] hover:shadow-[inset_0_0_0_1.5px_var(--text-4)] transition-shadow"
+    >
+      <LeagueAvatar
+        kind={t.avatarKind}
+        color={t.avatarColor}
+        emoji={t.avatarEmoji}
+        abbr={(t.name[0] ?? "?").toUpperCase()}
+        size={32}
+      />
+      <div className="flex flex-col min-w-0 flex-1">
+        <span className="font-bold text-[14px] truncate">{t.name}</span>
+        <span className="text-[11.5px] text-[color:var(--text-3)] truncate">
+          {place || "Travel team"}
+        </span>
+      </div>
+      <div className="flex items-center gap-1.5 flex-shrink-0 max-sm:hidden">
+        <Pill tone="neutral">{t.rosterCount} players</Pill>
+        <Pill tone="brand">{formatLabel(t.defaultFormat)}</Pill>
+      </div>
+      <ChevronRight
+        size={16}
+        className="text-[color:var(--text-3)] group-hover:text-[color:var(--text)] flex-shrink-0"
+      />
     </Link>
   );
 }
