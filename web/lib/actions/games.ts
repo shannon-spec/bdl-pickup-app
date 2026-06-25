@@ -10,6 +10,7 @@ import {
   requireTeamManager,
 } from "@/lib/auth/perms";
 import { requireManageView } from "@/lib/auth/view";
+import { STAT_FIELDS, type StatRowInput } from "@/lib/stats";
 
 export type ActionResult<T = unknown> =
   | { ok: true; data?: T }
@@ -361,28 +362,6 @@ export async function updateGame(
   revalidatePath("/");
   return { ok: true, data: { id } };
 }
-
-/** Numeric box-score fields, in the order the editor renders them. */
-export const STAT_FIELDS = [
-  "minutes",
-  "points",
-  "rebounds",
-  "assists",
-  "steals",
-  "blocks",
-  "turnovers",
-  "fouls",
-  "fgm",
-  "fga",
-  "tpm",
-  "tpa",
-  "ftm",
-  "fta",
-] as const;
-
-export type StatRowInput = { playerId: string } & Partial<
-  Record<(typeof STAT_FIELDS)[number], string | number | null>
->;
 
 const toInt = (v: string | number | null | undefined): number | null => {
   if (v === null || v === undefined || v === "") return null;

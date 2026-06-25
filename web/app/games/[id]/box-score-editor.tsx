@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, Check } from "lucide-react";
-import { saveGameStats, type StatRowInput } from "@/lib/actions/games";
+import { BarChart3, Check, ImageUp, Loader2 } from "lucide-react";
+import { saveGameStats } from "@/lib/actions/games";
+import type { StatRowInput } from "@/lib/stats";
 
 const COLUMNS = [
   { key: "minutes", label: "MIN" },
@@ -74,6 +75,71 @@ export function BoxScoreEditor({
     setRows((prev) => ({ ...prev, [pid]: { ...prev[pid], [key]: value } }));
   };
 
+  // --- Import from image(s) ---
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [importMsg, setImportMsg] = useState<string | null>(null);
+
+  const runImport = async (files: File[]) => {
+    if (files.length === 0 || importing) return;
+    setImporting(true);
+    setImportMsg(null);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.set("gameId", gameId);
+      fd.set(
+        "roster",
+        JSON.stringify(
+          players.map((p) => ({ id: p.id, name: `${p.firstName} ${p.lastName}` })),
+        ),
+      );
+      for (const f of files.slice(0, 8)) fd.append("images", f);
+      const res = await fetch("/api/box-score-ocr", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Could not read the image.");
+        return;
+      }
+      const matched: Record<string, Record<string, number | null>> = data.matched ?? {};
+      const ids = Object.keys(matched);
+      setSaved(false);
+      setRows((prev) => {
+        const next = { ...prev };
+        for (const id of ids) {
+          if (!next[id]) continue;
+          const row = { ...next[id] };
+          for (const c of COLUMNS) {
+            const v = matched[id][c.key];
+            if (v !== null && v !== undefined) row[c.key] = String(v);
+          }
+          next[id] = row;
+        }
+        return next;
+      });
+      const unmatched: string[] = data.unmatched ?? [];
+      const parts = [`Imported ${ids.length} player${ids.length === 1 ? "" : "s"}.`];
+      if (unmatched.length)
+        parts.push(`Couldn't match: ${unmatched.join(", ")}.`);
+      parts.push("Review the numbers, then Save.");
+      setImportMsg(parts.join(" "));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not read the image.");
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const files = Array.from(e.dataTransfer.files).filter((f) =>
+      f.type.startsWith("image/"),
+    );
+    runImport(files);
+  };
+
   const onSave = () => {
     setError(null);
     const payload: StatRowInput[] = players.map((p) => ({
@@ -104,6 +170,55 @@ export function BoxScoreEditor({
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Import from image(s) */}
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={onDrop}
+        onClick={() => fileRef.current?.click()}
+        role="button"
+        tabIndex={0}
+        className={`flex flex-col items-center justify-center gap-1.5 rounded-[12px] px-4 py-5 text-center cursor-pointer transition-colors outline-dashed outline-2 outline-offset-[-2px] ${
+          dragOver
+            ? "outline-[color:var(--brand)] bg-[color:var(--brand-soft)]"
+            : "outline-[color:var(--hairline-2)] bg-[color:var(--surface)] hover:bg-[color:var(--surface-2)]"
+        }`}
+      >
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            runImport(Array.from(e.target.files ?? []));
+            e.target.value = "";
+          }}
+        />
+        {importing ? (
+          <Loader2 size={20} className="animate-spin text-[color:var(--brand)]" />
+        ) : (
+          <ImageUp size={20} className="text-[color:var(--text-3)]" />
+        )}
+        <span className="text-[13px] font-semibold text-[color:var(--text-2)]">
+          {importing
+            ? "Reading box score…"
+            : "Drag stat-sheet image(s) here, or click to upload"}
+        </span>
+        <span className="text-[11px] text-[color:var(--text-4)]">
+          Auto-fills the grid below for review · up to 8 images · PNG/JPG
+        </span>
+      </div>
+
+      {importMsg && (
+        <div className="text-[12px] text-[color:var(--brand-ink)] bg-[color:var(--brand-soft)] rounded-[var(--r-md)] px-3 py-2">
+          {importMsg}
+        </div>
+      )}
+
       <div className="overflow-x-auto rounded-[12px] bg-[color:var(--surface)] shadow-[inset_0_0_0_1px_var(--hairline)]">
         <table className="w-full border-collapse">
           <thead>

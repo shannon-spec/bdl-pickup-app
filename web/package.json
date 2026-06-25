@@ -29,6 +29,7 @@
     "db:migrate:game-stats": "node --env-file=.env.local scripts/migrate-game-stats.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.106.0",
     "@base-ui/react": "^1.4.1",
     "@neondatabase/serverless": "^1.1.0",
     "@vercel/blob": "^2.3.3",
