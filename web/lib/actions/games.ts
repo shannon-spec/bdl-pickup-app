@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { and, desc, eq, inArray, lt, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { db, games, gameRoster, gameSubgames, leagues, teams } from "@/lib/db";
+import { db, games, gameRoster, gameStats, gameSubgames, leagues, teams } from "@/lib/db";
 import {
   requireGameManager,
   requireLeagueManager,
@@ -360,6 +360,59 @@ export async function updateGame(
   revalidatePath(`/games/${id}`);
   revalidatePath("/");
   return { ok: true, data: { id } };
+}
+
+/** Numeric box-score fields, in the order the editor renders them. */
+export const STAT_FIELDS = [
+  "minutes",
+  "points",
+  "rebounds",
+  "assists",
+  "steals",
+  "blocks",
+  "turnovers",
+  "fouls",
+  "fgm",
+  "fga",
+  "tpm",
+  "tpa",
+  "ftm",
+  "fta",
+] as const;
+
+export type StatRowInput = { playerId: string } & Partial<
+  Record<(typeof STAT_FIELDS)[number], string | number | null>
+>;
+
+const toInt = (v: string | number | null | undefined): number | null => {
+  if (v === null || v === undefined || v === "") return null;
+  const n = typeof v === "number" ? v : parseInt(v, 10);
+  return Number.isFinite(n) ? n : null;
+};
+
+/** Save the manual box score for a game: upsert one row per player. */
+export async function saveGameStats(
+  gameId: string,
+  rows: StatRowInput[],
+): Promise<ActionResult> {
+  const gate = await gateGameManager(gameId);
+  if (!gate.ok) return gate;
+  if (!Array.isArray(rows)) return { ok: false, error: "Invalid stats." };
+
+  for (const r of rows) {
+    if (!r?.playerId) continue;
+    const values: Record<string, number | null> = {};
+    for (const f of STAT_FIELDS) values[f] = toInt(r[f]);
+    await db
+      .insert(gameStats)
+      .values({ gameId, playerId: r.playerId, ...values })
+      .onConflictDoUpdate({
+        target: [gameStats.gameId, gameStats.playerId],
+        set: values,
+      });
+  }
+  revalidatePath(`/games/${gameId}`);
+  return { ok: true };
 }
 
 export async function deleteGame(id: string): Promise<ActionResult> {

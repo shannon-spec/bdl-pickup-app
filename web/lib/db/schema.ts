@@ -659,6 +659,44 @@ export const gameRoster = pgTable(
   ],
 );
 
+/* Per-player box-score stats for a game. One row per (game, player). All
+ * counting fields are nullable so a partial line can be saved. */
+export const gameStats = pgTable(
+  "game_stats",
+  {
+    gameId: uuid("game_id")
+      .notNull()
+      .references(() => games.id, { onDelete: "cascade" }),
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    minutes: integer("minutes"),
+    points: integer("points"),
+    rebounds: integer("rebounds"),
+    assists: integer("assists"),
+    steals: integer("steals"),
+    blocks: integer("blocks"),
+    turnovers: integer("turnovers"),
+    fouls: integer("fouls"),
+    fgm: integer("fgm"),
+    fga: integer("fga"),
+    tpm: integer("tpm"),
+    tpa: integer("tpa"),
+    ftm: integer("ftm"),
+    fta: integer("fta"),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    primaryKey({ columns: [t.gameId, t.playerId] }),
+    index("game_stats_player_idx").on(t.playerId),
+  ],
+);
+
+export type GameStat = typeof gameStats.$inferSelect;
+
 /* ============== SUPER ADMINS ============== */
 
 export const superAdmins = pgTable("super_admins", {

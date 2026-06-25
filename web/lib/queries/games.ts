@@ -8,6 +8,7 @@ import {
   leaguePlayers,
   players,
   gameRoster,
+  gameStats,
   teamPlayers,
   type Game,
   type Player,
@@ -117,6 +118,11 @@ export type GameDetail = {
   allLeagues: { id: string; name: string }[];
   subgames: GameSubgameRow[];
 };
+
+/** All saved box-score rows for a game, keyed by playerId. */
+export async function getGameStats(gameId: string) {
+  return db.select().from(gameStats).where(eq(gameStats.gameId, gameId));
+}
 
 export async function getGameDetail(id: string): Promise<GameDetail | null> {
   const [g] = await db.select().from(games).where(eq(games.id, id)).limit(1);

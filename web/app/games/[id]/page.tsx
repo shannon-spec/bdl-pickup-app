@@ -16,6 +16,7 @@ import { PctPill } from "@/components/bdl/pct-pill";
 import { formatLabel } from "@/lib/format";
 import {
   getGameDetail,
+  getGameStats,
   getPlayerWinPctsForLeague,
   getMatchupOdds,
   getPreviousGameSummary,
@@ -27,6 +28,7 @@ import {
   RosterBuilder,
   DangerZone,
 } from "./game-detail-client";
+import { BoxScoreEditor } from "./box-score-editor";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +76,14 @@ export default async function GameDetailPage({
 
   // For the "load previous game's teams" shortcut on the roster editor.
   const previousGame = canEdit ? await getPreviousGameSummary(id) : null;
+
+  // Manual box score (rostered players + any saved stat lines).
+  const statRows = canEdit ? await getGameStats(id) : [];
+  const statByPlayer = Object.fromEntries(statRows.map((r) => [r.playerId, r]));
+  const statPlayers = [
+    ...detail.rosterA.map((p) => ({ ...p, side: "A" as const })),
+    ...detail.rosterB.map((p) => ({ ...p, side: "B" as const })),
+  ];
 
   const { game } = detail;
   const completed =
@@ -295,6 +305,26 @@ export default async function GameDetailPage({
               <RosterPanel detail={detail} side="B" canEdit={canEdit} winPcts={winPcts} />
             </div>
           </div>
+        )}
+
+        {canEdit && (
+          <section className="rounded-[16px] bg-[color:var(--surface-2)] p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10.5px] font-bold tracking-[0.16em] uppercase text-[color:var(--brand-ink)]">
+                Box Score
+              </span>
+            </div>
+            <p className="text-[12px] text-[color:var(--text-3)] mb-3">
+              Enter per-player stats for this game.
+            </p>
+            <BoxScoreEditor
+              gameId={game.id}
+              teamAName={game.teamAName ?? "White"}
+              teamBName={game.teamBName ?? "Dark"}
+              players={statPlayers}
+              initial={statByPlayer}
+            />
+          </section>
         )}
 
         {canEdit && (
