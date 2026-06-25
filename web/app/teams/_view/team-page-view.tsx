@@ -256,6 +256,14 @@ export function TeamPageView(props: TeamPageViewProps) {
     danger,
   } = props;
   const abbr = (name.trim()[0] ?? "?").toUpperCase();
+  // Per-player stats for the roster, sourced from the leaderboard.
+  const statByPlayer = new Map(leaderboard.players.map((p) => [p.id, p]));
+  // Sort the roster by most games played (then by name).
+  const sortedRoster = [...roster].sort((a, b) => {
+    const ga = statByPlayer.get(a.id)?.gamesPlayed ?? 0;
+    const gb = statByPlayer.get(b.id)?.gamesPlayed ?? 0;
+    return gb - ga || a.lastName.localeCompare(b.lastName);
+  });
 
   return (
     <>
@@ -337,26 +345,36 @@ export function TeamPageView(props: TeamPageViewProps) {
             </div>
           ) : (
             <ul className="mt-3 grid grid-cols-2 gap-x-6 gap-y-0.5 max-sm:grid-cols-1 rounded-[12px] bg-[color:var(--surface)] p-3">
-              {roster.map((p, i) => (
-                <li key={p.id}>
-                  <Link
-                    href={`/players/${p.id}`}
-                    className="flex items-center gap-2.5 py-1 rounded-[6px] -mx-1.5 px-1.5 hover:bg-[color:var(--surface-2)] transition-colors"
-                  >
-                    <span className="shrink-0 inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-[6px] bg-[color:var(--surface-2)] text-[color:var(--text-3)] text-[11px] font-bold font-[family-name:var(--mono)] num">
-                      {i + 1}
-                    </span>
-                    <span className="font-medium text-[14px] truncate hover:text-[color:var(--brand)]">
-                      {p.firstName} {p.lastName}
-                    </span>
-                    {p.position && (
-                      <span className="ml-auto text-[12px] font-[family-name:var(--mono)] text-[color:var(--text-4)]">
-                        {p.position}
+              {sortedRoster.map((p, i) => {
+                const st = statByPlayer.get(p.id);
+                return (
+                  <li key={p.id}>
+                    <Link
+                      href={`/players/${p.id}`}
+                      className="flex items-center gap-2.5 py-1 rounded-[6px] -mx-1.5 px-1.5 hover:bg-[color:var(--surface-2)] transition-colors"
+                    >
+                      <span className="shrink-0 inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-[6px] bg-[color:var(--surface-2)] text-[color:var(--text-3)] text-[11px] font-bold font-[family-name:var(--mono)] num">
+                        {i + 1}
                       </span>
-                    )}
-                  </Link>
-                </li>
-              ))}
+                      <span className="font-medium text-[14px] truncate hover:text-[color:var(--brand)]">
+                        {p.firstName} {p.lastName}
+                      </span>
+                      <span className="ml-auto flex items-center gap-2 flex-shrink-0">
+                        {st && (
+                          <Pill tone={st.pct >= 50 ? "win" : "loss"}>
+                            {st.pct.toFixed(0)}%
+                          </Pill>
+                        )}
+                        {p.position && (
+                          <span className="text-[12px] font-[family-name:var(--mono)] text-[color:var(--text-4)]">
+                            {p.position}
+                          </span>
+                        )}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>
