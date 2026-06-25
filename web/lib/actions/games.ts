@@ -182,12 +182,80 @@ export async function createTeamGame(
   return { ok: true, data: { id: row.id } };
 }
 
+const teamGameEditSchema = z
+  .object({
+    gameDate: z.string().min(1, "Date required."),
+    gameTime: z.string().optional().or(z.literal("")),
+    venue: z.string().trim().max(120).optional().or(z.literal("")),
+    format: z.enum(FORMATS).default("5v5"),
+    teamAName: z.string().trim().min(1).max(40).optional().or(z.literal("")),
+    teamBName: z.string().trim().min(1).max(40).optional().or(z.literal("")),
+    gameType: z.enum(["exhibition", "tournament"]).default("exhibition"),
+    tournamentName: z.string().trim().max(120).optional().or(z.literal("")),
+    tournamentRound: z.enum(TOURNAMENT_ROUNDS).optional().or(z.literal("")),
+  })
+  .refine((v) => v.gameType !== "tournament" || !!v.tournamentName?.trim(), {
+    message: "Tournament name is required.",
+    path: ["tournamentName"],
+  })
+  .refine((v) => v.gameType !== "tournament" || !!v.tournamentRound, {
+    message: "Pick a round.",
+    path: ["tournamentRound"],
+  });
+
 export async function updateGame(
   id: string,
   formData: FormData,
 ): Promise<ActionResult<{ id: string }>> {
   const gate = await gateGameManager(id);
   if (!gate.ok) return gate;
+
+  const [existing] = await db
+    .select({
+      leagueId: games.leagueId,
+      teamAId: games.teamAId,
+      teamBId: games.teamBId,
+    })
+    .from(games)
+    .where(eq(games.id, id))
+    .limit(1);
+  const isTeamGame =
+    !!existing && !existing.leagueId && !!(existing.teamAId || existing.teamBId);
+
+  if (isTeamGame) {
+    const parsed = teamGameEditSchema.safeParse(readForm(formData));
+    if (!parsed.success) {
+      return {
+        ok: false,
+        error: "Validation failed.",
+        fieldErrors: parsed.error.flatten().fieldErrors,
+      };
+    }
+    const v = parsed.data;
+    const tA = (v.teamAName ?? "").trim();
+    const tB = (v.teamBName ?? "").trim();
+    await db
+      .update(games)
+      .set({
+        gameDate: v.gameDate,
+        gameTime: nullable(v.gameTime),
+        venue: nullable(v.venue),
+        format: v.format,
+        ...(tA ? { teamAName: tA } : {}),
+        ...(tB ? { teamBName: tB } : {}),
+        gameType: v.gameType,
+        tournamentName:
+          v.gameType === "tournament" ? nullable(v.tournamentName) : null,
+        tournamentRound:
+          v.gameType === "tournament" ? v.tournamentRound || null : null,
+      })
+      .where(eq(games.id, id));
+    revalidatePath("/games");
+    revalidatePath(`/games/${id}`);
+    revalidatePath("/");
+    return { ok: true, data: { id } };
+  }
+
   const parsed = gameSchema.safeParse(readForm(formData));
   if (!parsed.success) {
     return {

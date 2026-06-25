@@ -742,6 +742,10 @@ export function GameMetaEditor({ detail }: { detail: GameDetail }) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const isTeamGame = !game.leagueId && !!(game.teamAId || game.teamBId);
+  const [gameType, setGameType] = useState<"exhibition" | "tournament">(
+    game.gameType === "tournament" ? "tournament" : "exhibition",
+  );
 
   const onSubmit = (formData: FormData) => {
     setError(null);
@@ -838,6 +842,48 @@ export function GameMetaEditor({ detail }: { detail: GameDetail }) {
               className={inputCx}
             />
           </Field>
+          {isTeamGame && (
+            <Field label="Game type">
+              <select
+                name="gameType"
+                value={gameType}
+                onChange={(e) =>
+                  setGameType(e.target.value as "exhibition" | "tournament")
+                }
+                className={selectCx}
+              >
+                <option value="exhibition">Exhibition</option>
+                <option value="tournament">Tournament</option>
+              </select>
+            </Field>
+          )}
+          {isTeamGame && gameType === "tournament" && (
+            <>
+              <Field label="Tournament name">
+                <input
+                  name="tournamentName"
+                  type="text"
+                  defaultValue={game.tournamentName ?? ""}
+                  maxLength={120}
+                  placeholder="e.g. Tennessee Senior Olympics"
+                  className={inputCx}
+                />
+              </Field>
+              <Field label="Round">
+                <select
+                  name="tournamentRound"
+                  defaultValue={game.tournamentRound ?? ""}
+                  className={selectCx}
+                >
+                  <option value="">Select round…</option>
+                  <option value="Seeding Game">Seeding Game</option>
+                  <option value="Quarterfinals">Quarterfinals</option>
+                  <option value="Semifinals">Semifinals</option>
+                  <option value="Championship">Championship</option>
+                </select>
+              </Field>
+            </>
+          )}
           {error && (
             <div className="col-span-full text-[12px] text-[color:var(--down)] bg-[color:var(--down-soft)] rounded-[var(--r-md)] px-3 py-2">
               {error}
