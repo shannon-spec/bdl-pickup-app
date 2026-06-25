@@ -59,7 +59,9 @@ function SideTable({
   players: StatPlayer[];
   stats: Record<string, GameStat>;
 }) {
-  const rows = players.filter((p) => hasAnyStat(stats[p.id]));
+  const rows = players
+    .filter((p) => hasAnyStat(stats[p.id]))
+    .sort((a, b) => n(stats[b.id]?.points ?? null) - n(stats[a.id]?.points ?? null));
   if (rows.length === 0) return null;
 
   const totals = { fgm: 0, fga: 0, tpm: 0, tpa: 0, ftm: 0, fta: 0 } as Record<
