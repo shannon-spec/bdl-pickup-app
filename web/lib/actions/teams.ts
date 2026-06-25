@@ -88,9 +88,10 @@ export async function createTeam(
     })
     .returning({ id: teams.id });
 
-  // Non-admin creators become a commissioner of their new team so they
-  // can manage it immediately. Admins manage every team globally.
-  if (!isAdmin && session.playerId) {
+  // The creator becomes a commissioner of their new team — including
+  // admins, so the team shows up in their commissioner-scoped Teams
+  // list and "My teams", not just the admin-view all-teams list.
+  if (session.playerId) {
     await db
       .insert(teamCommissioners)
       .values({ teamId: row.id, playerId: session.playerId })
