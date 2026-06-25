@@ -132,7 +132,10 @@ export default async function GameDetailPage({
           <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
             <div>
               <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)]">
-                {game.leagueName ?? "—"} · {formatLabel(game.format)}
+                {game.leagueName ??
+                  game.tournamentName ??
+                  (game.gameType === "exhibition" ? "Exhibition" : "—")}{" "}
+                · {formatLabel(game.format)}
               </div>
               <h1 className="text-[22px] font-extrabold tracking-[-0.03em] mt-0.5">
                 {fmtDate(game.gameDate)}

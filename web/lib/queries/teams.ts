@@ -1,12 +1,52 @@
-import { asc, eq, isNull, inArray, and, sql } from "drizzle-orm";
+import { asc, desc, eq, isNull, inArray, and, or, sql } from "drizzle-orm";
 import {
   db,
   teams,
   teamPlayers,
   teamCommissioners,
   players,
+  games,
 } from "@/lib/db";
 import type { Session } from "@/lib/auth/session";
+
+export type TeamGameRow = {
+  id: string;
+  gameDate: string | null;
+  gameTime: string | null;
+  gameType: string;
+  tournamentName: string | null;
+  venue: string | null;
+  teamAId: string | null;
+  teamBId: string | null;
+  teamAName: string;
+  teamBName: string;
+  scoreA: number | null;
+  scoreB: number | null;
+  winTeam: "A" | "B" | "Tie" | null;
+};
+
+/** All games this team has played / will play (either side), newest first. */
+export async function getTeamGames(teamId: string): Promise<TeamGameRow[]> {
+  return db
+    .select({
+      id: games.id,
+      gameDate: games.gameDate,
+      gameTime: games.gameTime,
+      gameType: games.gameType,
+      tournamentName: games.tournamentName,
+      venue: games.venue,
+      teamAId: games.teamAId,
+      teamBId: games.teamBId,
+      teamAName: games.teamAName,
+      teamBName: games.teamBName,
+      scoreA: games.scoreA,
+      scoreB: games.scoreB,
+      winTeam: games.winTeam,
+    })
+    .from(games)
+    .where(or(eq(games.teamAId, teamId), eq(games.teamBId, teamId)))
+    .orderBy(desc(games.gameDate), desc(games.gameTime));
+}
 
 export type TeamCard = {
   id: string;

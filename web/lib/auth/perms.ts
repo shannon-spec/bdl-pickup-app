@@ -14,6 +14,7 @@ import {
   leaguePlayers,
   games,
   teamCommissioners,
+  teamPlayers,
 } from "@/lib/db";
 import { readSession, type Session } from "./session";
 
@@ -110,7 +111,8 @@ export async function canManageTeam(
   return isTeamCommissionerOf(s, teamId);
 }
 
-/** True for admin-like OR commissioner of the game's league. */
+/** True for admin-like OR commissioner of the game's league (intra-league
+ *  game), OR commissioner of either team (team-vs-team game). */
 export async function canManageGame(
   s: Session | null,
   gameId: string,
@@ -118,12 +120,23 @@ export async function canManageGame(
   if (isAdminLike(s)) return true;
   if (!s || !s.playerId) return false;
   const [g] = await db
-    .select({ leagueId: games.leagueId })
+    .select({
+      leagueId: games.leagueId,
+      teamAId: games.teamAId,
+      teamBId: games.teamBId,
+    })
     .from(games)
     .where(eq(games.id, gameId))
     .limit(1);
-  if (!g?.leagueId) return false;
-  return isCommissionerOf(s, g.leagueId);
+  if (!g) return false;
+  if (g.leagueId) return isCommissionerOf(s, g.leagueId);
+  if (
+    (g.teamAId && (await isTeamCommissionerOf(s, g.teamAId))) ||
+    (g.teamBId && (await isTeamCommissionerOf(s, g.teamBId)))
+  ) {
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -168,11 +181,35 @@ export async function canViewGame(
   if (isAdminLike(s)) return true;
   if (!s || !s.playerId) return false;
   const [g] = await db
-    .select({ leagueId: games.leagueId })
+    .select({
+      leagueId: games.leagueId,
+      teamAId: games.teamAId,
+      teamBId: games.teamBId,
+    })
     .from(games)
     .where(eq(games.id, gameId))
     .limit(1);
-  if (!g?.leagueId) return false;
+  if (!g) return false;
+
+  // Team-vs-team game: visible to commissioners or rostered players of
+  // either team.
+  if (!g.leagueId) {
+    if (await canManageGame(s, gameId)) return true;
+    const teamIds = [g.teamAId, g.teamBId].filter(Boolean) as string[];
+    if (teamIds.length === 0) return false;
+    const [onTeam] = await db
+      .select({ playerId: teamPlayers.playerId })
+      .from(teamPlayers)
+      .where(
+        and(
+          inArray(teamPlayers.teamId, teamIds),
+          eq(teamPlayers.playerId, s.playerId),
+        ),
+      )
+      .limit(1);
+    return !!onTeam;
+  }
+
   if (await isCommissionerOf(s, g.leagueId)) return true;
   const [member] = await db
     .select({ playerId: leaguePlayers.playerId })

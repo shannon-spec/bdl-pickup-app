@@ -8,6 +8,7 @@ import {
   leaguePlayers,
   players,
   gameRoster,
+  teamPlayers,
   type Game,
   type Player,
 } from "@/lib/db";
@@ -156,14 +157,16 @@ export async function getGameDetail(id: string): Promise<GameDetail | null> {
     .filter((r) => r.side === "invited")
     .map((r) => ({ id: r.playerId, firstName: r.firstName, lastName: r.lastName }));
 
-  // Eligible = league members not already on this game's roster
+  // Eligible = members not already on this game's roster. For a league
+  // game that's the league's members; for a team-vs-team game it's the
+  // combined rosters of both teams.
   let eligible: Pick<Player, "id" | "firstName" | "lastName">[] = [];
+  const onRoster = new Set([
+    ...rosterA.map((p) => p.id),
+    ...rosterB.map((p) => p.id),
+    ...invited.map((p) => p.id),
+  ]);
   if (g.leagueId) {
-    const onRoster = new Set([
-      ...rosterA.map((p) => p.id),
-      ...rosterB.map((p) => p.id),
-      ...invited.map((p) => p.id),
-    ]);
     const memberRows = await db
       .select({
         id: players.id,
@@ -173,6 +176,19 @@ export async function getGameDetail(id: string): Promise<GameDetail | null> {
       .from(players)
       .innerJoin(leaguePlayers, eq(leaguePlayers.playerId, players.id))
       .where(eq(leaguePlayers.leagueId, g.leagueId))
+      .orderBy(asc(players.lastName), asc(players.firstName));
+    eligible = memberRows.filter((p) => !onRoster.has(p.id));
+  } else if (g.teamAId || g.teamBId) {
+    const teamIds = [g.teamAId, g.teamBId].filter(Boolean) as string[];
+    const memberRows = await db
+      .selectDistinct({
+        id: players.id,
+        firstName: players.firstName,
+        lastName: players.lastName,
+      })
+      .from(players)
+      .innerJoin(teamPlayers, eq(teamPlayers.playerId, players.id))
+      .where(inArray(teamPlayers.teamId, teamIds))
       .orderBy(asc(players.lastName), asc(players.firstName));
     eligible = memberRows.filter((p) => !onRoster.has(p.id));
   }

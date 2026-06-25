@@ -57,6 +57,13 @@ export const gameFormatEnum = pgEnum("game_format", [
 
 export const winTeamEnum = pgEnum("win_team", ["A", "B", "Tie"]);
 
+// Distinguishes intra-league games from standalone team-vs-team games.
+export const gameTypeEnum = pgEnum("game_type", [
+  "league",
+  "exhibition",
+  "tournament",
+]);
+
 export const adminRoleEnum = pgEnum("admin_role", ["owner", "super_admin"]);
 
 export const inviteStatusEnum = pgEnum("invite_status", [
@@ -368,6 +375,12 @@ export const games = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     leagueId: uuid("league_id").references(() => leagues.id, { onDelete: "set null" }),
     leagueName: text("league_name"),
+    // Team-vs-team play. When set, leagueId is null and the two sides are
+    // these teams (side A = teamA roster, side B = teamB roster).
+    teamAId: uuid("team_a_id").references(() => teams.id, { onDelete: "set null" }),
+    teamBId: uuid("team_b_id").references(() => teams.id, { onDelete: "set null" }),
+    gameType: gameTypeEnum("game_type").notNull().default("league"),
+    tournamentName: text("tournament_name"),
     gameDate: date("game_date"),
     gameTime: time("game_time"),
     venue: text("venue"),

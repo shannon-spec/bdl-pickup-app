@@ -3,8 +3,12 @@
 import { z } from "zod";
 import { and, desc, eq, inArray, lt, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { db, games, gameRoster, gameSubgames, leagues } from "@/lib/db";
-import { requireGameManager, requireLeagueManager } from "@/lib/auth/perms";
+import { db, games, gameRoster, gameSubgames, leagues, teams } from "@/lib/db";
+import {
+  requireGameManager,
+  requireLeagueManager,
+  requireTeamManager,
+} from "@/lib/auth/perms";
 import { requireManageView } from "@/lib/auth/view";
 
 export type ActionResult<T = unknown> =
@@ -93,6 +97,74 @@ export async function createGame(formData: FormData): Promise<ActionResult<{ id:
     .returning({ id: games.id });
   revalidatePath("/games");
   revalidatePath("/");
+  return { ok: true, data: { id: row.id } };
+}
+
+const teamGameSchema = z
+  .object({
+    teamAId: z.string().uuid("Your team is required."),
+    teamBId: z.string().uuid("Pick an opponent."),
+    gameDate: z.string().min(1, "Date required."),
+    gameTime: z.string().optional().or(z.literal("")),
+    venue: z.string().trim().max(120).optional().or(z.literal("")),
+    format: z.enum(FORMATS).default("5v5"),
+    gameType: z.enum(["exhibition", "tournament"]).default("exhibition"),
+    tournamentName: z.string().trim().max(120).optional().or(z.literal("")),
+  })
+  .refine((v) => v.teamAId !== v.teamBId, {
+    message: "A team can't play itself.",
+    path: ["teamBId"],
+  })
+  .refine(
+    (v) => v.gameType !== "tournament" || !!v.tournamentName?.trim(),
+    { message: "Tournament name is required.", path: ["tournamentName"] },
+  );
+
+/** Schedule a standalone team-vs-team game (Exhibition or Tournament).
+ *  No leagueId; the two sides are the chosen teams. */
+export async function createTeamGame(
+  formData: FormData,
+): Promise<ActionResult<{ id: string }>> {
+  const parsed = teamGameSchema.safeParse(readForm(formData));
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "Validation failed.",
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+  const v = parsed.data;
+  await requireTeamManager(v.teamAId);
+  await requireManageView();
+
+  const rows = await db
+    .select({ id: teams.id, name: teams.name })
+    .from(teams)
+    .where(inArray(teams.id, [v.teamAId, v.teamBId]));
+  const teamA = rows.find((t) => t.id === v.teamAId);
+  const teamB = rows.find((t) => t.id === v.teamBId);
+  if (!teamA || !teamB) return { ok: false, error: "Team not found." };
+
+  const [row] = await db
+    .insert(games)
+    .values({
+      leagueId: null,
+      teamAId: v.teamAId,
+      teamBId: v.teamBId,
+      gameType: v.gameType,
+      tournamentName:
+        v.gameType === "tournament" ? nullable(v.tournamentName) : null,
+      gameDate: v.gameDate,
+      gameTime: nullable(v.gameTime),
+      venue: nullable(v.venue),
+      format: v.format,
+      teamAName: teamA.name,
+      teamBName: teamB.name,
+    })
+    .returning({ id: games.id });
+
+  revalidatePath(`/teams/${v.teamAId}`);
+  revalidatePath(`/teams/${v.teamBId}`);
   return { ok: true, data: { id: row.id } };
 }
 

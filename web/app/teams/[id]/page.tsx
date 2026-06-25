@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, ChevronRight, Pencil, Plus } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
 import { canManageTeam } from "@/lib/auth/perms";
 import { getViewCaps } from "@/lib/auth/view";
@@ -11,8 +11,83 @@ import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { LeagueAvatar } from "@/components/bdl/league-avatar";
 import { Pill } from "@/components/bdl/pill";
 import { formatLabel } from "@/lib/format";
-import { getTeamDetail, getEligibleTeamMembers } from "@/lib/queries/teams";
+import {
+  getTeamDetail,
+  getEligibleTeamMembers,
+  getTeamGames,
+  type TeamGameRow,
+} from "@/lib/queries/teams";
 import { TeamRosterControls } from "./team-detail-client";
+
+const fmtDate = (d: string | null) => {
+  if (!d) return "TBD";
+  const dt = new Date(d + "T00:00:00");
+  return `${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][dt.getDay()]} · ${
+    ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][dt.getMonth()]
+  } ${dt.getDate()}`;
+};
+
+function TeamGameCard({ g, teamId }: { g: TeamGameRow; teamId: string }) {
+  const isA = g.teamAId === teamId;
+  const oppName = isA ? g.teamBName : g.teamAName;
+  const myScore = isA ? g.scoreA : g.scoreB;
+  const oppScore = isA ? g.scoreB : g.scoreA;
+  const decided =
+    g.winTeam ??
+    (g.scoreA !== null && g.scoreB !== null
+      ? g.scoreA > g.scoreB
+        ? "A"
+        : g.scoreB > g.scoreA
+          ? "B"
+          : "Tie"
+      : null);
+  const completed = decided !== null;
+  const result = !completed
+    ? null
+    : decided === "Tie"
+      ? "Tie"
+      : (decided === "A") === isA
+        ? "Won"
+        : "Lost";
+
+  return (
+    <a
+      href={`/games/${g.id}`}
+      className="flex items-center justify-between gap-3 rounded-[12px] bg-[color:var(--surface)] px-4 py-3 shadow-[inset_0_0_0_1px_var(--hairline-2)] hover:shadow-[inset_0_0_0_1.5px_var(--text-4)] transition-shadow"
+    >
+      <div className="flex flex-col min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-bold text-[14px] truncate">vs {oppName}</span>
+          {g.gameType === "tournament" && g.tournamentName && (
+            <Pill tone="brand">{g.tournamentName}</Pill>
+          )}
+          {g.gameType === "exhibition" && <Pill tone="neutral">Exhibition</Pill>}
+        </div>
+        <span className="text-[11.5px] text-[color:var(--text-3)] mt-0.5">
+          {fmtDate(g.gameDate)}
+          {g.venue ? ` · ${g.venue}` : ""}
+        </span>
+      </div>
+      <div className="flex items-center gap-3 flex-shrink-0">
+        {completed ? (
+          <>
+            <span className="font-[family-name:var(--mono)] num font-extrabold text-[15px]">
+              {myScore}–{oppScore}
+            </span>
+            {result && (
+              <Pill tone={result === "Won" ? "win" : result === "Lost" ? "loss" : "neutral"}>
+                {result}
+              </Pill>
+            )}
+          </>
+        ) : (
+          <Pill tone="brand">Scheduled</Pill>
+        )}
+        <ChevronRight size={15} className="text-[color:var(--text-4)]" />
+      </div>
+    </a>
+  );
+}
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +104,7 @@ export default async function TeamDetailPage({
   const caps = await getViewCaps(session);
   const canManage = caps.canManage && (await canManageTeam(session, id));
   const eligible = canManage ? await getEligibleTeamMembers(id) : [];
+  const teamGames = await getTeamGames(id);
 
   const { team, roster } = detail;
   const place = [team.city, team.state].filter(Boolean).join(", ");
@@ -121,7 +197,36 @@ export default async function TeamDetailPage({
           )}
         </section>
 
-        {/* Games + leaderboard land here in Phase 2 / Phase 3. */}
+        {/* Games */}
+        <section className="rounded-[16px] bg-[color:var(--surface)] p-4 shadow-[inset_0_0_0_1px_var(--hairline-2)]">
+          <SectionHead
+            title="Games"
+            count={<span>{teamGames.length}</span>}
+            right={
+              canManage ? (
+                <Link
+                  href={`/teams/${id}/games/new`}
+                  className="inline-flex items-center gap-1 text-[12px] font-semibold text-[color:var(--brand-ink)] hover:text-[color:var(--brand)]"
+                >
+                  <Plus size={13} strokeWidth={2.5} /> Schedule game
+                </Link>
+              ) : undefined
+            }
+          />
+          {teamGames.length === 0 ? (
+            <div className="mt-3 text-[13px] text-[color:var(--text-3)]">
+              No games scheduled yet.
+            </div>
+          ) : (
+            <div className="mt-3 flex flex-col gap-2">
+              {teamGames.map((g) => (
+                <TeamGameCard key={g.id} g={g} teamId={id} />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Cumulative leaderboard lands here in Phase 3. */}
       </PageFrame>
       <MobileBottomBar active="home" />
     </>
