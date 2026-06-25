@@ -673,6 +673,8 @@ export const gameStats = pgTable(
     minutes: integer("minutes"),
     points: integer("points"),
     rebounds: integer("rebounds"),
+    oreb: integer("oreb"),
+    dreb: integer("dreb"),
     assists: integer("assists"),
     steals: integer("steals"),
     blocks: integer("blocks"),

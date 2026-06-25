@@ -10,6 +10,8 @@ const COLUMNS = [
   { key: "minutes", label: "MIN" },
   { key: "points", label: "PTS" },
   { key: "rebounds", label: "REB" },
+  { key: "oreb", label: "OREB" },
+  { key: "dreb", label: "DREB" },
   { key: "assists", label: "AST" },
   { key: "steals", label: "STL" },
   { key: "blocks", label: "BLK" },

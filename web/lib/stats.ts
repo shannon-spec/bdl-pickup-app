@@ -3,6 +3,8 @@ export const STAT_FIELDS = [
   "minutes",
   "points",
   "rebounds",
+  "oreb",
+  "dreb",
   "assists",
   "steals",
   "blocks",
