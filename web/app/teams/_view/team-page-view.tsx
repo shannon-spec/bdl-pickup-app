@@ -367,13 +367,16 @@ export function TeamPageView(props: TeamPageViewProps) {
                       <span className="font-medium text-[14px] truncate hover:text-[color:var(--brand)]">
                         {p.firstName} {p.lastName}
                       </span>
-                      <span className="ml-auto flex items-center gap-2 flex-shrink-0">
-                        <span className="w-[64px] flex justify-end">
+                      {p.position && (
+                        <span className="flex-shrink-0 text-[11px] font-[family-name:var(--mono)] text-[color:var(--text-4)]">
+                          {p.position}
+                        </span>
+                      )}
+                      <span className="ml-auto flex items-center gap-3 flex-shrink-0">
+                        <span className="w-[104px] flex justify-end text-[12px] text-[color:var(--text-2)]">
                           {st && (
-                            <span title="Games played · Wins">
-                              <Pill tone="neutral">
-                                {st.gamesPlayed} · {st.wins}
-                              </Pill>
+                            <span>
+                              {st.gamesPlayed} GP · {st.wins} W
                             </span>
                           )}
                         </span>
@@ -397,9 +400,6 @@ export function TeamPageView(props: TeamPageViewProps) {
                               {st.pct.toFixed(0)}%
                             </Pill>
                           )}
-                        </span>
-                        <span className="w-[14px] text-right text-[12px] font-[family-name:var(--mono)] text-[color:var(--text-4)]">
-                          {p.position ?? ""}
                         </span>
                       </span>
                     </Link>
