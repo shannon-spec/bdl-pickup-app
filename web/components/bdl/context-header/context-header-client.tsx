@@ -278,6 +278,14 @@ function CommissionerMore({ leagueId }: { leagueId: string | null }) {
             <KeyRound size={15} strokeWidth={2} /> Manage logins
           </Link>
           <Link
+            href="/teams/new"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className={live}
+          >
+            <UsersRound size={15} strokeWidth={2} /> Create team
+          </Link>
+          <Link
             href="/teams"
             role="menuitem"
             onClick={() => setOpen(false)}
