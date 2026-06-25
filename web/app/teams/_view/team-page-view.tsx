@@ -372,7 +372,7 @@ export function TeamPageView(props: TeamPageViewProps) {
                           {p.position}
                         </span>
                       )}
-                      <span className="ml-auto flex items-center gap-3 flex-shrink-0">
+                      <span className="ml-auto flex items-center gap-6 flex-shrink-0">
                         <span className="w-[104px] flex justify-end text-[12px] text-[color:var(--text-2)]">
                           {st && (
                             <span>
