@@ -351,7 +351,7 @@ export function TeamPageView(props: TeamPageViewProps) {
               {rosterEmptyNote}
             </div>
           ) : (
-            <ul className="mt-3 grid grid-cols-2 gap-x-6 gap-y-0.5 max-sm:grid-cols-1 rounded-[12px] bg-[color:var(--surface)] p-3">
+            <ul className="mt-3 flex flex-col gap-y-0.5 rounded-[12px] bg-[color:var(--surface)] p-3">
               {sortedRoster.map((p, i) => {
                 const st = statByPlayer.get(p.id);
                 const played = pctPlayed(p.id);
@@ -368,6 +368,11 @@ export function TeamPageView(props: TeamPageViewProps) {
                         {p.firstName} {p.lastName}
                       </span>
                       <span className="ml-auto flex items-center gap-2 flex-shrink-0">
+                        {st && (
+                          <Pill tone="neutral">
+                            {st.gamesPlayed} GP · {st.wins} W
+                          </Pill>
+                        )}
                         {st && (
                           <span
                             title={`${played.toFixed(0)}% of games played`}
