@@ -2,8 +2,8 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, Check, ImageUp, Loader2 } from "lucide-react";
-import { saveGameStats } from "@/lib/actions/games";
+import { BarChart3, Check, ImageUp, Loader2, Trash2 } from "lucide-react";
+import { saveGameStats, clearGameStats } from "@/lib/actions/games";
 import type { StatRowInput } from "@/lib/stats";
 
 const COLUMNS = [
@@ -131,6 +131,32 @@ export function BoxScoreEditor({
     } finally {
       setImporting(false);
     }
+  };
+
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const onClear = () => {
+    if (!confirmClear) {
+      setConfirmClear(true);
+      return;
+    }
+    setClearing(true);
+    setError(null);
+    start(async () => {
+      const res = await clearGameStats(gameId);
+      setClearing(false);
+      setConfirmClear(false);
+      if (res.ok) {
+        setRows(() => {
+          const o: Record<string, Row> = {};
+          for (const p of players) o[p.id] = emptyRow();
+          return o;
+        });
+        setSaved(false);
+        setImportMsg(null);
+        router.refresh();
+      } else setError(res.error);
+    });
   };
 
   const onDrop = (e: React.DragEvent) => {
@@ -282,6 +308,20 @@ export function BoxScoreEditor({
             <Check size={14} /> Saved
           </span>
         )}
+        <button
+          type="button"
+          onClick={onClear}
+          disabled={pending}
+          onBlur={() => setConfirmClear(false)}
+          className={`inline-flex items-center justify-center gap-1.5 h-10 px-4 mr-auto rounded-[var(--r-lg)] text-[12px] font-bold tracking-[0.06em] uppercase transition-colors disabled:opacity-60 ${
+            confirmClear
+              ? "bg-[color:var(--down-soft)] text-[color:var(--down)]"
+              : "text-[color:var(--text-2)] hover:text-[color:var(--down)] shadow-[inset_0_0_0_1px_var(--hairline-2)]"
+          }`}
+        >
+          <Trash2 size={14} strokeWidth={2.5} />
+          {clearing ? "Clearing…" : confirmClear ? "Confirm clear all?" : "Clear stats"}
+        </button>
         <button
           type="button"
           onClick={onSave}

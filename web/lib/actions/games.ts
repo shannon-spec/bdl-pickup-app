@@ -394,6 +394,15 @@ export async function saveGameStats(
   return { ok: true };
 }
 
+/** Delete every saved box-score row for a game. */
+export async function clearGameStats(gameId: string): Promise<ActionResult> {
+  const gate = await gateGameManager(gameId);
+  if (!gate.ok) return gate;
+  await db.delete(gameStats).where(eq(gameStats.gameId, gameId));
+  revalidatePath(`/games/${gameId}`);
+  return { ok: true };
+}
+
 export async function deleteGame(id: string): Promise<ActionResult> {
   const gate = await gateGameManager(id);
   if (!gate.ok) return gate;
