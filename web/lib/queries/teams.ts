@@ -185,8 +185,9 @@ export async function getMyTeams(
     .orderBy(asc(teams.name));
 }
 
-/** Teams the viewer is part of (roster member OR commissioner), with
- *  avatar fields — drives the context-header switcher. */
+/** Teams the viewer is *on the roster of* — drives the context-header
+ *  switcher ("part of a team"). Commissioner-only teams (created/managed
+ *  but not rostered) are reached via the Teams menu, not the switcher. */
 export async function getMyTeamsForSwitcher(s: Session | null): Promise<
   {
     id: string;
@@ -197,20 +198,6 @@ export async function getMyTeamsForSwitcher(s: Session | null): Promise<
   }[]
 > {
   if (!s?.playerId) return [];
-  const [memb, commish] = await Promise.all([
-    db
-      .select({ teamId: teamPlayers.teamId })
-      .from(teamPlayers)
-      .where(eq(teamPlayers.playerId, s.playerId)),
-    db
-      .select({ teamId: teamCommissioners.teamId })
-      .from(teamCommissioners)
-      .where(eq(teamCommissioners.playerId, s.playerId)),
-  ]);
-  const ids = Array.from(
-    new Set([...memb, ...commish].map((r) => r.teamId)),
-  );
-  if (ids.length === 0) return [];
   return db
     .select({
       id: teams.id,
@@ -220,7 +207,8 @@ export async function getMyTeamsForSwitcher(s: Session | null): Promise<
       avatarEmoji: teams.avatarEmoji,
     })
     .from(teams)
-    .where(and(isNull(teams.hiddenAt), inArray(teams.id, ids)))
+    .innerJoin(teamPlayers, eq(teamPlayers.teamId, teams.id))
+    .where(and(isNull(teams.hiddenAt), eq(teamPlayers.playerId, s.playerId)))
     .orderBy(asc(teams.name));
 }
 
