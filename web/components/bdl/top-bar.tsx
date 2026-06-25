@@ -9,6 +9,7 @@ import { getViewCaps, type View } from "@/lib/auth/view";
 import { db, players } from "@/lib/db";
 import { getUnreadAnnouncementCount } from "@/lib/queries/announcements";
 import { getUnreadMessageCount } from "@/lib/queries/messages";
+import { getMyTeamsForSwitcher } from "@/lib/queries/teams";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -43,6 +44,22 @@ export async function TopBar({
   const visibleNav = NAV_ITEMS.filter(
     (item) => item.views.includes(view) && (isSignedIn || !item.signedInOnly),
   );
+
+  // "My Team" — shown only when the viewer is rostered on a team, just
+  // after "My League". Links to their (first) team's page.
+  const myTeams = session?.playerId ? await getMyTeamsForSwitcher(session) : [];
+  const nav: NavItem[] = [...visibleNav];
+  if (myTeams[0]) {
+    const myTeamItem: NavItem = {
+      label: "My Team",
+      href: `/teams/${myTeams[0].id}`,
+      views: [view],
+    };
+    const afterLeague = nav.findIndex((n) => n.href === "/");
+    if (afterLeague >= 0) nav.splice(afterLeague + 1, 0, myTeamItem);
+    else nav.unshift(myTeamItem);
+  }
+
   const showSettings = view === "admin";
 
   // Avatar for the signed-in player. Super admins without a linked
@@ -96,8 +113,10 @@ export async function TopBar({
         </Link>
 
         <nav className="flex items-center justify-center gap-7" aria-label="Primary">
-          {visibleNav.map((item) => {
-            const isActive = item.href === active;
+          {nav.map((item) => {
+            const isActive =
+              item.href === active ||
+              (item.label === "My Team" && (active?.startsWith("/teams") ?? false));
             return (
               <Link
                 key={item.href}

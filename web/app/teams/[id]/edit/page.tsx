@@ -32,7 +32,7 @@ export default async function EditTeamPage({
 
   return (
     <>
-      <TopBar active="/players" />
+      <TopBar active="/teams" />
       <PageFrame>
         <ContextHeader />
         <Link

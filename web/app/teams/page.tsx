@@ -30,7 +30,7 @@ export default async function TeamsPage() {
 
   return (
     <>
-      <TopBar active="/players" />
+      <TopBar active="/teams" />
       <PageFrame>
         <ContextHeader />
         <SectionHead

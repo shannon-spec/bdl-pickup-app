@@ -157,7 +157,7 @@ export default async function TeamDetailPage({
 
   return (
     <>
-      <TopBar active="/players" />
+      <TopBar active="/teams" />
       <PageFrame>
         <ContextHeader />
         <Link

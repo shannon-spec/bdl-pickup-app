@@ -38,7 +38,7 @@ export default async function NewTeamGamePage({
 
   return (
     <>
-      <TopBar active="/players" />
+      <TopBar active="/teams" />
       <PageFrame>
         <ContextHeader />
         <Link
