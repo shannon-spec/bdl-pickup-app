@@ -54,6 +54,12 @@ function Chip({
 function TeamGameCard({ g, teamId }: { g: TeamGameRow; teamId: string }) {
   const isA = g.teamAId === teamId;
   const oppName = isA ? g.teamBName : g.teamAName;
+  const oppPlace = [
+    isA ? g.teamBCity : g.teamACity,
+    isA ? g.teamBState : g.teamAState,
+  ]
+    .filter(Boolean)
+    .join(", ");
   const myScore = isA ? g.scoreA : g.scoreB;
   const oppScore = isA ? g.scoreB : g.scoreA;
   const decided =
@@ -90,6 +96,11 @@ function TeamGameCard({ g, teamId }: { g: TeamGameRow; teamId: string }) {
           )}
           {g.gameType === "exhibition" && <Pill tone="neutral">Exhibition</Pill>}
         </div>
+        {oppPlace && (
+          <span className="text-[11.5px] text-[color:var(--text-3)] mt-0.5 truncate">
+            {oppPlace}
+          </span>
+        )}
         <span className="text-[11.5px] text-[color:var(--text-3)] mt-0.5">
           {fmtDate(g.gameDate)}
           {g.venue ? ` · ${g.venue}` : ""}

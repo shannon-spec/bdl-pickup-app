@@ -1,4 +1,5 @@
 import { asc, desc, eq, isNull, inArray, and, or, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import {
   db,
   teams,
@@ -21,6 +22,10 @@ export type TeamGameRow = {
   teamBId: string | null;
   teamAName: string;
   teamBName: string;
+  teamACity: string | null;
+  teamAState: string | null;
+  teamBCity: string | null;
+  teamBState: string | null;
   scoreA: number | null;
   scoreB: number | null;
   winTeam: "A" | "B" | "Tie" | null;
@@ -28,6 +33,8 @@ export type TeamGameRow = {
 
 /** All games this team has played / will play (either side), newest first. */
 export async function getTeamGames(teamId: string): Promise<TeamGameRow[]> {
+  const ta = alias(teams, "ta");
+  const tb = alias(teams, "tb");
   return db
     .select({
       id: games.id,
@@ -41,11 +48,17 @@ export async function getTeamGames(teamId: string): Promise<TeamGameRow[]> {
       teamBId: games.teamBId,
       teamAName: games.teamAName,
       teamBName: games.teamBName,
+      teamACity: ta.city,
+      teamAState: ta.state,
+      teamBCity: tb.city,
+      teamBState: tb.state,
       scoreA: games.scoreA,
       scoreB: games.scoreB,
       winTeam: games.winTeam,
     })
     .from(games)
+    .leftJoin(ta, eq(ta.id, games.teamAId))
+    .leftJoin(tb, eq(tb.id, games.teamBId))
     .where(or(eq(games.teamAId, teamId), eq(games.teamBId, teamId)))
     .orderBy(desc(games.gameDate), desc(games.gameTime));
 }
