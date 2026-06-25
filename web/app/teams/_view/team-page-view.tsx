@@ -258,11 +258,18 @@ export function TeamPageView(props: TeamPageViewProps) {
   const abbr = (name.trim()[0] ?? "?").toUpperCase();
   // Per-player stats for the roster, sourced from the leaderboard.
   const statByPlayer = new Map(leaderboard.players.map((p) => [p.id, p]));
-  // Sort the roster by most games played (then by name).
+  const totalGames = leaderboard.totalGames;
+  const pctPlayed = (id: string) =>
+    totalGames > 0
+      ? ((statByPlayer.get(id)?.gamesPlayed ?? 0) / totalGames) * 100
+      : 0;
+  // Sort by % played, then games won, then name.
   const sortedRoster = [...roster].sort((a, b) => {
-    const ga = statByPlayer.get(a.id)?.gamesPlayed ?? 0;
-    const gb = statByPlayer.get(b.id)?.gamesPlayed ?? 0;
-    return gb - ga || a.lastName.localeCompare(b.lastName);
+    const pa = pctPlayed(a.id);
+    const pb = pctPlayed(b.id);
+    const wa = statByPlayer.get(a.id)?.wins ?? 0;
+    const wb = statByPlayer.get(b.id)?.wins ?? 0;
+    return pb - pa || wb - wa || a.lastName.localeCompare(b.lastName);
   });
 
   return (
@@ -347,6 +354,7 @@ export function TeamPageView(props: TeamPageViewProps) {
             <ul className="mt-3 grid grid-cols-2 gap-x-6 gap-y-0.5 max-sm:grid-cols-1 rounded-[12px] bg-[color:var(--surface)] p-3">
               {sortedRoster.map((p, i) => {
                 const st = statByPlayer.get(p.id);
+                const played = pctPlayed(p.id);
                 return (
                   <li key={p.id}>
                     <Link
@@ -360,6 +368,18 @@ export function TeamPageView(props: TeamPageViewProps) {
                         {p.firstName} {p.lastName}
                       </span>
                       <span className="ml-auto flex items-center gap-2 flex-shrink-0">
+                        {st && (
+                          <span
+                            title={`${played.toFixed(0)}% of games played`}
+                            className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none whitespace-nowrap"
+                            style={{
+                              background: "linear-gradient(180deg, #EBEDF0, #C7CCD4)",
+                              color: "#3A3F47",
+                            }}
+                          >
+                            {played.toFixed(0)}% played
+                          </span>
+                        )}
                         {st && (
                           <Pill tone={st.pct >= 50 ? "win" : "loss"}>
                             {st.pct.toFixed(0)}%
