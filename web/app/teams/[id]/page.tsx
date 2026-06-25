@@ -18,7 +18,7 @@ import {
   type TeamGameRow,
 } from "@/lib/queries/teams";
 import { getTeamLeaderboard } from "@/lib/queries/leaderboard";
-import { TeamRosterControls } from "./team-detail-client";
+import { TeamRosterControls, DeleteTeamButton } from "./team-detail-client";
 
 const fmtDate = (d: string | null) => {
   if (!d) return "TBD";
@@ -364,6 +364,21 @@ export default async function TeamDetailPage({
             </div>
           )}
         </section>
+
+        {/* Danger zone */}
+        {canManage && (
+          <section className="rounded-[16px] bg-[color:var(--surface)] px-5 py-4 shadow-[inset_0_0_0_1px_var(--hairline-2)] flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <span className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-3)]">
+                Danger Zone
+              </span>
+              <span className="text-[12.5px] text-[color:var(--text-3)]">
+                Permanently delete this team, its roster links, and unlink its games.
+              </span>
+            </div>
+            <DeleteTeamButton teamId={id} teamName={team.name} />
+          </section>
+        )}
       </PageFrame>
       <MobileBottomBar active="home" />
     </>

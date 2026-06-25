@@ -197,6 +197,18 @@ export async function createAndAddTeamMember(
   return { ok: true, data: { id: row.id } };
 }
 
+/** Permanently delete a team. Team managers (creator / commissioner)
+ *  or admins can delete. Cascades roster + commissioner rows; any games
+ *  referencing the team have their team side set to null (FK).
+ *  Returns ok so the client can redirect to the teams list. */
+export async function deleteTeam(teamId: string): Promise<ActionResult> {
+  await requireTeamManager(teamId);
+  await requireManageView();
+  await db.delete(teams).where(eq(teams.id, teamId));
+  revalidatePath("/teams");
+  return { ok: true };
+}
+
 /** Soft-hide / unhide a team (admin only) — mirrors setLeagueHidden. */
 export async function setTeamHidden(
   id: string,

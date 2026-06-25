@@ -2,14 +2,83 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, UserPlus, X } from "lucide-react";
+import { Plus, Trash2, UserPlus, X } from "lucide-react";
 import {
   addTeamPlayer,
   createAndAddTeamMember,
   removeTeamPlayer,
+  deleteTeam,
 } from "@/lib/actions/teams";
 
 type PlayerLite = { id: string; firstName: string; lastName: string };
+
+/** Danger-zone delete for a team. Two-click confirm; redirects to the
+ *  teams list on success. */
+export function DeleteTeamButton({
+  teamId,
+  teamName,
+}: {
+  teamId: string;
+  teamName: string;
+}) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [confirm, setConfirm] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const onDelete = () => {
+    if (!confirm) {
+      setConfirm(true);
+      return;
+    }
+    start(async () => {
+      setError(null);
+      try {
+        const res = await deleteTeam(teamId);
+        if (res.ok) {
+          router.push("/teams");
+          router.refresh();
+        } else setError(res.error);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Could not delete team.");
+      }
+    });
+  };
+
+  return (
+    <div className="flex flex-col gap-2 items-end max-sm:items-stretch">
+      <div className="flex items-center gap-2 max-sm:flex-col max-sm:items-stretch">
+        {confirm && !pending && (
+          <button
+            type="button"
+            onClick={() => setConfirm(false)}
+            className="h-9 px-3.5 rounded-[var(--r-lg)] bg-[color:var(--surface)] text-[12px] font-semibold text-[color:var(--text-2)] hover:bg-[color:var(--surface-2)] shadow-[inset_0_0_0_1px_var(--hairline-2)]"
+          >
+            Cancel
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={pending}
+          className="inline-flex items-center gap-2 h-9 px-3.5 rounded-[var(--r-lg)] bg-[color:var(--down)] text-white text-[12px] font-bold disabled:opacity-60"
+        >
+          <Trash2 size={13} strokeWidth={2.25} />
+          {pending
+            ? "Deleting…"
+            : confirm
+              ? `Delete ${teamName}?`
+              : "Delete team"}
+        </button>
+      </div>
+      {error && (
+        <div className="text-[12px] text-[color:var(--down)] bg-[color:var(--down-soft)] rounded-[var(--r-md)] px-3 py-2">
+          {error}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /** Add / remove roster members on a team. Mirrors MembersAdminControls,
  *  flat-styled, scoped to a team. */
