@@ -90,16 +90,20 @@ function TeamGameCard({ g, teamId }: { g: TeamGameRow; teamId: string }) {
       className="flex items-center justify-between gap-3 rounded-[12px] bg-[color:var(--surface)] px-4 py-3 hover:shadow-[0_2px_10px_rgba(0,0,0,0.06)] transition-shadow"
     >
       <div className="flex flex-col min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-bold text-[14px] truncate">vs {oppName}</span>
-          {g.gameType === "tournament" && g.tournamentName && (
+        {g.gameType === "tournament" && g.tournamentName && (
+          <div className="mb-1">
             <Pill tone="brand">
               {g.tournamentName}
               {g.tournamentRound ? ` · ${g.tournamentRound}` : ""}
             </Pill>
-          )}
-          {g.gameType === "exhibition" && <Pill tone="neutral">Exhibition</Pill>}
-        </div>
+          </div>
+        )}
+        {g.gameType === "exhibition" && (
+          <div className="mb-1">
+            <Pill tone="neutral">Exhibition</Pill>
+          </div>
+        )}
+        <span className="font-bold text-[14px] truncate">vs {oppName}</span>
         {oppPlace && (
           <span className="text-[11.5px] text-[color:var(--text-3)] mt-0.5 truncate">
             {oppPlace}
