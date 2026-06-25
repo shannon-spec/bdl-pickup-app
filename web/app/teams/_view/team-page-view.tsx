@@ -368,33 +368,39 @@ export function TeamPageView(props: TeamPageViewProps) {
                         {p.firstName} {p.lastName}
                       </span>
                       <span className="ml-auto flex items-center gap-2 flex-shrink-0">
-                        {st && (
-                          <Pill tone="neutral">
-                            {st.gamesPlayed} GP · {st.wins} W
-                          </Pill>
-                        )}
-                        {st && (
-                          <span
-                            title={`${played.toFixed(0)}% of games played`}
-                            className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none whitespace-nowrap"
-                            style={{
-                              background: "linear-gradient(180deg, #F6F7F9, #E2E5EA)",
-                              color: "#6B7280",
-                            }}
-                          >
-                            {played.toFixed(0)}%
-                          </span>
-                        )}
-                        {st && (
-                          <Pill tone={st.pct >= 50 ? "win" : "loss"}>
-                            {st.pct.toFixed(0)}%
-                          </Pill>
-                        )}
-                        {p.position && (
-                          <span className="text-[12px] font-[family-name:var(--mono)] text-[color:var(--text-4)]">
-                            {p.position}
-                          </span>
-                        )}
+                        <span className="w-[64px] flex justify-end">
+                          {st && (
+                            <span title="Games played · Wins">
+                              <Pill tone="neutral">
+                                {st.gamesPlayed} · {st.wins}
+                              </Pill>
+                            </span>
+                          )}
+                        </span>
+                        <span className="w-[44px] flex justify-end">
+                          {st && (
+                            <span
+                              title={`${played.toFixed(0)}% of games played`}
+                              className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none whitespace-nowrap"
+                              style={{
+                                background: "linear-gradient(180deg, #F6F7F9, #E2E5EA)",
+                                color: "#6B7280",
+                              }}
+                            >
+                              {played.toFixed(0)}%
+                            </span>
+                          )}
+                        </span>
+                        <span className="w-[44px] flex justify-end">
+                          {st && (
+                            <Pill tone={st.pct >= 50 ? "win" : "loss"}>
+                              {st.pct.toFixed(0)}%
+                            </Pill>
+                          )}
+                        </span>
+                        <span className="w-[14px] text-right text-[12px] font-[family-name:var(--mono)] text-[color:var(--text-4)]">
+                          {p.position ?? ""}
+                        </span>
                       </span>
                     </Link>
                   </li>
