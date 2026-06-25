@@ -1,6 +1,7 @@
 import { readSession } from "@/lib/auth/session";
 import { getViewCaps } from "@/lib/auth/view";
 import { getSessionContext } from "@/lib/queries/session-context";
+import { getMyTeamsForSwitcher } from "@/lib/queries/teams";
 import { ContextHeaderClient } from "./context-header-client";
 
 /**
@@ -16,12 +17,14 @@ export async function ContextHeader() {
   if (!ctx) return null;
   const session = await readSession();
   const caps = await getViewCaps(session);
+  const teams = await getMyTeamsForSwitcher(session);
   return (
     <ContextHeaderClient
       ctx={ctx}
       view={caps.view}
       options={caps.options}
       canManage={caps.canManage}
+      teams={teams}
     />
   );
 }

@@ -183,6 +183,45 @@ export async function getMyTeams(
     .orderBy(asc(teams.name));
 }
 
+/** Teams the viewer is part of (roster member OR commissioner), with
+ *  avatar fields — drives the context-header switcher. */
+export async function getMyTeamsForSwitcher(s: Session | null): Promise<
+  {
+    id: string;
+    name: string;
+    avatarKind: string;
+    avatarColor: string;
+    avatarEmoji: string | null;
+  }[]
+> {
+  if (!s?.playerId) return [];
+  const [memb, commish] = await Promise.all([
+    db
+      .select({ teamId: teamPlayers.teamId })
+      .from(teamPlayers)
+      .where(eq(teamPlayers.playerId, s.playerId)),
+    db
+      .select({ teamId: teamCommissioners.teamId })
+      .from(teamCommissioners)
+      .where(eq(teamCommissioners.playerId, s.playerId)),
+  ]);
+  const ids = Array.from(
+    new Set([...memb, ...commish].map((r) => r.teamId)),
+  );
+  if (ids.length === 0) return [];
+  return db
+    .select({
+      id: teams.id,
+      name: teams.name,
+      avatarKind: teams.avatarKind,
+      avatarColor: teams.avatarColor,
+      avatarEmoji: teams.avatarEmoji,
+    })
+    .from(teams)
+    .where(and(isNull(teams.hiddenAt), inArray(teams.id, ids)))
+    .orderBy(asc(teams.name));
+}
+
 /** Players not yet on the team's roster — drives the add-member picker. */
 export async function getEligibleTeamMembers(
   teamId: string,

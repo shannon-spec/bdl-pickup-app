@@ -20,18 +20,22 @@ import type { SessionContext } from "@/lib/queries/session-context";
 import type { View } from "@/lib/cookies/active-view";
 import { LeagueSwitcher } from "./league-switcher";
 import { RoleToggle } from "./role-toggle";
+import type { SwitcherTeam } from "./league-switcher";
 
 export function ContextHeaderClient({
   ctx,
   view,
   options,
   canManage,
+  teams = [],
 }: {
   ctx: SessionContext;
   view: View;
   options: View[];
   /** Commissioner or admin — gates the docked Commissioner Tools bar. */
   canManage: boolean;
+  /** Teams the viewer is part of — listed in the context switcher. */
+  teams?: SwitcherTeam[];
 }) {
   const hasPlayer = !!ctx.user.playerId;
   const hasChips =
@@ -111,6 +115,7 @@ export function ContextHeaderClient({
             leagues={ctx.leagues}
             activeLeagueId={ctx.activeLeagueId}
             view={view}
+            teams={teams}
           />
         </div>
       )}

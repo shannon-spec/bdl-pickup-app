@@ -9,14 +9,25 @@ import type { View } from "@/lib/cookies/active-view";
 import { setActiveLeagueAction } from "@/lib/cookies/active-league";
 import { LeagueAvatar } from "@/components/bdl/league-avatar";
 
+export type SwitcherTeam = {
+  id: string;
+  name: string;
+  avatarKind: string;
+  avatarColor: string;
+  avatarEmoji: string | null;
+};
+
 export function LeagueSwitcher({
   leagues,
   activeLeagueId,
   view,
+  teams = [],
 }: {
   leagues: SessionLeague[];
   activeLeagueId: string;
   view: View;
+  /** Teams the viewer is part of (member or commissioner). */
+  teams?: SwitcherTeam[];
 }) {
   const canCreate = view === "commissioner" || view === "admin";
   const router = useRouter();
@@ -24,9 +35,6 @@ export function LeagueSwitcher({
   const [pending, start] = useTransition();
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
-
-  const active = leagues.find((l) => l.id === activeLeagueId) ?? leagues[0];
-  if (!active) return null;
 
   // Close on outside click + Escape
   useEffect(() => {
@@ -64,6 +72,9 @@ export function LeagueSwitcher({
       router.refresh();
     });
   };
+
+  const active = leagues.find((l) => l.id === activeLeagueId) ?? leagues[0];
+  if (!active) return null;
 
   const triggerMeta = [active.season, active.cadence].filter(Boolean).join(" · ");
 
@@ -173,7 +184,32 @@ export function LeagueSwitcher({
             );
           })}
 
-          <div className="border-t border-[color:var(--hairline)]">
+          {teams.length > 0 && (
+            <div className="shadow-[inset_0_1px_0_0_var(--hairline)]">
+              <div className="px-4 pt-2.5 pb-1 text-[10px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-4)]">
+                Teams
+              </div>
+              {teams.map((t) => (
+                <Link
+                  key={t.id}
+                  href={`/teams/${t.id}`}
+                  onClick={() => setOpen(false)}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[color:var(--surface-2)] transition-colors"
+                >
+                  <LeagueAvatar
+                    kind={t.avatarKind}
+                    color={t.avatarColor}
+                    emoji={t.avatarEmoji}
+                    abbr={(t.name[0] ?? "?").toUpperCase()}
+                    size={28}
+                  />
+                  <span className="font-bold text-[14px] truncate">{t.name}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          <div className="shadow-[inset_0_1px_0_0_var(--hairline)]">
             <Link
               href={canCreate ? "/leagues/new" : "/discover"}
               onClick={() => setOpen(false)}
