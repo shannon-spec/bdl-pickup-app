@@ -114,11 +114,23 @@ function SideTable({
                       {p.firstName} {p.lastName}
                     </Link>
                   </td>
-                  {COLUMNS.map((c) => (
-                    <td key={c.key} className={td}>
-                      {n(s[c.key])}
-                    </td>
-                  ))}
+                  {COLUMNS.map((c) => {
+                    const highlight =
+                      c.key === "points" ||
+                      c.key === "rebounds" ||
+                      c.key === "assists";
+                    return (
+                      <td key={c.key} className={td}>
+                        {highlight ? (
+                          <span className="inline-block min-w-[28px] rounded-full bg-[color:var(--brand-soft)] px-2 py-0.5 font-bold text-[color:var(--brand-ink)]">
+                            {n(s[c.key])}
+                          </span>
+                        ) : (
+                          n(s[c.key])
+                        )}
+                      </td>
+                    );
+                  })}
                   <td className={td}>
                     {n(s.fgm)}-{n(s.fga)}
                   </td>
