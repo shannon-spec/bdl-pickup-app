@@ -141,12 +141,27 @@ function SideTable({
                   })}
                   <td className={td}>
                     {n(s.fgm)}-{n(s.fga)}
+                    {n(s.fga) > 0 && (
+                      <span className="block text-[10px] font-semibold text-[color:var(--text-3)]">
+                        {pct(n(s.fgm), n(s.fga))}
+                      </span>
+                    )}
                   </td>
                   <td className={td}>
                     {n(s.tpm)}-{n(s.tpa)}
+                    {n(s.tpa) > 0 && (
+                      <span className="block text-[10px] font-semibold text-[color:var(--text-3)]">
+                        {pct(n(s.tpm), n(s.tpa))}
+                      </span>
+                    )}
                   </td>
                   <td className={td}>
                     {n(s.ftm)}-{n(s.fta)}
+                    {n(s.fta) > 0 && (
+                      <span className="block text-[10px] font-semibold text-[color:var(--text-3)]">
+                        {pct(n(s.ftm), n(s.fta))}
+                      </span>
+                    )}
                   </td>
                 </tr>
               );
