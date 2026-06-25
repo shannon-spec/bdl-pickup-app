@@ -28,6 +28,7 @@ export function ContextHeaderClient({
   options,
   canManage,
   teams = [],
+  activeTeam = null,
 }: {
   ctx: SessionContext;
   view: View;
@@ -36,6 +37,8 @@ export function ContextHeaderClient({
   canManage: boolean;
   /** Teams the viewer is part of — listed in the context switcher. */
   teams?: SwitcherTeam[];
+  /** When on a team page, the team to surface as the active context. */
+  activeTeam?: SwitcherTeam | null;
 }) {
   const hasPlayer = !!ctx.user.playerId;
   const hasChips =
@@ -109,13 +112,14 @@ export function ContextHeaderClient({
         </div>
       </div>
 
-      {ctx.leagues.length > 0 && ctx.activeLeagueId && (
+      {((ctx.leagues.length > 0 && ctx.activeLeagueId) || activeTeam) && (
         <div className="flex-shrink-0 max-sm:w-full">
           <LeagueSwitcher
             leagues={ctx.leagues}
-            activeLeagueId={ctx.activeLeagueId}
+            activeLeagueId={ctx.activeLeagueId ?? ""}
             view={view}
             teams={teams}
+            activeTeam={activeTeam}
           />
         </div>
       )}

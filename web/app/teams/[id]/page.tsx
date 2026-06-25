@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ChevronRight, Pencil, Plus } from "lucide-react";
+import { ArrowLeft, ChevronRight, Medal, Pencil, Plus } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
 import { canManageTeam } from "@/lib/auth/perms";
 import { getViewCaps } from "@/lib/auth/view";
@@ -112,6 +112,17 @@ function TeamGameCard({ g, teamId }: { g: TeamGameRow; teamId: string }) {
             <span className="font-[family-name:var(--mono)] num font-extrabold text-[15px]">
               {myScore}–{oppScore}
             </span>
+            {result === "Won" &&
+              g.gameType === "tournament" &&
+              g.tournamentRound === "Championship" && (
+                <Medal
+                  size={17}
+                  strokeWidth={2.25}
+                  className="flex-shrink-0"
+                  style={{ color: "#E0A100" }}
+                  aria-label="Tournament champion"
+                />
+              )}
             {result && (
               <Pill tone={result === "Won" ? "win" : result === "Lost" ? "loss" : "neutral"}>
                 {result}
@@ -170,7 +181,15 @@ export default async function TeamDetailPage({
     <>
       <TopBar active="/teams" />
       <PageFrame>
-        <ContextHeader />
+        <ContextHeader
+          activeTeam={{
+            id: team.id,
+            name: team.name,
+            avatarKind: team.avatarKind,
+            avatarColor: team.avatarColor,
+            avatarEmoji: team.avatarEmoji,
+          }}
+        />
         <Link
           href="/"
           className="inline-flex items-center gap-1.5 text-[12px] text-[color:var(--text-3)] hover:text-[color:var(--text)] -mb-2"

@@ -22,12 +22,15 @@ export function LeagueSwitcher({
   activeLeagueId,
   view,
   teams = [],
+  activeTeam = null,
 }: {
   leagues: SessionLeague[];
   activeLeagueId: string;
   view: View;
   /** Teams the viewer is part of (member or commissioner). */
   teams?: SwitcherTeam[];
+  /** When viewing a team page, the team to surface as the active context. */
+  activeTeam?: SwitcherTeam | null;
 }) {
   const canCreate = view === "commissioner" || view === "admin";
   const router = useRouter();
@@ -73,10 +76,21 @@ export function LeagueSwitcher({
     });
   };
 
-  const active = leagues.find((l) => l.id === activeLeagueId) ?? leagues[0];
-  if (!active) return null;
+  const activeLeague = leagues.find((l) => l.id === activeLeagueId) ?? leagues[0];
+  const showingTeam = !!activeTeam;
+  if (!activeTeam && !activeLeague) return null;
 
-  const triggerMeta = [active.season, active.cadence].filter(Boolean).join(" · ");
+  // When viewing a team, make sure it's listed in the Teams section even if
+  // the viewer isn't on its roster.
+  const teamList =
+    activeTeam && !teams.some((t) => t.id === activeTeam.id)
+      ? [activeTeam, ...teams]
+      : teams;
+
+  const triggerMeta = showingTeam
+    ? "Team"
+    : [activeLeague.season, activeLeague.cadence].filter(Boolean).join(" · ");
+  const triggerName = showingTeam ? activeTeam!.name : activeLeague.name;
 
   return (
     <div className="relative inline-flex max-sm:w-full">
@@ -85,7 +99,7 @@ export function LeagueSwitcher({
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label={`Switch league. Current: ${active.name}.`}
+        aria-label={`Switch context. Current: ${triggerName}.`}
         onClick={() => setOpen((o) => !o)}
         data-open={open || undefined}
         disabled={pending}
@@ -99,16 +113,32 @@ export function LeagueSwitcher({
           "max-sm:w-full max-sm:justify-start",
         ].join(" ")}
     >
-        <LeagueAvatar
-          kind={active.avatarKind}
-          color={active.avatarColor}
-          emoji={active.avatarEmoji}
-          abbr={active.abbr}
-          size={32}
-        />
-        <span className="font-bold whitespace-nowrap">{active.name}</span>
+        {showingTeam ? (
+          <LeagueAvatar
+            kind={activeTeam!.avatarKind}
+            color={activeTeam!.avatarColor}
+            emoji={activeTeam!.avatarEmoji}
+            abbr={(activeTeam!.name[0] ?? "?").toUpperCase()}
+            size={32}
+          />
+        ) : (
+          <LeagueAvatar
+            kind={activeLeague.avatarKind}
+            color={activeLeague.avatarColor}
+            emoji={activeLeague.avatarEmoji}
+            abbr={activeLeague.abbr}
+            size={32}
+          />
+        )}
+        <span className="font-bold whitespace-nowrap">{triggerName}</span>
         {triggerMeta && (
-          <span className="font-[family-name:var(--mono)] text-[12px] text-[color:var(--text-3)] num whitespace-nowrap">
+          <span
+            className={`text-[12px] text-[color:var(--text-3)] whitespace-nowrap ${
+              showingTeam
+                ? "uppercase tracking-[0.12em] font-semibold"
+                : "font-[family-name:var(--mono)] num"
+            }`}
+          >
             {triggerMeta}
           </span>
         )}
@@ -146,7 +176,7 @@ export function LeagueSwitcher({
             }
           `}</style>
           {leagues.map((l) => {
-            const selected = l.id === activeLeagueId;
+            const selected = !showingTeam && l.id === activeLeagueId;
             const longMeta = [l.season, l.cadence, l.timeOfDay].filter(Boolean).join(" · ");
             return (
               <button
@@ -184,28 +214,41 @@ export function LeagueSwitcher({
             );
           })}
 
-          {teams.length > 0 && (
+          {teamList.length > 0 && (
             <div className="shadow-[inset_0_1px_0_0_var(--hairline)]">
               <div className="px-4 pt-2.5 pb-1 text-[10px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-4)]">
                 Teams
               </div>
-              {teams.map((t) => (
-                <Link
-                  key={t.id}
-                  href={`/teams/${t.id}`}
-                  onClick={() => setOpen(false)}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[color:var(--surface-2)] transition-colors"
-                >
-                  <LeagueAvatar
-                    kind={t.avatarKind}
-                    color={t.avatarColor}
-                    emoji={t.avatarEmoji}
-                    abbr={(t.name[0] ?? "?").toUpperCase()}
-                    size={28}
-                  />
-                  <span className="font-bold text-[14px] truncate">{t.name}</span>
-                </Link>
-              ))}
+              {teamList.map((t) => {
+                const selected = activeTeam?.id === t.id;
+                return (
+                  <Link
+                    key={t.id}
+                    href={`/teams/${t.id}`}
+                    onClick={() => setOpen(false)}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[color:var(--surface-2)] transition-colors ${
+                      selected ? "bg-[color:var(--surface-2)]" : ""
+                    }`}
+                  >
+                    <LeagueAvatar
+                      kind={t.avatarKind}
+                      color={t.avatarColor}
+                      emoji={t.avatarEmoji}
+                      abbr={(t.name[0] ?? "?").toUpperCase()}
+                      size={28}
+                    />
+                    <span className="flex-1 min-w-0 font-bold text-[14px] truncate">
+                      {t.name}
+                    </span>
+                    {selected && (
+                      <Check
+                        size={16}
+                        className="text-[color:var(--brand)] flex-shrink-0"
+                      />
+                    )}
+                  </Link>
+                );
+              })}
             </div>
           )}
 
