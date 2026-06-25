@@ -7,6 +7,8 @@ import {
   teamCommissioners,
   players,
   games,
+  leagues,
+  leaguePlayers,
 } from "@/lib/db";
 import type { Session } from "@/lib/auth/session";
 
@@ -203,17 +205,70 @@ export async function getMyTeams(
 /** Teams the viewer is *on the roster of* — drives the context-header
  *  switcher ("part of a team"). Commissioner-only teams (created/managed
  *  but not rostered) are reached via the Teams menu, not the switcher. */
-export async function getMyTeamsForSwitcher(s: Session | null): Promise<
-  {
-    id: string;
-    name: string;
-    avatarKind: string;
-    avatarColor: string;
-    avatarEmoji: string | null;
-  }[]
-> {
+export type SwitcherTeamRef = {
+  id: string;
+  name: string;
+  avatarKind: string;
+  avatarColor: string;
+  avatarEmoji: string | null;
+  /** Where this entry navigates. Real teams → /teams/[id]; league sides
+   *  → the league page. */
+  href: string;
+};
+
+export type LeagueTeamRef = SwitcherTeamRef & { leagueName: string };
+
+/**
+ * "Teams" derived from the named sides of the leagues a player belongs to.
+ * Each league contributes two pseudo-teams (side A + side B names), both
+ * linking to the league page — league sides have no page of their own.
+ */
+export async function getMyLeagueTeams(
+  s: Session | null,
+): Promise<LeagueTeamRef[]> {
   if (!s?.playerId) return [];
-  return db
+  const rows = await db
+    .select({
+      id: leagues.id,
+      name: leagues.name,
+      teamAName: leagues.teamAName,
+      teamBName: leagues.teamBName,
+      avatarKind: leagues.avatarKind,
+      avatarColor: leagues.avatarColor,
+      avatarEmoji: leagues.avatarEmoji,
+    })
+    .from(leagues)
+    .innerJoin(leaguePlayers, eq(leaguePlayers.leagueId, leagues.id))
+    .where(and(isNull(leagues.hiddenAt), eq(leaguePlayers.playerId, s.playerId)))
+    .orderBy(asc(leagues.name));
+
+  const out: LeagueTeamRef[] = [];
+  for (const r of rows) {
+    const href = `/leagues/${r.id}`;
+    const sides: [string, string][] = [
+      ["A", (r.teamAName ?? "").trim() || "White"],
+      ["B", (r.teamBName ?? "").trim() || "Dark"],
+    ];
+    for (const [side, name] of sides) {
+      out.push({
+        id: `lg:${r.id}:${side}`,
+        name,
+        avatarKind: r.avatarKind,
+        avatarColor: r.avatarColor,
+        avatarEmoji: r.avatarEmoji,
+        href,
+        leagueName: r.name,
+      });
+    }
+  }
+  return out;
+}
+
+export async function getMyTeamsForSwitcher(
+  s: Session | null,
+): Promise<SwitcherTeamRef[]> {
+  if (!s?.playerId) return [];
+  const real = await db
     .select({
       id: teams.id,
       name: teams.name,
@@ -225,6 +280,20 @@ export async function getMyTeamsForSwitcher(s: Session | null): Promise<
     .innerJoin(teamPlayers, eq(teamPlayers.teamId, teams.id))
     .where(and(isNull(teams.hiddenAt), eq(teamPlayers.playerId, s.playerId)))
     .orderBy(asc(teams.name));
+  // Real teams first (so "My Team" nav prefers a real team), then the
+  // league-derived sides.
+  const leagueTeams = await getMyLeagueTeams(s);
+  return [
+    ...real.map((t) => ({ ...t, href: `/teams/${t.id}` })),
+    ...leagueTeams.map((t) => ({
+      id: t.id,
+      name: t.name,
+      avatarKind: t.avatarKind,
+      avatarColor: t.avatarColor,
+      avatarEmoji: t.avatarEmoji,
+      href: t.href,
+    })),
+  ];
 }
 
 /** Players not yet on the team's roster — drives the add-member picker. */

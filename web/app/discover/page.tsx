@@ -8,7 +8,12 @@ import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
 import { LeagueAvatar } from "@/components/bdl/league-avatar";
 import { getLeaguesWithStats } from "@/lib/queries/leagues";
-import { getTeamCards, type TeamCard } from "@/lib/queries/teams";
+import {
+  getTeamCards,
+  getMyLeagueTeams,
+  type TeamCard,
+  type LeagueTeamRef,
+} from "@/lib/queries/teams";
 import { formatLabel } from "@/lib/format";
 import { db, leaguePlayers, teamPlayers } from "@/lib/db";
 import { eq } from "drizzle-orm";
@@ -23,6 +28,7 @@ export default async function DiscoverPage() {
 
   const allLeagues = await getLeaguesWithStats();
   const allTeams = await getTeamCards({ all: true });
+  const leagueTeams = await getMyLeagueTeams(session);
 
   // Which leagues / teams is the signed-in player in?
   const memberSet = new Set<string>();
@@ -104,7 +110,7 @@ export default async function DiscoverPage() {
           Teams
         </div>
 
-        {yourTeams.length > 0 && (
+        {(yourTeams.length > 0 || leagueTeams.length > 0) && (
           <>
             <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)] mt-1">
               Your teams
@@ -112,6 +118,9 @@ export default async function DiscoverPage() {
             <Grid>
               {yourTeams.map((t) => (
                 <TeamCardView key={t.id} t={t} mine />
+              ))}
+              {leagueTeams.map((t) => (
+                <LeagueTeamCardView key={t.id} t={t} />
               ))}
             </Grid>
           </>
@@ -130,7 +139,7 @@ export default async function DiscoverPage() {
           </>
         )}
 
-        {allTeams.length === 0 && (
+        {allTeams.length === 0 && leagueTeams.length === 0 && (
           <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-12 text-center text-[color:var(--text-3)] text-[14px]">
             No teams to discover yet.
           </div>
@@ -231,6 +240,40 @@ function LeagueListRow({
         size={16}
         className="text-[color:var(--text-3)] group-hover:text-[color:var(--text)] flex-shrink-0"
       />
+    </Link>
+  );
+}
+
+function LeagueTeamCardView({ t }: { t: LeagueTeamRef }) {
+  return (
+    <Link
+      href={t.href}
+      className="group rounded-[14px] border border-[color:var(--brand)] p-4 flex flex-col gap-3 transition-colors"
+      style={{
+        background:
+          "radial-gradient(ellipse at top right, var(--brand-soft), transparent 60%), var(--surface)",
+      }}
+    >
+      <LeagueAvatar
+        kind={t.avatarKind}
+        color={t.avatarColor}
+        emoji={t.avatarEmoji}
+        abbr={(t.name[0] ?? "?").toUpperCase()}
+        size={36}
+      />
+      <div>
+        <div className="font-bold text-[16px]">{t.name}</div>
+        <div className="text-[12px] text-[color:var(--text-3)] mt-0.5">
+          {t.leagueName}
+        </div>
+      </div>
+      <div className="flex items-center justify-between mt-auto pt-1 gap-2 flex-wrap">
+        <Pill tone="neutral">League team</Pill>
+        <ChevronRight
+          size={16}
+          className="text-[color:var(--text-3)] group-hover:text-[color:var(--text)]"
+        />
+      </div>
     </Link>
   );
 }

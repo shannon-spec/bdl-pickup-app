@@ -11,7 +11,7 @@ import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
 import { LeagueAvatar } from "@/components/bdl/league-avatar";
 import { formatLabel } from "@/lib/format";
-import { getTeamCards } from "@/lib/queries/teams";
+import { getTeamCards, getMyLeagueTeams } from "@/lib/queries/teams";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Teams · BDL" };
@@ -27,6 +27,7 @@ export default async function TeamsPage() {
     all: isAdminView,
     commissionerPlayerId: session.playerId,
   });
+  const leagueTeams = await getMyLeagueTeams(session);
 
   return (
     <>
@@ -46,14 +47,15 @@ export default async function TeamsPage() {
           }
         />
 
-        {teams.length === 0 ? (
+        {teams.length === 0 && leagueTeams.length === 0 && (
           <div className="rounded-[16px] bg-[color:var(--surface)] p-12 text-center text-[color:var(--text-3)] text-[14px] shadow-[inset_0_0_0_1px_var(--hairline-2)]">
             No teams yet.{" "}
             <Link href="/teams/new" className="text-[color:var(--brand-ink)] font-semibold">
               Create one →
             </Link>
           </div>
-        ) : (
+        )}
+        {teams.length > 0 && (
           <div className="grid grid-cols-3 gap-3 max-[1100px]:grid-cols-2 max-sm:grid-cols-1">
             {teams.map((t) => (
               <Link
@@ -87,6 +89,44 @@ export default async function TeamsPage() {
               </Link>
             ))}
           </div>
+        )}
+
+        {leagueTeams.length > 0 && (
+          <>
+            <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)] mt-4">
+              From your leagues
+            </div>
+            <div className="grid grid-cols-3 gap-3 max-[1100px]:grid-cols-2 max-sm:grid-cols-1">
+              {leagueTeams.map((t) => (
+                <Link
+                  key={t.id}
+                  href={t.href}
+                  className="group rounded-[14px] bg-[color:var(--surface)] p-4 flex flex-col gap-3 shadow-[inset_0_0_0_1px_var(--hairline-2)] hover:shadow-[inset_0_0_0_1.5px_var(--text-4)] transition-shadow"
+                >
+                  <LeagueAvatar
+                    kind={t.avatarKind}
+                    color={t.avatarColor}
+                    emoji={t.avatarEmoji}
+                    abbr={(t.name[0] ?? "?").toUpperCase()}
+                    size={36}
+                  />
+                  <div>
+                    <div className="font-bold text-[16px] text-[color:var(--text)]">{t.name}</div>
+                    <div className="text-[12px] text-[color:var(--text-3)] mt-0.5">
+                      {t.leagueName}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between mt-auto pt-1">
+                    <Pill tone="neutral">League team</Pill>
+                    <ChevronRight
+                      size={16}
+                      className="text-[color:var(--text-3)] group-hover:text-[color:var(--text)]"
+                    />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </>
         )}
       </PageFrame>
       <MobileBottomBar active="home" />

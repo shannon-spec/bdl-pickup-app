@@ -45,14 +45,15 @@ export async function TopBar({
     (item) => item.views.includes(view) && (isSignedIn || !item.signedInOnly),
   );
 
-  // "My Team" — shown only when the viewer is rostered on a team, just
-  // after "My League". Links to their (first) team's page.
+  // "My Team" — shown when the viewer is on a team (a real travel team or
+  // a league side), just after "My League". Links to that team's page;
+  // league sides link to their league.
   const myTeams = session?.playerId ? await getMyTeamsForSwitcher(session) : [];
   const nav: NavItem[] = [...visibleNav];
   if (myTeams[0]) {
     const myTeamItem: NavItem = {
       label: "My Team",
-      href: `/teams/${myTeams[0].id}`,
+      href: myTeams[0].href ?? `/teams/${myTeams[0].id}`,
       views: [view],
     };
     const afterLeague = nav.findIndex((n) => n.href === "/");

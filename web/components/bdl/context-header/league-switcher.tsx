@@ -15,6 +15,8 @@ export type SwitcherTeam = {
   avatarKind: string;
   avatarColor: string;
   avatarEmoji: string | null;
+  /** Optional explicit destination (league sides link to their league). */
+  href?: string;
 };
 
 export function LeagueSwitcher({
@@ -224,7 +226,7 @@ export function LeagueSwitcher({
                 return (
                   <Link
                     key={t.id}
-                    href={`/teams/${t.id}`}
+                    href={t.href ?? `/teams/${t.id}`}
                     onClick={() => setOpen(false)}
                     className={`w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[color:var(--surface-2)] transition-colors ${
                       selected ? "bg-[color:var(--surface-2)]" : ""
