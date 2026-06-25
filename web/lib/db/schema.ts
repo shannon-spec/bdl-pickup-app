@@ -367,6 +367,47 @@ export const teamCommissioners = pgTable(
   (t) => [primaryKey({ columns: [t.teamId, t.playerId] })],
 );
 
+/* A league's named side (e.g. CPA League's "White") treated as a persistent
+ * team: an optional info override + a managed "regular roster". Keyed by
+ * (leagueId, side) where side is "A" / "B". */
+export const leagueTeamMeta = pgTable(
+  "league_team_meta",
+  {
+    leagueId: uuid("league_id")
+      .notNull()
+      .references(() => leagues.id, { onDelete: "cascade" }),
+    side: text("side").notNull(),
+    name: text("name"),
+    avatarKind: text("avatar_kind"),
+    avatarColor: text("avatar_color"),
+    avatarEmoji: text("avatar_emoji"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [primaryKey({ columns: [t.leagueId, t.side] })],
+);
+
+export const leagueTeamPlayers = pgTable(
+  "league_team_players",
+  {
+    leagueId: uuid("league_id")
+      .notNull()
+      .references(() => leagues.id, { onDelete: "cascade" }),
+    side: text("side").notNull(),
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    addedAt: timestamp("added_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.leagueId, t.side, t.playerId] }),
+    index("ltp_player_idx").on(t.playerId),
+  ],
+);
+
 /* ============== GAMES ============== */
 
 export const games = pgTable(

@@ -7,9 +7,10 @@ import {
   teamCommissioners,
   players,
   games,
-  gameRoster,
   leagues,
   leaguePlayers,
+  leagueTeamMeta,
+  leagueTeamPlayers,
 } from "@/lib/db";
 import type { Session } from "@/lib/auth/session";
 
@@ -243,19 +244,37 @@ export async function getMyLeagueTeams(
     .where(and(isNull(leagues.hiddenAt), eq(leaguePlayers.playerId, s.playerId)))
     .orderBy(asc(leagues.name));
 
+  if (rows.length === 0) return [];
+  const metas = await db
+    .select()
+    .from(leagueTeamMeta)
+    .where(
+      inArray(
+        leagueTeamMeta.leagueId,
+        rows.map((r) => r.id),
+      ),
+    );
+  const metaByKey = new Map(metas.map((m) => [`${m.leagueId}:${m.side}`, m]));
+
   const out: LeagueTeamRef[] = [];
   for (const r of rows) {
     const sides: [string, string][] = [
       ["A", (r.teamAName ?? "").trim() || "White"],
       ["B", (r.teamBName ?? "").trim() || "Dark"],
     ];
-    for (const [side, name] of sides) {
+    for (const [side, defaultName] of sides) {
+      const meta = metaByKey.get(`${r.id}:${side}`);
       out.push({
         id: `lg:${r.id}:${side}`,
-        name,
-        avatarKind: r.avatarKind,
-        avatarColor: r.avatarColor,
-        avatarEmoji: r.avatarEmoji,
+        name: (meta?.name ?? "").trim() || defaultName,
+        avatarKind: meta?.avatarKind ?? r.avatarKind,
+        avatarColor: meta?.avatarColor ?? r.avatarColor,
+        avatarEmoji:
+          meta?.avatarKind === "emoji"
+            ? meta.avatarEmoji
+            : meta?.avatarKind
+              ? null
+              : r.avatarEmoji,
         href: `/teams/league/${r.id}/${side}`,
         leagueName: r.name,
       });
@@ -265,19 +284,19 @@ export async function getMyLeagueTeams(
 }
 
 export type LeagueSideView = {
-  league: {
-    id: string;
-    name: string;
-    format: string;
-    avatarKind: string;
-    avatarColor: string;
-    avatarEmoji: string | null;
-  };
+  league: { id: string; name: string; format: string };
   side: "A" | "B";
   sideName: string;
   sideKey: string;
+  /** Effective avatar (side override falling back to the league's). */
+  avatarKind: string;
+  avatarColor: string;
+  avatarEmoji: string | null;
   games: TeamGameRow[];
+  /** Managed regular roster — players always on this side. */
   roster: { id: string; firstName: string; lastName: string; position: string | null }[];
+  /** League members not on the regular roster (for the add picker). */
+  eligible: { id: string; firstName: string; lastName: string }[];
 };
 
 /**
@@ -306,9 +325,27 @@ export async function getLeagueSideView(
     .limit(1);
   if (!lg || lg.hiddenAt) return null;
 
-  const aName = (lg.teamAName ?? "").trim() || "White";
-  const bName = (lg.teamBName ?? "").trim() || "Dark";
+  // Per-side display overrides (name + avatar).
+  const metas = await db
+    .select()
+    .from(leagueTeamMeta)
+    .where(eq(leagueTeamMeta.leagueId, leagueId));
+  const metaA = metas.find((m) => m.side === "A");
+  const metaB = metas.find((m) => m.side === "B");
+  const aName =
+    (metaA?.name ?? "").trim() || (lg.teamAName ?? "").trim() || "White";
+  const bName =
+    (metaB?.name ?? "").trim() || (lg.teamBName ?? "").trim() || "Dark";
   const sideName = side === "A" ? aName : bName;
+  const sideMeta = side === "A" ? metaA : metaB;
+  const avatarKind = sideMeta?.avatarKind ?? lg.avatarKind;
+  const avatarColor = sideMeta?.avatarColor ?? lg.avatarColor;
+  const avatarEmoji =
+    sideMeta?.avatarKind === "emoji"
+      ? sideMeta.avatarEmoji
+      : sideMeta?.avatarKind
+        ? null
+        : lg.avatarEmoji;
   const sideKey = `lg:${leagueId}:${side}`;
 
   const gRows = await db
@@ -351,33 +388,49 @@ export async function getLeagueSideView(
     winTeam: g.winTeam,
   }));
 
+  // Managed regular roster for this side.
   const roster = await db
-    .selectDistinct({
+    .select({
       id: players.id,
       firstName: players.firstName,
       lastName: players.lastName,
       position: players.position,
     })
-    .from(players)
-    .innerJoin(gameRoster, eq(gameRoster.playerId, players.id))
-    .innerJoin(games, eq(games.id, gameRoster.gameId))
-    .where(and(eq(games.leagueId, leagueId), eq(gameRoster.side, side)))
+    .from(leagueTeamPlayers)
+    .innerJoin(players, eq(players.id, leagueTeamPlayers.playerId))
+    .where(
+      and(
+        eq(leagueTeamPlayers.leagueId, leagueId),
+        eq(leagueTeamPlayers.side, side),
+      ),
+    )
     .orderBy(asc(players.lastName), asc(players.firstName));
 
+  // League members eligible to add (not already on the regular roster).
+  const onRoster = new Set(roster.map((p) => p.id));
+  const members = await db
+    .select({
+      id: players.id,
+      firstName: players.firstName,
+      lastName: players.lastName,
+    })
+    .from(leaguePlayers)
+    .innerJoin(players, eq(players.id, leaguePlayers.playerId))
+    .where(eq(leaguePlayers.leagueId, leagueId))
+    .orderBy(asc(players.lastName), asc(players.firstName));
+  const eligible = members.filter((p) => !onRoster.has(p.id));
+
   return {
-    league: {
-      id: lg.id,
-      name: lg.name,
-      format: lg.format,
-      avatarKind: lg.avatarKind,
-      avatarColor: lg.avatarColor,
-      avatarEmoji: lg.avatarEmoji,
-    },
+    league: { id: lg.id, name: lg.name, format: lg.format },
     side,
     sideName,
     sideKey,
+    avatarKind,
+    avatarColor,
+    avatarEmoji,
     games: teamGames,
     roster,
+    eligible,
   };
 }
 

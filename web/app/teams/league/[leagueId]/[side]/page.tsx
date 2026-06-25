@@ -1,9 +1,13 @@
 import { notFound } from "next/navigation";
+import { readSession } from "@/lib/auth/session";
+import { canManageLeague } from "@/lib/auth/perms";
+import { getViewCaps } from "@/lib/auth/view";
 import { formatLabel } from "@/lib/format";
 import { getLeagueSideView } from "@/lib/queries/teams";
 import { getLeagueSideLeaderboard } from "@/lib/queries/leaderboard";
 import { TeamPageView } from "../../../_view/team-page-view";
 import { computeHeroStats } from "../../../_view/hero-stats";
+import { LeagueSideRosterControls } from "./league-side-client";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +25,10 @@ export default async function LeagueSideTeamPage({
 
   const view = await getLeagueSideView(leagueId, side);
   if (!view) notFound();
+
+  const session = await readSession();
+  const caps = await getViewCaps(session);
+  const canManage = caps.canManage && (await canManageLeague(session, leagueId));
 
   const leaderboard = await getLeagueSideLeaderboard(leagueId, side, {
     year: sp.season ?? null,
@@ -42,25 +50,41 @@ export default async function LeagueSideTeamPage({
       contextTeam={{
         id: view.sideKey,
         name: view.sideName,
-        avatarKind: view.league.avatarKind,
-        avatarColor: view.league.avatarColor,
-        avatarEmoji: view.league.avatarEmoji,
+        avatarKind: view.avatarKind,
+        avatarColor: view.avatarColor,
+        avatarEmoji: view.avatarEmoji,
       }}
       backHref={`/leagues/${leagueId}`}
       kicker={`League team · ${view.league.name} · ${formatLabel(view.league.format)}`}
       name={view.sideName}
-      avatarKind={view.league.avatarKind}
-      avatarColor={view.league.avatarColor}
-      avatarEmoji={view.league.avatarEmoji}
+      avatarKind={view.avatarKind}
+      avatarColor={view.avatarColor}
+      avatarEmoji={view.avatarEmoji}
+      editHref={canManage ? `/teams/league/${leagueId}/${side}/edit` : null}
       hero={hero}
       games={view.games}
       gamesTeamId={view.sideKey}
+      rosterTitle="Regular Roster"
       roster={view.roster}
-      rosterEmptyNote="No players have suited up for this side yet."
+      rosterEmptyNote={
+        canManage
+          ? "No regular players yet — add the players who are always on this side below."
+          : "No regular roster set yet."
+      }
       leaderboard={leaderboard}
       activeTournament="all"
       activeSeason={activeSeason}
       chipHref={chipHref}
+      rosterAdmin={
+        canManage ? (
+          <LeagueSideRosterControls
+            leagueId={leagueId}
+            side={side}
+            members={view.roster}
+            eligible={view.eligible}
+          />
+        ) : undefined
+      }
     />
   );
 }
