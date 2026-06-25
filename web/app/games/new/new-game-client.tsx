@@ -164,7 +164,7 @@ export function NewGameClient({
             onChange={(e) => setGameLength(e.target.value)}
             className={selectCx}
           >
-            <option value="">—</option>
+            <option value="">NA</option>
             {GAME_LENGTHS.map((m) => (
               <option key={m} value={m}>
                 {m} min
