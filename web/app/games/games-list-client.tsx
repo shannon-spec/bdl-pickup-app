@@ -70,6 +70,16 @@ export function GamesListClient({ rows }: { rows: GameListRow[] }) {
                     <TeamLabel side="A" winTeam={g.winTeam} name={g.teamAName} />
                     <span className="text-[color:var(--text-4)] font-medium">vs</span>
                     <TeamLabel side="B" winTeam={g.winTeam} name={g.teamBName} />
+                    {g.hasStats && (
+                      <Link
+                        href={`/games/${g.id}#box-score`}
+                        title="View box score"
+                        aria-label="View box score"
+                        className="pointer-events-auto inline-flex items-center gap-1 h-6 pl-1.5 pr-2 rounded-full bg-[color:var(--brand-soft)] text-[color:var(--brand-ink)] text-[10px] font-bold uppercase tracking-[0.06em] hover:bg-[color:var(--brand)] hover:text-white transition-colors"
+                      >
+                        <BarChart3 size={13} strokeWidth={2.5} /> Stats
+                      </Link>
+                    )}
                     {isHero && <HeroTag name={g.gameWinnerName!} size="sm" />}
                   </div>
                   <div className="font-[family-name:var(--mono)] text-[13px] num pointer-events-none relative z-[1]">
@@ -88,16 +98,6 @@ export function GamesListClient({ rows }: { rows: GameListRow[] }) {
                     )}
                   </div>
                   <div className="flex items-center gap-2 justify-self-end relative z-[1]">
-                    {g.hasStats && (
-                      <Link
-                        href={`/games/${g.id}#box-score`}
-                        title="View box score"
-                        aria-label="View box score"
-                        className="pointer-events-auto inline-flex items-center justify-center w-7 h-7 rounded-full text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-soft)] transition-colors"
-                      >
-                        <BarChart3 size={15} strokeWidth={2.25} />
-                      </Link>
-                    )}
                     <span className="pointer-events-none flex items-center gap-2">
                       {completed ? (
                         g.locked ? (
