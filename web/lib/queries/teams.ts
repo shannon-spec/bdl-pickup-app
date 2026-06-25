@@ -7,6 +7,7 @@ import {
   teamCommissioners,
   players,
   games,
+  gameRoster,
   leagues,
   leaguePlayers,
 } from "@/lib/db";
@@ -244,7 +245,6 @@ export async function getMyLeagueTeams(
 
   const out: LeagueTeamRef[] = [];
   for (const r of rows) {
-    const href = `/leagues/${r.id}`;
     const sides: [string, string][] = [
       ["A", (r.teamAName ?? "").trim() || "White"],
       ["B", (r.teamBName ?? "").trim() || "Dark"],
@@ -256,12 +256,129 @@ export async function getMyLeagueTeams(
         avatarKind: r.avatarKind,
         avatarColor: r.avatarColor,
         avatarEmoji: r.avatarEmoji,
-        href,
+        href: `/teams/league/${r.id}/${side}`,
         leagueName: r.name,
       });
     }
   }
   return out;
+}
+
+export type LeagueSideView = {
+  league: {
+    id: string;
+    name: string;
+    format: string;
+    avatarKind: string;
+    avatarColor: string;
+    avatarEmoji: string | null;
+  };
+  side: "A" | "B";
+  sideName: string;
+  sideKey: string;
+  games: TeamGameRow[];
+  roster: { id: string; firstName: string; lastName: string; position: string | null }[];
+};
+
+/**
+ * A league's named side ("White"/"Dark") presented as a team: its games
+ * (from that side's perspective), the players who've appeared on it, and
+ * league metadata. Returns null if the league is missing or hidden.
+ */
+export async function getLeagueSideView(
+  leagueId: string,
+  side: "A" | "B",
+): Promise<LeagueSideView | null> {
+  const [lg] = await db
+    .select({
+      id: leagues.id,
+      name: leagues.name,
+      format: leagues.format,
+      teamAName: leagues.teamAName,
+      teamBName: leagues.teamBName,
+      avatarKind: leagues.avatarKind,
+      avatarColor: leagues.avatarColor,
+      avatarEmoji: leagues.avatarEmoji,
+      hiddenAt: leagues.hiddenAt,
+    })
+    .from(leagues)
+    .where(eq(leagues.id, leagueId))
+    .limit(1);
+  if (!lg || lg.hiddenAt) return null;
+
+  const aName = (lg.teamAName ?? "").trim() || "White";
+  const bName = (lg.teamBName ?? "").trim() || "Dark";
+  const sideName = side === "A" ? aName : bName;
+  const sideKey = `lg:${leagueId}:${side}`;
+
+  const gRows = await db
+    .select({
+      id: games.id,
+      gameDate: games.gameDate,
+      gameTime: games.gameTime,
+      gameType: games.gameType,
+      tournamentName: games.tournamentName,
+      tournamentRound: games.tournamentRound,
+      venue: games.venue,
+      gameLengthMinutes: games.gameLengthMinutes,
+      scoreA: games.scoreA,
+      scoreB: games.scoreB,
+      winTeam: games.winTeam,
+    })
+    .from(games)
+    .where(eq(games.leagueId, leagueId))
+    .orderBy(desc(games.gameDate), desc(games.gameTime));
+
+  const teamGames: TeamGameRow[] = gRows.map((g) => ({
+    id: g.id,
+    gameDate: g.gameDate,
+    gameTime: g.gameTime,
+    gameType: g.gameType,
+    tournamentName: g.tournamentName,
+    tournamentRound: g.tournamentRound,
+    venue: g.venue,
+    gameLengthMinutes: g.gameLengthMinutes,
+    teamAId: side === "A" ? sideKey : null,
+    teamBId: side === "B" ? sideKey : null,
+    teamAName: aName,
+    teamBName: bName,
+    teamACity: null,
+    teamAState: null,
+    teamBCity: null,
+    teamBState: null,
+    scoreA: g.scoreA,
+    scoreB: g.scoreB,
+    winTeam: g.winTeam,
+  }));
+
+  const roster = await db
+    .selectDistinct({
+      id: players.id,
+      firstName: players.firstName,
+      lastName: players.lastName,
+      position: players.position,
+    })
+    .from(players)
+    .innerJoin(gameRoster, eq(gameRoster.playerId, players.id))
+    .innerJoin(games, eq(games.id, gameRoster.gameId))
+    .where(and(eq(games.leagueId, leagueId), eq(gameRoster.side, side)))
+    .orderBy(asc(players.lastName), asc(players.firstName));
+
+  return {
+    league: {
+      id: lg.id,
+      name: lg.name,
+      format: lg.format,
+      avatarKind: lg.avatarKind,
+      avatarColor: lg.avatarColor,
+      avatarEmoji: lg.avatarEmoji,
+    },
+    side,
+    sideName,
+    sideKey,
+    games: teamGames,
+    roster,
+  };
 }
 
 export async function getMyTeamsForSwitcher(

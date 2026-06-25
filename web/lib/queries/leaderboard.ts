@@ -189,6 +189,125 @@ export async function getTeamLeaderboard(
   };
 }
 
+/**
+ * Cumulative per-player stats for ONE side of a league's intra-squad games
+ * (e.g. CPA League's "White"). Mirrors getTeamLeaderboard, but the "team"
+ * is a fixed roster side (A/B) within a single league. Optionally filtered
+ * by year.
+ */
+export async function getLeagueSideLeaderboard(
+  leagueId: string,
+  side: "A" | "B",
+  opts: { year?: string | null } = {},
+): Promise<TeamLeaderboardData> {
+  const yearPrefix = opts.year && opts.year !== "all" ? `${opts.year}-` : null;
+
+  const lgGames = await db
+    .select()
+    .from(games)
+    .where(
+      and(
+        eq(games.leagueId, leagueId),
+        yearPrefix
+          ? sql`${games.gameDate}::text LIKE ${yearPrefix + "%"}`
+          : undefined,
+      ),
+    );
+  const completed = lgGames.filter(
+    (g) => (g.scoreA !== null && g.scoreB !== null) || g.winTeam !== null,
+  );
+  const completedById = new Map(completed.map((g) => [g.id, g]));
+  const completedIds = completed.map((g) => g.id);
+
+  const rosterRows = completedIds.length
+    ? await db
+        .select({
+          gameId: gameRoster.gameId,
+          playerId: gameRoster.playerId,
+        })
+        .from(gameRoster)
+        .where(
+          and(
+            inArray(gameRoster.gameId, completedIds),
+            eq(gameRoster.side, side),
+          ),
+        )
+    : [];
+
+  const playerRows = await db
+    .select({
+      id: players.id,
+      firstName: players.firstName,
+      lastName: players.lastName,
+    })
+    .from(players)
+    .orderBy(asc(players.lastName));
+  const playerMap = new Map(playerRows.map((p) => [p.id, p]));
+
+  const stats = new Map<
+    string,
+    { wins: number; losses: number; gamesPlayed: number }
+  >();
+  for (const r of rosterRows) {
+    const g = completedById.get(r.gameId);
+    if (!g) continue;
+    const win =
+      g.winTeam ??
+      (g.scoreA !== null && g.scoreB !== null
+        ? g.scoreA > g.scoreB
+          ? "A"
+          : g.scoreB > g.scoreA
+            ? "B"
+            : "Tie"
+        : null);
+    if (!win) continue;
+    const cur = stats.get(r.playerId) ?? { wins: 0, losses: 0, gamesPlayed: 0 };
+    cur.gamesPlayed++;
+    if (win === "Tie") {
+      // tie: gp only
+    } else if (win === side) {
+      cur.wins++;
+    } else {
+      cur.losses++;
+    }
+    stats.set(r.playerId, cur);
+  }
+
+  const players_: LbPlayer[] = [];
+  for (const [id, s] of stats) {
+    const p = playerMap.get(id);
+    if (!p) continue;
+    const total = s.wins + s.losses;
+    players_.push({
+      id,
+      firstName: p.firstName,
+      lastName: p.lastName,
+      wins: s.wins,
+      losses: s.losses,
+      gamesPlayed: s.gamesPlayed,
+      gameWinnerCount: 0,
+      heroCount: 0,
+      pct: total > 0 ? (s.wins / total) * 100 : 0,
+    });
+  }
+  players_.sort(
+    (a, b) => b.pct - a.pct || b.wins - a.wins || b.gamesPlayed - a.gamesPlayed,
+  );
+
+  const yearOptions = Array.from(
+    new Set(lgGames.map((g) => g.gameDate?.slice(0, 4)).filter(Boolean) as string[]),
+  )
+    .sort()
+    .reverse();
+
+  return {
+    players: players_,
+    totalGames: completed.length,
+    tournamentOptions: [],
+    yearOptions,
+  };
+}
+
 export async function getLeaderboard(opts: {
   leagueId?: string | null;
   year?: string | null;
