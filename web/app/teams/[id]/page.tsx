@@ -79,6 +79,10 @@ function TeamGameCard({ g, teamId }: { g: TeamGameRow; teamId: string }) {
       : (decided === "A") === isA
         ? "Won"
         : "Lost";
+  const ppm =
+    myScore !== null && g.gameLengthMinutes && g.gameLengthMinutes > 0
+      ? (myScore / g.gameLengthMinutes).toFixed(2)
+      : null;
 
   return (
     <a
@@ -109,14 +113,19 @@ function TeamGameCard({ g, teamId }: { g: TeamGameRow; teamId: string }) {
       <div className="flex items-center gap-3 flex-shrink-0">
         {completed ? (
           <>
-            <span className="font-[family-name:var(--mono)] num font-extrabold text-[15px]">
+            {ppm && (
+              <span className="font-[family-name:var(--mono)] num text-[11px] text-[color:var(--text-3)] whitespace-nowrap">
+                {ppm} PPM
+              </span>
+            )}
+            <span className="font-[family-name:var(--mono)] num font-extrabold text-[18px]">
               {myScore}–{oppScore}
             </span>
             {result === "Won" &&
               g.gameType === "tournament" &&
               g.tournamentRound === "Championship" && (
                 <Medal
-                  size={17}
+                  size={20}
                   strokeWidth={2.25}
                   className="flex-shrink-0"
                   style={{ color: "#E0A100" }}
@@ -124,7 +133,10 @@ function TeamGameCard({ g, teamId }: { g: TeamGameRow; teamId: string }) {
                 />
               )}
             {result && (
-              <Pill tone={result === "Won" ? "win" : result === "Lost" ? "loss" : "neutral"}>
+              <Pill
+                tone={result === "Won" ? "win" : result === "Lost" ? "loss" : "neutral"}
+                className="text-[13px] px-3 py-1.5"
+              >
                 {result}
               </Pill>
             )}
