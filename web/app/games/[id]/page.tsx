@@ -29,6 +29,7 @@ import {
   DangerZone,
 } from "./game-detail-client";
 import { BoxScoreEditor } from "./box-score-editor";
+import { BoxScore } from "./box-score";
 
 export const dynamic = "force-dynamic";
 
@@ -77,8 +78,9 @@ export default async function GameDetailPage({
   // For the "load previous game's teams" shortcut on the roster editor.
   const previousGame = canEdit ? await getPreviousGameSummary(id) : null;
 
-  // Manual box score (rostered players + any saved stat lines).
-  const statRows = canEdit ? await getGameStats(id) : [];
+  // Box score: saved stat lines (read-only for everyone, editable for
+  // managers) keyed by player, plus the rostered players for the editor.
+  const statRows = await getGameStats(id);
   const statByPlayer = Object.fromEntries(statRows.map((r) => [r.playerId, r]));
   const statPlayers = [
     ...detail.rosterA.map((p) => ({ ...p, side: "A" as const })),
@@ -269,6 +271,13 @@ export default async function GameDetailPage({
           />
         )}
 
+        <BoxScore
+          teamAName={game.teamAName ?? "White"}
+          teamBName={game.teamBName ?? "Dark"}
+          players={statPlayers}
+          stats={statByPlayer}
+        />
+
         {canEdit && <GameMetaEditor detail={detail} />}
 
         {canEdit ? (
@@ -311,7 +320,7 @@ export default async function GameDetailPage({
           <section className="rounded-[16px] bg-[color:var(--surface-2)] p-4">
             <div className="flex items-center gap-2 mb-1">
               <span className="text-[10.5px] font-bold tracking-[0.16em] uppercase text-[color:var(--brand-ink)]">
-                Box Score
+                Edit Box Score
               </span>
             </div>
             <p className="text-[12px] text-[color:var(--text-3)] mb-3">
