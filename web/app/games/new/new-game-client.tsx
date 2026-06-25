@@ -13,10 +13,16 @@ const FORMATS = [
 
 const GAME_LENGTHS = ["20", "24", "30", "32", "36", "40", "44", "48"];
 
+/** Normalize a Postgres `time` value ("05:30:00") to an <input type=time>
+ *  value ("05:30"). Returns "" when unset so the field stays empty. */
+const toInputTime = (t: string | null | undefined) =>
+  t ? t.slice(0, 5) : "";
+const DEFAULT_TIME = "19:00";
+
 export function NewGameClient({
   leagues,
 }: {
-  leagues: { id: string; name: string }[];
+  leagues: { id: string; name: string; startTime: string | null }[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -24,6 +30,12 @@ export function NewGameClient({
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [pending, start] = useTransition();
+
+  // Time defaults to the selected league's configured start time, falling
+  // back to 7 PM when the league has none. Switching leagues updates it.
+  const timeForLeague = (id: string) =>
+    toInputTime(leagues.find((l) => l.id === id)?.startTime) || DEFAULT_TIME;
+  const [time, setTime] = useState(() => timeForLeague(presetLeagueId));
 
   const onSubmit = (formData: FormData) => {
     setError(null);
@@ -54,6 +66,7 @@ export function NewGameClient({
           name="leagueId"
           defaultValue={presetLeagueId}
           required
+          onChange={(e) => setTime(timeForLeague(e.target.value))}
           className={selectCx}
         >
           <option value="" disabled>
@@ -80,7 +93,8 @@ export function NewGameClient({
           <input
             name="gameTime"
             type="time"
-            defaultValue="19:00"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
             className={inputCx}
           />
         </Field>

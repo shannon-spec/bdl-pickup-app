@@ -31,7 +31,11 @@ export default async function NewGamePage() {
   const allLeagues = await getLeaguesWithStats(
     isAdmin ? undefined : { scopeIds: scopedIds! },
   );
-  const leagueOptions = allLeagues.map((l) => ({ id: l.id, name: l.name }));
+  const leagueOptions = allLeagues.map((l) => ({
+    id: l.id,
+    name: l.name,
+    startTime: l.startTime,
+  }));
 
   return (
     <>
