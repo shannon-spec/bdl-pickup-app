@@ -83,7 +83,10 @@ function TeamGameCard({ g, teamId }: { g: TeamGameRow; teamId: string }) {
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-bold text-[14px] truncate">vs {oppName}</span>
           {g.gameType === "tournament" && g.tournamentName && (
-            <Pill tone="brand">{g.tournamentName}</Pill>
+            <Pill tone="brand">
+              {g.tournamentName}
+              {g.tournamentRound ? ` · ${g.tournamentRound}` : ""}
+            </Pill>
           )}
           {g.gameType === "exhibition" && <Pill tone="neutral">Exhibition</Pill>}
         </div>

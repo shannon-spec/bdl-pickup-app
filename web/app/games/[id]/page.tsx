@@ -133,8 +133,11 @@ export default async function GameDetailPage({
             <div>
               <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)]">
                 {game.leagueName ??
-                  game.tournamentName ??
-                  (game.gameType === "exhibition" ? "Exhibition" : "—")}{" "}
+                  (game.tournamentName
+                    ? `${game.tournamentName}${game.tournamentRound ? ` · ${game.tournamentRound}` : ""}`
+                    : game.gameType === "exhibition"
+                      ? "Exhibition"
+                      : "—")}{" "}
                 · {formatLabel(game.format)}
               </div>
               <h1 className="text-[22px] font-extrabold tracking-[-0.03em] mt-0.5">

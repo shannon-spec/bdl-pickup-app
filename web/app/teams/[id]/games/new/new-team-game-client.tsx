@@ -89,13 +89,26 @@ export function NewTeamGameClient({
       </Row>
 
       {type === "tournament" && (
-        <Field label="Tournament name *" error={fieldErrors.tournamentName?.[0]}>
-          <input
-            name="tournamentName"
-            className={inputCx}
-            placeholder="Summer Slam 2026"
-          />
-        </Field>
+        <Row>
+          <Field label="Tournament name *" error={fieldErrors.tournamentName?.[0]}>
+            <input
+              name="tournamentName"
+              className={inputCx}
+              placeholder="Summer Slam 2026"
+            />
+          </Field>
+          <Field label="Round *" error={fieldErrors.tournamentRound?.[0]}>
+            <select name="tournamentRound" defaultValue="" className={selectCx}>
+              <option value="" disabled>
+                Pick a round…
+              </option>
+              <option value="Seeding Game">Seeding Game</option>
+              <option value="Quarterfinals">Quarterfinals</option>
+              <option value="Semifinals">Semifinals</option>
+              <option value="Championship">Championship</option>
+            </select>
+          </Field>
+        </Row>
       )}
 
       <Field label="Venue">

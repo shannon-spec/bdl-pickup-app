@@ -100,6 +100,13 @@ export async function createGame(formData: FormData): Promise<ActionResult<{ id:
   return { ok: true, data: { id: row.id } };
 }
 
+const TOURNAMENT_ROUNDS = [
+  "Seeding Game",
+  "Quarterfinals",
+  "Semifinals",
+  "Championship",
+] as const;
+
 const teamGameSchema = z
   .object({
     teamAId: z.string().uuid("Your team is required."),
@@ -110,6 +117,7 @@ const teamGameSchema = z
     format: z.enum(FORMATS).default("5v5"),
     gameType: z.enum(["exhibition", "tournament"]).default("exhibition"),
     tournamentName: z.string().trim().max(120).optional().or(z.literal("")),
+    tournamentRound: z.enum(TOURNAMENT_ROUNDS).optional().or(z.literal("")),
   })
   .refine((v) => v.teamAId !== v.teamBId, {
     message: "A team can't play itself.",
@@ -118,6 +126,10 @@ const teamGameSchema = z
   .refine(
     (v) => v.gameType !== "tournament" || !!v.tournamentName?.trim(),
     { message: "Tournament name is required.", path: ["tournamentName"] },
+  )
+  .refine(
+    (v) => v.gameType !== "tournament" || !!v.tournamentRound,
+    { message: "Pick a round.", path: ["tournamentRound"] },
   );
 
 /** Schedule a standalone team-vs-team game (Exhibition or Tournament).
@@ -154,6 +166,8 @@ export async function createTeamGame(
       gameType: v.gameType,
       tournamentName:
         v.gameType === "tournament" ? nullable(v.tournamentName) : null,
+      tournamentRound:
+        v.gameType === "tournament" ? v.tournamentRound || null : null,
       gameDate: v.gameDate,
       gameTime: nullable(v.gameTime),
       venue: nullable(v.venue),

@@ -15,6 +15,7 @@ export type TeamGameRow = {
   gameTime: string | null;
   gameType: string;
   tournamentName: string | null;
+  tournamentRound: string | null;
   venue: string | null;
   teamAId: string | null;
   teamBId: string | null;
@@ -34,6 +35,7 @@ export async function getTeamGames(teamId: string): Promise<TeamGameRow[]> {
       gameTime: games.gameTime,
       gameType: games.gameType,
       tournamentName: games.tournamentName,
+      tournamentRound: games.tournamentRound,
       venue: games.venue,
       teamAId: games.teamAId,
       teamBId: games.teamBId,

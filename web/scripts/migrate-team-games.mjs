@@ -26,6 +26,7 @@ await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS team_a_id uuid REFERENCES t
 await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS team_b_id uuid REFERENCES teams(id) ON DELETE SET NULL`;
 await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS game_type game_type NOT NULL DEFAULT 'league'`;
 await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS tournament_name text`;
+await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS tournament_round text`;
 await sql`CREATE INDEX IF NOT EXISTS games_team_a_idx ON games(team_a_id)`;
 await sql`CREATE INDEX IF NOT EXISTS games_team_b_idx ON games(team_b_id)`;
 

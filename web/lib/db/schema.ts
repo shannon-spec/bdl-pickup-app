@@ -381,6 +381,7 @@ export const games = pgTable(
     teamBId: uuid("team_b_id").references(() => teams.id, { onDelete: "set null" }),
     gameType: gameTypeEnum("game_type").notNull().default("league"),
     tournamentName: text("tournament_name"),
+    tournamentRound: text("tournament_round"),
     gameDate: date("game_date"),
     gameTime: time("game_time"),
     venue: text("venue"),
