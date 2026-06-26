@@ -11,7 +11,8 @@ import {
   getMyCommissionerLeagueIds,
 } from "@/lib/auth/perms";
 import { db, leagues } from "@/lib/db";
-import { getLeaguePlayerStats, type StatLine } from "@/lib/queries/player-stats";
+import { getLeaguePlayerStats } from "@/lib/queries/player-stats";
+import { StatsTable } from "./stats-table";
 
 const EXAMPLE_LEAGUE_NAME = "CPA League";
 
@@ -89,98 +90,6 @@ export default async function StatsPage({
       </PageFrame>
       <MobileBottomBar active="home" />
     </>
-  );
-}
-
-const COLS: { key: keyof StatLine; label: string; pct?: boolean }[] = [
-  { key: "gp", label: "GP" },
-  { key: "ppg", label: "PPG" },
-  { key: "rpg", label: "RPG" },
-  { key: "apg", label: "APG" },
-  { key: "spg", label: "SPG" },
-  { key: "bpg", label: "BPG" },
-  { key: "fgPct", label: "FG%", pct: true },
-  { key: "tpPct", label: "3P%", pct: true },
-  { key: "ftPct", label: "FT%", pct: true },
-];
-
-function StatsTable({ rows, meId }: { rows: StatLine[]; meId: string | null }) {
-  const fmt = (v: number | null, pct?: boolean) => {
-    if (v === null) return "—";
-    if (pct) return `${Math.round(v)}%`;
-    return Number.isInteger(v) ? String(v) : v.toFixed(1);
-  };
-  return (
-    <div className="overflow-x-auto rounded-[16px] bg-[color:var(--surface)] shadow-[inset_0_0_0_1px_var(--hairline-2)]">
-      <table className="w-full border-collapse">
-        <thead>
-          <tr className="text-[10px] font-bold tracking-[0.08em] uppercase text-[color:var(--text-3)]">
-            <th className="sticky left-0 z-10 bg-[color:var(--surface)] text-left px-4 py-2.5 min-w-[170px]">
-              Player
-            </th>
-            {COLS.map((c) => (
-              <th key={c.key} className="px-3 py-2.5 text-center">
-                {c.label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((p, i) => {
-            const isMe = p.id === meId;
-            return (
-              <tr
-                key={p.id}
-                className={`shadow-[inset_0_-1px_0_0_var(--hairline)] ${
-                  isMe ? "bg-[color:var(--brand-soft)]" : ""
-                }`}
-              >
-                <td
-                  className={`sticky left-0 z-10 px-4 py-2 min-w-[170px] ${
-                    isMe ? "bg-[color:var(--brand-soft)]" : "bg-[color:var(--surface)]"
-                  }`}
-                >
-                  <Link
-                    href={`/players/${p.id}`}
-                    className="flex items-center gap-2 hover:text-[color:var(--brand)]"
-                  >
-                    <span className="text-[color:var(--text-4)] font-[family-name:var(--mono)] text-[11px] num w-5 text-right shrink-0">
-                      {i + 1}
-                    </span>
-                    <span className="flex flex-col leading-tight min-w-0">
-                      <span className="font-semibold text-[13.5px] truncate">
-                        {p.firstName} {p.lastName}
-                      </span>
-                      {p.team && (
-                        <span className="text-[10.5px] uppercase tracking-[0.06em] text-[color:var(--text-4)] truncate">
-                          {p.team}
-                        </span>
-                      )}
-                    </span>
-                  </Link>
-                </td>
-                {COLS.map((c) => {
-                  const v = p[c.key] as number | null;
-                  const headline = c.key === "ppg";
-                  return (
-                    <td
-                      key={c.key}
-                      className={`px-3 py-2 text-center text-[13px] num font-[family-name:var(--mono)] ${
-                        headline
-                          ? "font-extrabold text-[color:var(--brand-ink)]"
-                          : "text-[color:var(--text-2)]"
-                      }`}
-                    >
-                      {fmt(v, c.pct)}
-                    </td>
-                  );
-                })}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
   );
 }
 
