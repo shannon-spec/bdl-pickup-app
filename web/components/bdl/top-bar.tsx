@@ -28,6 +28,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Commissioners", href: "/admin/commissioners", views: ["admin"] },
   { label: "Discover", href: "/discover", views: ["player", "commissioner", "admin"] },
   { label: "Leaderboard", href: "/leaderboard", views: ["player", "commissioner", "admin"] },
+  { label: "Stats", href: "/stats", views: ["player", "commissioner", "admin"] },
   { label: "Activity", href: "/activity", views: ["player", "commissioner", "admin"] },
 ];
 
