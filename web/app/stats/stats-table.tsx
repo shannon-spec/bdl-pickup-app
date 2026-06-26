@@ -36,6 +36,36 @@ export function StatsTable({
   const [sortKey, setSortKey] = useState<SortKey>("power");
   const [dir, setDir] = useState<"asc" | "desc">("desc");
 
+  // Category leaders → award badges by the player's name.
+  const maxOf = (sel: (r: StatLine) => number | null) => {
+    let m = -Infinity;
+    for (const r of rows) {
+      const v = sel(r);
+      if (v !== null && v > m) m = v;
+    }
+    return m;
+  };
+  const leaders = {
+    ppg: maxOf((r) => r.ppg),
+    rpg: maxOf((r) => r.rpg),
+    apg: maxOf((r) => r.apg),
+    spg: maxOf((r) => r.spg),
+    tp: maxOf((r) => r.tpPct),
+  };
+  const eq = (a: number, b: number) => Math.abs(a - b) < 1e-9;
+  const awardsFor = (p: StatLine): { label: string; title: string; td?: boolean }[] => {
+    const a: { label: string; title: string; td?: boolean }[] = [];
+    if (p.ppg > 0 && eq(p.ppg, leaders.ppg)) a.push({ label: "PTS", title: "Leading scorer" });
+    if (p.rpg > 0 && eq(p.rpg, leaders.rpg)) a.push({ label: "REB", title: "Leading rebounder" });
+    if (p.apg > 0 && eq(p.apg, leaders.apg)) a.push({ label: "AST", title: "Leading assists" });
+    if (p.spg > 0 && eq(p.spg, leaders.spg)) a.push({ label: "STL", title: "Leading steals" });
+    if (p.tpPct !== null && leaders.tp > -Infinity && eq(p.tpPct, leaders.tp))
+      a.push({ label: "3PT", title: "Leading 3PT %" });
+    if (p.ppg >= 10 && p.rpg >= 10 && p.apg >= 10)
+      a.push({ label: "TD", title: "Triple-double average", td: true });
+    return a;
+  };
+
   const onSort = (key: SortKey) => {
     if (key === sortKey) {
       setDir((d) => (d === "desc" ? "asc" : "desc"));
@@ -123,8 +153,27 @@ export function StatsTable({
                       {i + 1}
                     </span>
                     <span className="flex flex-col leading-tight min-w-0">
-                      <span className="font-semibold text-[13.5px] truncate">
-                        {p.firstName} {p.lastName}
+                      <span className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-semibold text-[13.5px]">
+                          {p.firstName} {p.lastName}
+                        </span>
+                        {awardsFor(p).map((aw) => (
+                          <span
+                            key={aw.label}
+                            title={aw.title}
+                            className="inline-flex items-center h-[15px] px-1.5 rounded-full text-[8.5px] font-bold uppercase tracking-[0.04em]"
+                            style={
+                              aw.td
+                                ? { background: "var(--brand-soft)", color: "var(--brand-ink)" }
+                                : {
+                                    background: "linear-gradient(180deg,#FCEFC7,#F2D480)",
+                                    color: "#7A5C12",
+                                  }
+                            }
+                          >
+                            {aw.label}
+                          </span>
+                        ))}
                       </span>
                       {p.team && (
                         <span className="text-[10.5px] uppercase tracking-[0.06em] text-[color:var(--text-4)] truncate">
