@@ -24,6 +24,8 @@ export function LeagueSwitcher({
   activeLeagueId,
   view,
   teams = [],
+  tournaments = [],
+  communities = [],
   activeTeam = null,
 }: {
   leagues: SessionLeague[];
@@ -31,6 +33,8 @@ export function LeagueSwitcher({
   view: View;
   /** Teams the viewer is part of (member or commissioner). */
   teams?: SwitcherTeam[];
+  tournaments?: SwitcherTeam[];
+  communities?: SwitcherTeam[];
   /** When viewing a team page, the team to surface as the active context. */
   activeTeam?: SwitcherTeam | null;
 }) {
@@ -254,6 +258,13 @@ export function LeagueSwitcher({
             </div>
           )}
 
+          {tournaments.length > 0 && (
+            <ContextGroup label="Tournaments" items={tournaments} onPick={() => setOpen(false)} />
+          )}
+          {communities.length > 0 && (
+            <ContextGroup label="Communities" items={communities} onPick={() => setOpen(false)} />
+          )}
+
           <div className="shadow-[inset_0_1px_0_0_var(--hairline)]">
             <Link
               href={
@@ -291,3 +302,39 @@ export function LeagueSwitcher({
   );
 }
 
+
+/** A labeled group of contexts (Tournaments / Communities) in the dropdown. */
+function ContextGroup({
+  label,
+  items,
+  onPick,
+}: {
+  label: string;
+  items: SwitcherTeam[];
+  onPick: () => void;
+}) {
+  return (
+    <div className="shadow-[inset_0_1px_0_0_var(--hairline)]">
+      <div className="px-4 pt-2.5 pb-1 text-[10px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-4)]">
+        {label}
+      </div>
+      {items.map((t) => (
+        <Link
+          key={t.id}
+          href={t.href ?? "#"}
+          onClick={onPick}
+          className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[color:var(--surface-2)] transition-colors"
+        >
+          <LeagueAvatar
+            kind={t.avatarKind}
+            color={t.avatarColor}
+            emoji={t.avatarEmoji}
+            abbr={(t.name[0] ?? "?").toUpperCase()}
+            size={28}
+          />
+          <span className="flex-1 min-w-0 font-bold text-[14px] truncate">{t.name}</span>
+        </Link>
+      ))}
+    </div>
+  );
+}

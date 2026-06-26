@@ -2,6 +2,7 @@ import { readSession } from "@/lib/auth/session";
 import { getViewCaps } from "@/lib/auth/view";
 import { getSessionContext } from "@/lib/queries/session-context";
 import { getMyTeamsForSwitcher } from "@/lib/queries/teams";
+import { getMyContexts } from "@/lib/queries/contexts";
 import { ContextHeaderClient } from "./context-header-client";
 import type { SwitcherTeam } from "./league-switcher";
 
@@ -23,7 +24,21 @@ export async function ContextHeader({
   if (!ctx) return null;
   const session = await readSession();
   const caps = await getViewCaps(session);
-  const teams = await getMyTeamsForSwitcher(session);
+  const [teams, allContexts] = await Promise.all([
+    getMyTeamsForSwitcher(session),
+    getMyContexts(session),
+  ]);
+  const toSwitcher = (type: "TOURNAMENT" | "COMMUNITY"): SwitcherTeam[] =>
+    allContexts
+      .filter((c) => c.type === type)
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        avatarKind: c.avatarKind,
+        avatarColor: c.avatarColor,
+        avatarEmoji: c.avatarEmoji,
+        href: c.href,
+      }));
   return (
     <ContextHeaderClient
       ctx={ctx}
@@ -31,6 +46,8 @@ export async function ContextHeader({
       options={caps.options}
       canManage={caps.canManage}
       teams={teams}
+      tournaments={toSwitcher("TOURNAMENT")}
+      communities={toSwitcher("COMMUNITY")}
       activeTeam={activeTeam}
     />
   );

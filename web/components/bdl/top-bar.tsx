@@ -23,7 +23,7 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "My League", href: "/", views: ["player", "commissioner"], signedInOnly: true },
+  { label: "My League", href: "/home", views: ["player", "commissioner"], signedInOnly: true },
   { label: "Leagues", href: "/leagues", views: ["commissioner", "admin"] },
   { label: "Games", href: "/games", views: ["player", "commissioner", "admin"] },
   { label: "Players", href: "/players", views: ["player", "commissioner", "admin"] },
@@ -59,7 +59,7 @@ export async function TopBar({
       href: myTeams[0].href ?? `/teams/${myTeams[0].id}`,
       views: [view],
     };
-    const afterLeague = nav.findIndex((n) => n.href === "/");
+    const afterLeague = nav.findIndex((n) => n.href === "/home");
     if (afterLeague >= 0) nav.splice(afterLeague + 1, 0, myTeamItem);
     else nav.unshift(myTeamItem);
   }
@@ -112,7 +112,7 @@ export async function TopBar({
           "gap-4",
         )}
       >
-        <Link href="/" aria-label="BDL home" className="min-w-0">
+        <Link href="/home" aria-label="BDL home" className="min-w-0">
           <Brand />
         </Link>
 

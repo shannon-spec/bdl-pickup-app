@@ -64,6 +64,30 @@ export const gameTypeEnum = pgEnum("game_type", [
   "tournament",
 ]);
 
+// Multi-context model: a Context is a League/Tournament/Team/Community, and a
+// Membership ties a player to one with a contextual role. Roles live on the
+// membership, never on the user.
+export const contextTypeEnum = pgEnum("context_type", [
+  "LEAGUE",
+  "TOURNAMENT",
+  "TEAM",
+  "COMMUNITY",
+]);
+export const membershipRoleEnum = pgEnum("membership_role", [
+  "PLAYER",
+  "CAPTAIN",
+  "COACH",
+  "COMMISSIONER",
+  "DIRECTOR",
+  "MEMBER",
+  "FAN",
+]);
+export const membershipStatusEnum = pgEnum("membership_status", [
+  "active",
+  "invited",
+  "inactive",
+]);
+
 export const adminRoleEnum = pgEnum("admin_role", ["owner", "super_admin"]);
 
 export const inviteStatusEnum = pgEnum("invite_status", [
@@ -113,8 +137,11 @@ export const players = pgTable(
     /** Deterministic HMAC of the lowercased email — used for unique
      *  login lookup since the encrypted email column has random IVs. */
     emailHash: text("email_hash"),
-    /** Encrypted (see email). */
+    /** Encrypted (see email). Also the phone used for OTP sign-in. */
     cell: text("cell"),
+    /** Deterministic HMAC of the normalized phone digits — used for OTP
+     *  login lookup since `cell` is encrypted with random IVs. */
+    phoneHash: text("phone_hash"),
     address: text("address"),
     city: text("city"),
     state: varchar("state", { length: 2 }),
@@ -191,6 +218,7 @@ export const players = pgTable(
       .on(t.emailHash)
       .where(sql`email_hash IS NOT NULL`),
     uniqueIndex("players_username_idx").on(t.username),
+    index("players_phone_hash_idx").on(t.phoneHash),
   ],
 );
 
@@ -366,6 +394,139 @@ export const teamCommissioners = pgTable(
   },
   (t) => [primaryKey({ columns: [t.teamId, t.playerId] })],
 );
+
+/* ============== CONTEXTS: COMMUNITIES / TOURNAMENTS / VENUES ============== */
+
+/* COMMUNITY = a frat/campus/gym/club org that can own leagues & tournaments. */
+export const communities = pgTable(
+  "communities",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    slug: text("slug"),
+    kind: text("kind"), // frat | campus | gym | club | other
+    description: text("description"),
+    avatarKind: text("avatar_kind").notNull().default("monogram"),
+    avatarColor: text("avatar_color").notNull().default("brand"),
+    avatarEmoji: text("avatar_emoji"),
+    createdBy: uuid("created_by").references(() => players.id, {
+      onDelete: "set null",
+    }),
+    hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [uniqueIndex("communities_slug_uq").on(t.slug).where(sql`slug IS NOT NULL`)],
+);
+
+export const communityMembers = pgTable(
+  "community_members",
+  {
+    communityId: uuid("community_id")
+      .notNull()
+      .references(() => communities.id, { onDelete: "cascade" }),
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    role: membershipRoleEnum("role").notNull().default("MEMBER"),
+    status: membershipStatusEnum("status").notNull().default("active"),
+    addedAt: timestamp("added_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.communityId, t.playerId] }),
+    index("cm_player_idx").on(t.playerId),
+  ],
+);
+
+export const tournaments = pgTable(
+  "tournaments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    slug: text("slug"),
+    communityId: uuid("community_id").references(() => communities.id, {
+      onDelete: "set null",
+    }),
+    format: gameFormatEnum("format").notNull().default("5v5"),
+    startDate: date("start_date"),
+    description: text("description"),
+    avatarKind: text("avatar_kind").notNull().default("monogram"),
+    avatarColor: text("avatar_color").notNull().default("brand"),
+    avatarEmoji: text("avatar_emoji"),
+    createdBy: uuid("created_by").references(() => players.id, {
+      onDelete: "set null",
+    }),
+    hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [uniqueIndex("tournaments_slug_uq").on(t.slug).where(sql`slug IS NOT NULL`)],
+);
+
+export const tournamentMembers = pgTable(
+  "tournament_members",
+  {
+    tournamentId: uuid("tournament_id")
+      .notNull()
+      .references(() => tournaments.id, { onDelete: "cascade" }),
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    role: membershipRoleEnum("role").notNull().default("PLAYER"),
+    status: membershipStatusEnum("status").notNull().default("active"),
+    addedAt: timestamp("added_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.tournamentId, t.playerId] }),
+    index("tm_player_idx").on(t.playerId),
+  ],
+);
+
+/* Physical court/venue with geo — powers "meet here to play" + Discover. */
+export const venues = pgTable("venues", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  address: text("address"),
+  lat: doublePrecision("lat"),
+  lng: doublePrecision("lng"),
+  createdBy: uuid("created_by").references(() => players.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+/* Short-lived phone OTP codes for passwordless sign-in. */
+export const authOtp = pgTable(
+  "auth_otp",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    phoneHash: text("phone_hash").notNull(),
+    codeHash: text("code_hash").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    requestIp: text("request_ip"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("auth_otp_phone_idx").on(t.phoneHash),
+    index("auth_otp_created_idx").on(t.createdAt),
+  ],
+);
+
+export type Community = typeof communities.$inferSelect;
+export type Tournament = typeof tournaments.$inferSelect;
+export type Venue = typeof venues.$inferSelect;
 
 /* A league's named side (e.g. CPA League's "White") treated as a persistent
  * team: an optional info override + a managed "regular roster". Keyed by

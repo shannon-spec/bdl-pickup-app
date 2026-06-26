@@ -37,7 +37,7 @@ export async function MobileBottomBar({
       }}
     >
       <div className="grid grid-cols-5 items-center h-[56px]">
-        <NavItem href="/" icon={<Home size={20} />} label="Home" active={active === "home"} />
+        <NavItem href="/home" icon={<Home size={20} />} label="Home" active={active === "home"} />
         <NavItem href="/leaderboard" icon={<Trophy size={20} />} label="Leaders" active={active === "leaderboard"} />
         <div className="flex justify-center">
           <button
