@@ -74,7 +74,10 @@ export function BoxScoreEditor({
 
   const setCell = (pid: string, key: StatKey, value: string) => {
     setSaved(false);
-    setRows((prev) => ({ ...prev, [pid]: { ...prev[pid], [key]: value } }));
+    setRows((prev) => ({
+      ...prev,
+      [pid]: { ...(prev[pid] ?? emptyRow()), [key]: value },
+    }));
   };
 
   // --- Import from image(s) ---
@@ -172,7 +175,7 @@ export function BoxScoreEditor({
     setError(null);
     const payload: StatRowInput[] = players.map((p) => ({
       playerId: p.id,
-      ...rows[p.id],
+      ...(rows[p.id] ?? emptyRow()),
     }));
     start(async () => {
       const res = await saveGameStats(gameId, payload);
@@ -262,36 +265,39 @@ export function BoxScoreEditor({
             </tr>
           </thead>
           <tbody>
-            {players.map((p) => (
-              <tr
-                key={p.id}
-                className="shadow-[inset_0_1px_0_0_var(--hairline)]"
-              >
-                <td className="sticky left-0 z-10 bg-[color:var(--surface)] px-3 py-1.5 min-w-[150px]">
-                  <div className="flex flex-col leading-tight">
-                    <span className="font-semibold text-[13.5px] truncate">
-                      {p.firstName} {p.lastName}
-                    </span>
-                    <span className="text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-4)] truncate">
-                      {sideName(p.side)}
-                    </span>
-                  </div>
-                </td>
-                {COLUMNS.map((c) => (
-                  <td key={c.key} className="px-1 py-1.5 text-center">
-                    <input
-                      type="number"
-                      min={0}
-                      inputMode="numeric"
-                      value={rows[p.id][c.key]}
-                      onChange={(e) => setCell(p.id, c.key, e.target.value)}
-                      className={cellInput}
-                      aria-label={`${p.firstName} ${p.lastName} ${c.label}`}
-                    />
+            {players.map((p) => {
+              const row = rows[p.id] ?? emptyRow();
+              return (
+                <tr
+                  key={p.id}
+                  className="shadow-[inset_0_1px_0_0_var(--hairline)]"
+                >
+                  <td className="sticky left-0 z-10 bg-[color:var(--surface)] px-3 py-1.5 min-w-[150px]">
+                    <div className="flex flex-col leading-tight">
+                      <span className="font-semibold text-[13.5px] truncate">
+                        {p.firstName} {p.lastName}
+                      </span>
+                      <span className="text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-4)] truncate">
+                        {sideName(p.side)}
+                      </span>
+                    </div>
                   </td>
-                ))}
-              </tr>
-            ))}
+                  {COLUMNS.map((c) => (
+                    <td key={c.key} className="px-1 py-1.5 text-center">
+                      <input
+                        type="number"
+                        min={0}
+                        inputMode="numeric"
+                        value={row[c.key]}
+                        onChange={(e) => setCell(p.id, c.key, e.target.value)}
+                        className={cellInput}
+                        aria-label={`${p.firstName} ${p.lastName} ${c.label}`}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
