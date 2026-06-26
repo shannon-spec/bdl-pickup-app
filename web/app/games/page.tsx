@@ -92,7 +92,9 @@ export default async function GamesPage({
             (a.gameDate ?? "").localeCompare(b.gameDate ?? "") ||
             (a.gameTime ?? "").localeCompare(b.gameTime ?? ""),
           )[0] ?? null;
-  const baseListRows = heroGame ? rows.filter((g) => g.id !== heroGame.id) : rows;
+  // Keep the next-up game in the list too — it's also shown as the hero
+  // card above, but having it in the list is the expected behavior.
+  const baseListRows = rows;
 
   // Years available across the listing (regardless of selected year).
   // Default-active year = the most recent year that has at least one
