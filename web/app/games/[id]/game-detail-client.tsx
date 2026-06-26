@@ -466,6 +466,15 @@ function TeamColumn({
   divider: boolean;
 }) {
   const remaining = Math.max(0, perSide - list.length);
+  // Auto-sort by win % (highest first); unrated players sink to the bottom.
+  const sortedList = [...list].sort((a, b) => {
+    const pa = winPcts[a.id]?.pct ?? null;
+    const pb = winPcts[b.id]?.pct ?? null;
+    if (pa === null && pb === null) return 0;
+    if (pa === null) return 1;
+    if (pb === null) return -1;
+    return pb - pa;
+  });
   return (
     <div
       className="p-4 flex flex-col gap-0.5"
@@ -493,7 +502,7 @@ function TeamColumn({
         </div>
       </div>
 
-      {list.map((p, i) => (
+      {sortedList.map((p, i) => (
         <BuilderRow
           key={p.id}
           gameId={gameId}
