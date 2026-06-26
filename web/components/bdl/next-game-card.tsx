@@ -201,9 +201,7 @@ export function NextGameCard({
             {(ps || spread != null) && (
               <div
                 className={`flex items-center justify-between gap-6 ${
-                  probA != null && probB != null
-                    ? "mt-3 pt-3 shadow-[inset_0_1px_0_0_var(--hairline)]"
-                    : ""
+                  probA != null && probB != null ? "mt-3" : ""
                 }`}
               >
                 {ps && (
