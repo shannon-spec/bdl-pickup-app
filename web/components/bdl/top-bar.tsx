@@ -18,6 +18,8 @@ type NavItem = {
   views: View[];
   /** Hide from guests (no session). Profile-oriented surfaces. */
   signedInOnly?: boolean;
+  /** Small badge after the label, e.g. "beta". */
+  badge?: string;
 };
 
 const NAV_ITEMS: NavItem[] = [
@@ -28,7 +30,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Commissioners", href: "/admin/commissioners", views: ["admin"] },
   { label: "Discover", href: "/discover", views: ["player", "commissioner", "admin"] },
   { label: "Leaderboard", href: "/leaderboard", views: ["player", "commissioner", "admin"] },
-  { label: "Stats", href: "/stats", views: ["player", "commissioner", "admin"] },
+  { label: "Stats", href: "/stats", views: ["player", "commissioner", "admin"], badge: "beta" },
   { label: "Activity", href: "/activity", views: ["player", "commissioner", "admin"] },
 ];
 
@@ -134,7 +136,14 @@ export async function TopBar({
                 )}
                 data-active={isActive || undefined}
               >
-                {item.label}
+                <span className="inline-flex items-center gap-1.5">
+                  {item.label}
+                  {item.badge && (
+                    <span className="inline-flex items-center h-[15px] px-1.5 rounded-full bg-[color:var(--brand-soft)] text-[color:var(--brand-ink)] text-[8.5px] font-bold uppercase tracking-[0.06em]">
+                      {item.badge}
+                    </span>
+                  )}
+                </span>
               </Link>
             );
           })}

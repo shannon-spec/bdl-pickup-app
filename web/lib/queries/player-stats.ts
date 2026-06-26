@@ -1,10 +1,11 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
-import { db, players, leagues, games, gameStats } from "@/lib/db";
+import { db, players, leagues, games, gameStats, gameRoster } from "@/lib/db";
 
 export type StatLine = {
   id: string;
   firstName: string;
   lastName: string;
+  team: string | null;
   gp: number;
   pts: number;
   reb: number;
@@ -104,6 +105,9 @@ export async function getLeaguePlayerStats(opts: {
       playerId: gameStats.playerId,
       firstName: players.firstName,
       lastName: players.lastName,
+      teamAName: games.teamAName,
+      teamBName: games.teamBName,
+      side: gameRoster.side,
       minutes: gameStats.minutes,
       points: gameStats.points,
       rebounds: gameStats.rebounds,
@@ -123,10 +127,21 @@ export async function getLeaguePlayerStats(opts: {
     })
     .from(gameStats)
     .innerJoin(players, eq(players.id, gameStats.playerId))
+    .innerJoin(games, eq(games.id, gameStats.gameId))
+    .leftJoin(
+      gameRoster,
+      and(
+        eq(gameRoster.gameId, gameStats.gameId),
+        eq(gameRoster.playerId, gameStats.playerId),
+      ),
+    )
     .where(inArray(gameStats.gameId, scopeIds));
 
   const gamesWithStats = new Set<string>();
-  const agg = new Map<string, StatLine & { _games: Set<string> }>();
+  const agg = new Map<
+    string,
+    StatLine & { _games: Set<string>; _teams: Map<string, number> }
+  >();
   for (const r of rows) {
     gamesWithStats.add(r.gameId);
     let s = agg.get(r.playerId);
@@ -135,6 +150,7 @@ export async function getLeaguePlayerStats(opts: {
         id: r.playerId,
         firstName: r.firstName,
         lastName: r.lastName,
+        team: null,
         gp: 0,
         pts: 0,
         reb: 0,
@@ -160,10 +176,14 @@ export async function getLeaguePlayerStats(opts: {
         tpPct: null,
         ftPct: null,
         _games: new Set<string>(),
+        _teams: new Map<string, number>(),
       };
       agg.set(r.playerId, s);
     }
     s._games.add(r.gameId);
+    const teamName =
+      r.side === "A" ? r.teamAName : r.side === "B" ? r.teamBName : null;
+    if (teamName) s._teams.set(teamName, (s._teams.get(teamName) ?? 0) + 1);
     s.pts += n(r.points);
     s.reb += n(r.rebounds);
     s.oreb += n(r.oreb);
@@ -186,8 +206,18 @@ export async function getLeaguePlayerStats(opts: {
     const gp = s._games.size;
     const per = (v: number) => (gp > 0 ? v / gp : 0);
     const pctOf = (m: number, a: number) => (a > 0 ? (m / a) * 100 : null);
+    // Most-frequent team across this player's statted games.
+    let team: string | null = null;
+    let best = 0;
+    for (const [name, count] of s._teams) {
+      if (count > best) {
+        best = count;
+        team = name;
+      }
+    }
     out.push({
       ...s,
+      team,
       gp,
       ppg: per(s.pts),
       rpg: per(s.reb),

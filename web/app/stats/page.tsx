@@ -142,12 +142,21 @@ function StatsTable({ rows, meId }: { rows: StatLine[]; meId: string | null }) {
                 >
                   <Link
                     href={`/players/${p.id}`}
-                    className="inline-flex items-center gap-2 font-semibold text-[13.5px] hover:text-[color:var(--brand)]"
+                    className="flex items-center gap-2 hover:text-[color:var(--brand)]"
                   >
-                    <span className="text-[color:var(--text-4)] font-[family-name:var(--mono)] text-[11px] num w-5 text-right">
+                    <span className="text-[color:var(--text-4)] font-[family-name:var(--mono)] text-[11px] num w-5 text-right shrink-0">
                       {i + 1}
                     </span>
-                    {p.firstName} {p.lastName}
+                    <span className="flex flex-col leading-tight min-w-0">
+                      <span className="font-semibold text-[13.5px] truncate">
+                        {p.firstName} {p.lastName}
+                      </span>
+                      {p.team && (
+                        <span className="text-[10.5px] uppercase tracking-[0.06em] text-[color:var(--text-4)] truncate">
+                          {p.team}
+                        </span>
+                      )}
+                    </span>
                   </Link>
                 </td>
                 {COLS.map((c) => {
