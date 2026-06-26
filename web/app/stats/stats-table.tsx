@@ -162,7 +162,7 @@ export function StatsTable({
                             key={aw.title}
                             title={aw.title}
                             aria-label={aw.title}
-                            className="text-[14px] leading-none"
+                            className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[color:var(--surface-2)] text-[11px] leading-none shadow-[inset_0_0_0_1px_var(--hairline-2)]"
                           >
                             {aw.emoji}
                           </span>
