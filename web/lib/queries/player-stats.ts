@@ -30,6 +30,8 @@ export type StatLine = {
   fgPct: number | null;
   tpPct: number | null;
   ftPct: number | null;
+  /** BDL Power Score — production × efficiency × winning × sample. */
+  power: number;
 };
 
 export type LeaguePlayerStatsData = {
@@ -108,6 +110,9 @@ export async function getLeaguePlayerStats(opts: {
       teamAName: games.teamAName,
       teamBName: games.teamBName,
       side: gameRoster.side,
+      scoreA: games.scoreA,
+      scoreB: games.scoreB,
+      winTeam: games.winTeam,
       minutes: gameStats.minutes,
       points: gameStats.points,
       rebounds: gameStats.rebounds,
@@ -140,7 +145,12 @@ export async function getLeaguePlayerStats(opts: {
   const gamesWithStats = new Set<string>();
   const agg = new Map<
     string,
-    StatLine & { _games: Set<string>; _teams: Map<string, number> }
+    StatLine & {
+      _games: Set<string>;
+      _teams: Map<string, number>;
+      _w: number;
+      _l: number;
+    }
   >();
   for (const r of rows) {
     gamesWithStats.add(r.gameId);
@@ -175,8 +185,11 @@ export async function getLeaguePlayerStats(opts: {
         fgPct: null,
         tpPct: null,
         ftPct: null,
+        power: 0,
         _games: new Set<string>(),
         _teams: new Map<string, number>(),
+        _w: 0,
+        _l: 0,
       };
       agg.set(r.playerId, s);
     }
@@ -184,6 +197,22 @@ export async function getLeaguePlayerStats(opts: {
     const teamName =
       r.side === "A" ? r.teamAName : r.side === "B" ? r.teamBName : null;
     if (teamName) s._teams.set(teamName, (s._teams.get(teamName) ?? 0) + 1);
+    // Win/loss attribution for this player's side in this game.
+    if (r.side === "A" || r.side === "B") {
+      const decided =
+        r.winTeam ??
+        (r.scoreA !== null && r.scoreB !== null
+          ? r.scoreA > r.scoreB
+            ? "A"
+            : r.scoreB > r.scoreA
+              ? "B"
+              : "Tie"
+          : null);
+      if (decided === "A" || decided === "B") {
+        if (decided === r.side) s._w++;
+        else s._l++;
+      }
+    }
     s.pts += n(r.points);
     s.reb += n(r.rebounds);
     s.oreb += n(r.oreb);
@@ -215,6 +244,24 @@ export async function getLeaguePlayerStats(opts: {
         team = name;
       }
     }
+    // BDL Power Score: production × efficiency × winning × sample.
+    const tovpg = per(s.tov);
+    const base =
+      per(s.pts) +
+      1.2 * per(s.reb) +
+      1.5 * per(s.ast) +
+      2.5 * per(s.stl) +
+      2.5 * per(s.blk) -
+      1.0 * tovpg;
+    const tsDenom = s.fga + 0.44 * s.fta;
+    const ts = tsDenom > 0 ? s.pts / (2 * tsDenom) : null;
+    const eff = ts !== null ? 0.6 + 0.8 * ts : 1.0;
+    const decided = s._w + s._l;
+    const winPct = decided > 0 ? s._w / decided : null;
+    const win = winPct !== null ? 0.8 + 0.4 * winPct : 1.0;
+    const conf = gp > 0 ? gp / (gp + 2) : 0;
+    const power = Math.round(base * eff * win * conf * 2 * 10) / 10;
+
     out.push({
       ...s,
       team,
@@ -227,9 +274,10 @@ export async function getLeaguePlayerStats(opts: {
       fgPct: pctOf(s.fgm, s.fga),
       tpPct: pctOf(s.tpm, s.tpa),
       ftPct: pctOf(s.ftm, s.fta),
+      power,
     });
   }
-  out.sort((a, b) => b.ppg - a.ppg || b.pts - a.pts);
+  out.sort((a, b) => b.power - a.power || b.ppg - a.ppg);
 
   return {
     players: out,

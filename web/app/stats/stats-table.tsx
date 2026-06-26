@@ -17,6 +17,7 @@ const COLS: { key: ColKey; label: string; pct?: boolean }[] = [
   { key: "fgPct", label: "FG%", pct: true },
   { key: "tpPct", label: "3P%", pct: true },
   { key: "ftPct", label: "FT%", pct: true },
+  { key: "power", label: "BDL" },
 ];
 
 const fmt = (v: number | null, pct?: boolean) => {
@@ -32,7 +33,7 @@ export function StatsTable({
   rows: StatLine[];
   meId: string | null;
 }) {
-  const [sortKey, setSortKey] = useState<SortKey>("ppg");
+  const [sortKey, setSortKey] = useState<SortKey>("power");
   const [dir, setDir] = useState<"asc" | "desc">("desc");
 
   const onSort = (key: SortKey) => {
