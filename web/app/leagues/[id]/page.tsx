@@ -16,7 +16,11 @@ import { NextGameCard } from "@/components/bdl/next-game-card";
 import { getLeagueDetail } from "@/lib/queries/leagues";
 import { formatLabel } from "@/lib/format";
 import { getInvitesForLeague } from "@/lib/queries/invites";
-import { getLeagueNextGame, getMatchupOdds } from "@/lib/queries/games";
+import {
+  getLeagueNextGame,
+  getMatchupOdds,
+  getPlayerWinPctsForLeague,
+} from "@/lib/queries/games";
 import { isInviteEmailConfigured } from "@/lib/email/invite-email";
 import { LeagueDetailClient, Invites } from "./league-detail-client";
 
@@ -48,6 +52,16 @@ export default async function LeagueDetailPage({
         { format: detail.league.format },
       )
     : null;
+  const nextWinPcts = nextGame
+    ? Object.fromEntries(
+        [
+          ...(await getPlayerWinPctsForLeague(
+            id,
+            [...nextGame.rosterA, ...nextGame.rosterB].map((p) => p.id),
+          )),
+        ].map(([pid, v]) => [pid, { pct: v.pct }]),
+      )
+    : undefined;
 
   return (
     <>
@@ -108,6 +122,7 @@ export default async function LeagueDetailPage({
             predictedScore={odds?.predictedScore ?? null}
             rosterA={nextGame.rosterA}
             rosterB={nextGame.rosterB}
+            winPcts={nextWinPcts}
             meId={session?.playerId ?? null}
           />
         )}

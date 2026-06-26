@@ -34,6 +34,8 @@ export type NextGameCardProps = {
   predictedScore?: { a: number; b: number } | null;
   rosterA: RosterPlayer[];
   rosterB: RosterPlayer[];
+  /** Per-player win % for sorting + pills in the roster lists. */
+  winPcts?: Record<string, { pct: number | null }>;
   /** Current user's player id, highlighted in the rosters. */
   meId?: string | null;
 };
@@ -75,6 +77,7 @@ export function NextGameCard({
   predictedScore: ps,
   rosterA,
   rosterB,
+  winPcts,
   meId = null,
 }: NextGameCardProps) {
   const spread = ps ? Math.abs(ps.a - ps.b) : null;
@@ -240,8 +243,8 @@ export function NextGameCard({
 
         {/* Rosters */}
         <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
-          <RosterCard team="white" name={teamAName} players={rosterA} meId={meId} />
-          <RosterCard team="dark" name={teamBName} players={rosterB} meId={meId} />
+          <RosterCard team="white" name={teamAName} players={rosterA} meId={meId} winPcts={winPcts} />
+          <RosterCard team="dark" name={teamBName} players={rosterB} meId={meId} winPcts={winPcts} />
         </div>
       </div>
     </section>
@@ -261,12 +264,23 @@ function RosterCard({
   name,
   players,
   meId,
+  winPcts,
 }: {
   team: "white" | "dark";
   name: string;
   players: RosterPlayer[];
   meId: string | null;
+  winPcts?: Record<string, { pct: number | null }>;
 }) {
+  // Sort by win % (highest first); unrated players sink to the bottom.
+  const sorted = [...players].sort((a, b) => {
+    const pa = winPcts?.[a.id]?.pct ?? null;
+    const pb = winPcts?.[b.id]?.pct ?? null;
+    if (pa === null && pb === null) return 0;
+    if (pa === null) return 1;
+    if (pb === null) return -1;
+    return pb - pa;
+  });
   return (
     <div className="rounded-[12px] bg-[color:var(--surface)] px-4 py-3">
       <div
@@ -278,8 +292,9 @@ function RosterCard({
       </div>
       {players.length > 0 ? (
         <ul className="flex flex-col gap-0.5">
-          {players.map((p, i) => {
+          {sorted.map((p, i) => {
             const isMe = p.id === meId;
+            const pct = winPcts?.[p.id]?.pct ?? null;
             return (
               <li key={p.id}>
                 <Link
@@ -296,6 +311,11 @@ function RosterCard({
                   <span className="min-w-0 truncate">
                     {p.firstName} {p.lastName}
                   </span>
+                  {pct !== null && (
+                    <Pill tone={pct >= 50 ? "win" : "loss"} className="ml-auto">
+                      {pct.toFixed(0)}%
+                    </Pill>
+                  )}
                 </Link>
               </li>
             );

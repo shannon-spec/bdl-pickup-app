@@ -19,6 +19,7 @@ import {
   getGamesList,
   getGameRosterLite,
   getMatchupOdds,
+  getPlayerWinPctsForLeague,
 } from "@/lib/queries/games";
 import { getLeaguesWithStats } from "@/lib/queries/leagues";
 
@@ -135,6 +136,19 @@ export default async function GamesPage({
           { format: heroGame.format },
         )
       : null;
+
+  // Per-player win % for the hero rosters (sorting + pills).
+  const heroWinPcts =
+    heroGame && heroGame.leagueId
+      ? Object.fromEntries(
+          [
+            ...(await getPlayerWinPctsForLeague(
+              heroGame.leagueId,
+              [...heroRoster.A, ...heroRoster.B].map((p) => p.id),
+            )),
+          ].map(([id, v]) => [id, { pct: v.pct }]),
+        )
+      : undefined;
 
   // Team-vs-team season stats hero. Only meaningful when the listing
   // is scoped to a single league (otherwise White / Dark may differ
@@ -269,6 +283,7 @@ export default async function GamesPage({
             predictedScore={heroProb?.predictedScore ?? null}
             rosterA={heroRoster.A}
             rosterB={heroRoster.B}
+            winPcts={heroWinPcts}
             meId={session?.playerId ?? null}
           />
         )}

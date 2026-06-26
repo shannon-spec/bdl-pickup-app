@@ -28,6 +28,7 @@ import {
   getLeaguePlayerCount,
   getFirstRosterPlayer,
 } from "@/lib/queries/player-dashboard";
+import { getPlayerWinPctsForLeague } from "@/lib/queries/games";
 import { getActiveLeagueId } from "@/lib/cookies/active-league";
 
 /** Always render fresh — this dashboard reads session + DB on each request. */
@@ -112,6 +113,18 @@ export default async function Home() {
   ]);
   const canEditNextGame = caps.canManage && canManageThisLeague;
 
+  // Per-player win % for the next-game rosters (sorting + pills).
+  const nextWinPcts = nextGame
+    ? Object.fromEntries(
+        [
+          ...(await getPlayerWinPctsForLeague(
+            currentLeague.id,
+            [...nextGame.rosterA, ...nextGame.rosterB].map((p) => p.id),
+          )),
+        ].map(([id, v]) => [id, { pct: v.pct }]),
+      )
+    : undefined;
+
   return (
     <>
       <TopBar active="/" />
@@ -155,6 +168,7 @@ export default async function Home() {
             predictedScore={nextGame.predictedScore}
             rosterA={nextGame.rosterA}
             rosterB={nextGame.rosterB}
+            winPcts={nextWinPcts}
             meId={me?.id ?? null}
           />
         )}
