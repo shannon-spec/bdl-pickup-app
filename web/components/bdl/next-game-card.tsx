@@ -175,56 +175,66 @@ export function NextGameCard({
           </div>
         </div>
 
-        {/* Win probability */}
-        {probA != null && probB != null && (
+        {/* Win probability — with projected + spread folded in below */}
+        {((probA != null && probB != null) || ps || spread != null) && (
           <div className="rounded-[12px] bg-[color:var(--surface)] px-4 py-3">
-            <div className="flex items-center justify-between gap-2 text-[13px]">
-              <span className="font-semibold num text-[color:var(--brand-ink)]">
-                {teamAName} {Math.round(probA)}%
-              </span>
-              <span className="text-[10.5px] uppercase tracking-[0.12em] font-semibold text-[color:var(--text-3)]">
-                Win Probability
-              </span>
-              <span className="font-semibold num text-[color:var(--text-2)]">
-                {teamBName} {Math.round(probB)}%
-              </span>
-            </div>
-            <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-[color:var(--hairline)]">
-              <div style={{ width: `${probA}%` }} className="bg-[color:var(--brand)]" />
-              <div style={{ width: `${probB}%` }} className="bg-[color:var(--text-4)]" />
-            </div>
-          </div>
-        )}
-
-        {/* Projected + Spread */}
-        {(ps || spread != null) && (
-          <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
-            {ps && (
-              <div className="rounded-[12px] bg-[color:var(--surface)] px-4 py-3">
-                <div className="text-[10.5px] uppercase tracking-[0.12em] font-semibold text-[color:var(--text-3)] mb-1.5">
-                  Projected
+            {probA != null && probB != null && (
+              <>
+                <div className="flex items-center justify-between gap-2 text-[13px]">
+                  <span className="font-semibold num text-[color:var(--brand-ink)]">
+                    {teamAName} {Math.round(probA)}%
+                  </span>
+                  <span className="text-[10.5px] uppercase tracking-[0.12em] font-semibold text-[color:var(--text-3)]">
+                    Win Probability
+                  </span>
+                  <span className="font-semibold num text-[color:var(--text-2)]">
+                    {teamBName} {Math.round(probB)}%
+                  </span>
                 </div>
-                <div className="font-bold num text-[28px] max-sm:text-[24px] leading-none">
-                  <span className="text-[color:var(--brand-ink)]">{ps.a}</span>
-                  <span className="mx-2 text-[color:var(--text-4)]">—</span>
-                  <span className="text-[color:var(--text)]">{ps.b}</span>
+                <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-[color:var(--hairline)]">
+                  <div style={{ width: `${probA}%` }} className="bg-[color:var(--brand)]" />
+                  <div style={{ width: `${probB}%` }} className="bg-[color:var(--text-4)]" />
                 </div>
-              </div>
+              </>
             )}
-            {spread != null && (
-              <div className="rounded-[12px] bg-[color:var(--surface)] px-4 py-3">
-                <div className="text-[10.5px] uppercase tracking-[0.12em] font-semibold text-[color:var(--text-3)] mb-1.5">
-                  Spread
-                </div>
-                <div className="font-bold text-[28px] max-sm:text-[24px] leading-none text-[color:var(--text)]">
-                  {favorite ? (
-                    <>
-                      {favorite} <span className="num text-[color:var(--brand-ink)]">−{spread}</span>
-                    </>
-                  ) : (
-                    "Pick"
-                  )}
-                </div>
+
+            {(ps || spread != null) && (
+              <div
+                className={`flex items-center justify-between gap-6 ${
+                  probA != null && probB != null
+                    ? "mt-3 pt-3 shadow-[inset_0_1px_0_0_var(--hairline)]"
+                    : ""
+                }`}
+              >
+                {ps && (
+                  <div>
+                    <div className="text-[9px] uppercase tracking-[0.1em] font-semibold text-[color:var(--text-3)]">
+                      Projected
+                    </div>
+                    <div className="font-bold num text-[14px] leading-none mt-0.5">
+                      <span className="text-[color:var(--brand-ink)]">{ps.a}</span>
+                      <span className="mx-1 text-[color:var(--text-4)]">—</span>
+                      <span className="text-[color:var(--text)]">{ps.b}</span>
+                    </div>
+                  </div>
+                )}
+                {spread != null && (
+                  <div className="text-right">
+                    <div className="text-[9px] uppercase tracking-[0.1em] font-semibold text-[color:var(--text-3)]">
+                      Spread
+                    </div>
+                    <div className="font-bold text-[14px] leading-none mt-0.5 text-[color:var(--text)]">
+                      {favorite ? (
+                        <>
+                          {favorite}{" "}
+                          <span className="num text-[color:var(--brand-ink)]">−{spread}</span>
+                        </>
+                      ) : (
+                        "Pick"
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
