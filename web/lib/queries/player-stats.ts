@@ -40,6 +40,10 @@ export type LeaguePlayerStatsData = {
 
 const n = (v: number | null) => v ?? 0;
 
+/** Stat tracking starts this week — games before this date don't count
+ *  toward player stats. (Monday of the current week.) */
+export const STATS_START_DATE = "2026-06-22";
+
 /**
  * Per-player aggregate box-score stats across a league's games (or all the
  * viewer's leagues). Totals + per-game averages + shooting %s. Mirrors the
@@ -73,6 +77,8 @@ export async function getLeaguePlayerStats(opts: {
         : sql`false`
       : undefined,
     yearPrefix ? sql`${games.gameDate}::text LIKE ${yearPrefix + "%"}` : undefined,
+    // Stat tracking begins this week.
+    sql`${games.gameDate} >= ${STATS_START_DATE}`,
   );
 
   // Games in scope (for year options + total counted games).
