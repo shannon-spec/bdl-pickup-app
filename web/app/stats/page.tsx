@@ -12,7 +12,7 @@ import {
 } from "@/lib/auth/perms";
 import { db, leagues } from "@/lib/db";
 import { getLeaguePlayerStats } from "@/lib/queries/player-stats";
-import { StatsTable } from "./stats-table";
+import { StatsTable, AwardKey } from "./stats-table";
 
 const EXAMPLE_LEAGUE_NAME = "CPA League";
 
@@ -85,7 +85,10 @@ export default async function StatsPage({
             player stats here.
           </div>
         ) : (
-          <StatsTable rows={data.players} meId={meId} />
+          <>
+            <AwardKey />
+            <StatsTable rows={data.players} meId={meId} />
+          </>
         )}
       </PageFrame>
       <MobileBottomBar active="home" />

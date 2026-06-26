@@ -26,6 +26,43 @@ const fmt = (v: number | null, pct?: boolean) => {
   return Number.isInteger(v) ? String(v) : v.toFixed(1);
 };
 
+const AWARD_KEY = [
+  { emoji: "🏀", label: "Leading scorer" },
+  { emoji: "💪", label: "Leading rebounder" },
+  { emoji: "🎯", label: "Leading assists" },
+  { emoji: "🧤", label: "Leading steals" },
+  { emoji: "🏹", label: "Leading 3PT %" },
+  { emoji: "💎", label: "Triple-double avg" },
+];
+
+function AwardCircle({ emoji, title }: { emoji: string; title?: string }) {
+  return (
+    <span
+      title={title}
+      aria-label={title}
+      className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[color:var(--surface-2)] text-[11px] leading-none shadow-[inset_0_0_0_1px_var(--hairline-2)]"
+    >
+      {emoji}
+    </span>
+  );
+}
+
+export function AwardKey() {
+  return (
+    <div className="flex items-center gap-x-4 gap-y-2 flex-wrap rounded-[12px] bg-[color:var(--surface)] px-4 py-3 shadow-[inset_0_0_0_1px_var(--hairline-2)]">
+      <span className="text-[10px] font-bold tracking-[0.12em] uppercase text-[color:var(--text-3)]">
+        Key
+      </span>
+      {AWARD_KEY.map((a) => (
+        <span key={a.label} className="inline-flex items-center gap-1.5">
+          <AwardCircle emoji={a.emoji} />
+          <span className="text-[12px] text-[color:var(--text-2)]">{a.label}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function StatsTable({
   rows,
   meId,
@@ -158,14 +195,7 @@ export function StatsTable({
                           {p.firstName} {p.lastName}
                         </span>
                         {awardsFor(p).map((aw) => (
-                          <span
-                            key={aw.title}
-                            title={aw.title}
-                            aria-label={aw.title}
-                            className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[color:var(--surface-2)] text-[11px] leading-none shadow-[inset_0_0_0_1px_var(--hairline-2)]"
-                          >
-                            {aw.emoji}
-                          </span>
+                          <AwardCircle key={aw.title} emoji={aw.emoji} title={aw.title} />
                         ))}
                       </span>
                       {p.team && (
