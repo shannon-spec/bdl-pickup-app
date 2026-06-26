@@ -32,7 +32,7 @@ const AWARD_KEY = [
   { emoji: "🎯", label: "Leading assists" },
   { emoji: "🧤", label: "Leading steals" },
   { emoji: "🏹", label: "Leading 3PT %" },
-  { emoji: "💎", label: "Triple-double avg" },
+  { emoji: "💎💎💎", label: "Triple-double avg" },
 ];
 
 function AwardCircle({ emoji, title }: { emoji: string; title?: string }) {
@@ -40,7 +40,7 @@ function AwardCircle({ emoji, title }: { emoji: string; title?: string }) {
     <span
       title={title}
       aria-label={title}
-      className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[color:var(--surface-2)] text-[11px] leading-none shadow-[inset_0_0_0_1px_var(--hairline-2)]"
+      className="inline-flex items-center justify-center h-5 min-w-[20px] px-1 rounded-full bg-[color:var(--surface-2)] text-[11px] leading-none whitespace-nowrap shadow-[inset_0_0_0_1px_var(--hairline-2)]"
     >
       {emoji}
     </span>
@@ -99,7 +99,7 @@ export function StatsTable({
     if (p.tpPct !== null && leaders.tp > -Infinity && eq(p.tpPct, leaders.tp))
       a.push({ emoji: "🏹", title: "Leading 3PT %" });
     if (p.ppg >= 10 && p.rpg >= 10 && p.apg >= 10)
-      a.push({ emoji: "💎", title: "Triple-double average" });
+      a.push({ emoji: "💎💎💎", title: "Triple-double average" });
     return a;
   };
 
