@@ -62,22 +62,28 @@ async function sendResetEmail(args: {
     <p style="color:#666;font-size:13px;">&mdash; BDL Pickup</p>
   </div>`;
 
-  await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: fromAddress,
-      to: [args.to],
-      subject: "Reset your BDL Pickup password",
-      text,
-      html,
-    }),
-  }).catch((err) => {
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: fromAddress,
+        to: [args.to],
+        subject: "Reset your BDL Pickup password",
+        text,
+        html,
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      console.error("[password-reset] Resend rejected", res.status, body);
+    }
+  } catch (err) {
     console.error("[password-reset] Resend send failed:", err);
-  });
+  }
 }
 
 /**
