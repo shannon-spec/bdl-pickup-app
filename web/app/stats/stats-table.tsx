@@ -53,16 +53,16 @@ export function StatsTable({
     tp: maxOf((r) => r.tpPct),
   };
   const eq = (a: number, b: number) => Math.abs(a - b) < 1e-9;
-  const awardsFor = (p: StatLine): { label: string; title: string; td?: boolean }[] => {
-    const a: { label: string; title: string; td?: boolean }[] = [];
-    if (p.ppg > 0 && eq(p.ppg, leaders.ppg)) a.push({ label: "PTS", title: "Leading scorer" });
-    if (p.rpg > 0 && eq(p.rpg, leaders.rpg)) a.push({ label: "REB", title: "Leading rebounder" });
-    if (p.apg > 0 && eq(p.apg, leaders.apg)) a.push({ label: "AST", title: "Leading assists" });
-    if (p.spg > 0 && eq(p.spg, leaders.spg)) a.push({ label: "STL", title: "Leading steals" });
+  const awardsFor = (p: StatLine): { emoji: string; title: string }[] => {
+    const a: { emoji: string; title: string }[] = [];
+    if (p.ppg > 0 && eq(p.ppg, leaders.ppg)) a.push({ emoji: "🏀", title: "Leading scorer" });
+    if (p.rpg > 0 && eq(p.rpg, leaders.rpg)) a.push({ emoji: "💪", title: "Leading rebounder" });
+    if (p.apg > 0 && eq(p.apg, leaders.apg)) a.push({ emoji: "🎯", title: "Leading assists" });
+    if (p.spg > 0 && eq(p.spg, leaders.spg)) a.push({ emoji: "🧤", title: "Leading steals" });
     if (p.tpPct !== null && leaders.tp > -Infinity && eq(p.tpPct, leaders.tp))
-      a.push({ label: "3PT", title: "Leading 3PT %" });
+      a.push({ emoji: "🏹", title: "Leading 3PT %" });
     if (p.ppg >= 10 && p.rpg >= 10 && p.apg >= 10)
-      a.push({ label: "TD", title: "Triple-double average", td: true });
+      a.push({ emoji: "💎", title: "Triple-double average" });
     return a;
   };
 
@@ -159,19 +159,12 @@ export function StatsTable({
                         </span>
                         {awardsFor(p).map((aw) => (
                           <span
-                            key={aw.label}
+                            key={aw.title}
                             title={aw.title}
-                            className="inline-flex items-center h-[15px] px-1.5 rounded-full text-[8.5px] font-bold uppercase tracking-[0.04em]"
-                            style={
-                              aw.td
-                                ? { background: "var(--brand-soft)", color: "var(--brand-ink)" }
-                                : {
-                                    background: "linear-gradient(180deg,#FCEFC7,#F2D480)",
-                                    color: "#7A5C12",
-                                  }
-                            }
+                            aria-label={aw.title}
+                            className="text-[14px] leading-none"
                           >
-                            {aw.label}
+                            {aw.emoji}
                           </span>
                         ))}
                       </span>
