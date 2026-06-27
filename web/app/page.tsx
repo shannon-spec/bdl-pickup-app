@@ -61,7 +61,7 @@ export default async function FrontDoor() {
               <br />
               starts here<span style={{ color: "#EA6A2B" }}>.</span>
             </h1>
-            <p className="mt-4 text-[14.5px] text-white/75 leading-relaxed max-w-[340px]">
+            <p className="mt-4 text-[14.5px] text-white/75 leading-relaxed max-w-[300px] sm:max-w-[440px]">
               Find games. Join teams. Run leagues. Host tournaments. Track every
               stat. All from one account.
             </p>
