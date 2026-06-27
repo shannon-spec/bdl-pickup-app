@@ -28,11 +28,11 @@ export default async function FrontDoor() {
   const logoH = 56;
 
   return (
-    <main className="min-h-[100dvh] flex flex-col items-center bg-[color:var(--bg)]">
-      <div className="w-full max-w-[480px] flex flex-col pb-10">
-        {/* ---------- HERO (always dark) ---------- */}
+    <main className="min-h-[100dvh] flex justify-center bg-[color:var(--bg)] px-4 sm:px-6 py-4 sm:py-6">
+      <div className="w-full max-w-[600px] flex flex-col overflow-hidden rounded-[26px] bg-[color:var(--surface)] border border-[color:var(--hairline-2)] shadow-[0_2px_22px_rgba(0,0,0,.06)] pb-9">
+        {/* ---------- HERO (always dark, full-bleed top of the card) ---------- */}
         <section
-          className="relative overflow-hidden text-white px-6 pt-9 pb-20 rounded-b-[28px]"
+          className="relative overflow-hidden text-white px-6 pt-10 pb-20"
           style={{
             backgroundColor: "#0A0E14",
             backgroundImage:
