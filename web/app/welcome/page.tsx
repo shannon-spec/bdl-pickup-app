@@ -14,9 +14,17 @@ export default async function WelcomePage({
   const session = await readSession();
   if (!session) redirect("/login?next=/welcome");
   const sp = await searchParams;
-  const preselect =
-    sp.persona ??
-    (sp.intent === "organize" ? "organize" : sp.intent === "play" ? "play" : null);
+  const intentPersona =
+    sp.intent === "organize"
+      ? "organize"
+      : sp.intent === "coach"
+        ? "coach"
+        : sp.intent === "play"
+          ? "play"
+          : sp.intent === "watch"
+            ? "watch"
+            : null;
+  const preselect = sp.persona ?? intentPersona;
 
   return (
     <main className="min-h-[100dvh] flex items-center justify-center px-4 py-8">

@@ -24,7 +24,7 @@ export function LoginForm({
   intent,
   next,
 }: {
-  intent: "play" | "organize" | null;
+  intent: "play" | "coach" | "organize" | null;
   next: string | null;
 }) {
   const router = useRouter();

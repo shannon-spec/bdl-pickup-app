@@ -15,19 +15,29 @@ export default async function LoginPage({
   if (session) redirect(sp.next?.startsWith("/") ? sp.next : "/home");
 
   const intent =
-    sp.intent === "organize" ? "organize" : sp.intent === "play" ? "play" : null;
+    sp.intent === "organize"
+      ? "organize"
+      : sp.intent === "coach"
+        ? "coach"
+        : sp.intent === "play"
+          ? "play"
+          : null;
   const heading =
     intent === "organize"
       ? "Run your league or tournament"
-      : intent === "play"
-        ? "Find your run"
-        : "Sign in";
+      : intent === "coach"
+        ? "Coach your team"
+        : intent === "play"
+          ? "Find your run"
+          : "Sign in";
   const sub =
     intent === "organize"
       ? "Sign in to create and manage."
-      : intent === "play"
-        ? "Sign in to RSVP and track your runs."
-        : "Ball Don't Lie Pickup";
+      : intent === "coach"
+        ? "Sign in to manage your roster."
+        : intent === "play"
+          ? "Sign in to RSVP and track your runs."
+          : "Ball Don't Lie Pickup";
 
   return (
     <main className="min-h-[100dvh] flex items-center justify-center px-4 py-8">

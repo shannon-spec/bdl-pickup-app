@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ChevronRight, Trophy } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
 import { Brand } from "@/components/bdl/brand";
 
@@ -31,43 +31,56 @@ export default async function FrontDoor() {
           </p>
         </div>
 
-        {/* Two CTAs by intent — not by role. */}
-        <div className="flex flex-col gap-3">
-          <Link
-            href="/login?intent=play"
-            className="group flex items-center gap-3.5 min-h-[64px] rounded-[16px] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white pl-4 pr-3 py-3 shadow-[var(--cta-shadow)] transition-colors"
-          >
-            <span className="inline-flex items-center justify-center w-11 h-11 rounded-full bg-white/15 shrink-0 text-[22px] leading-none">
-              🏀
-            </span>
-            <span className="flex-1 text-[17px] font-bold tracking-[-0.01em]">
-              I want to play
-            </span>
-            <ChevronRight size={22} className="opacity-80 group-hover:translate-x-0.5 transition-transform" />
-          </Link>
-          <Link
-            href="/login?intent=organize"
-            className="group flex items-center gap-3.5 min-h-[64px] rounded-[16px] text-white pl-4 pr-3 py-3 transition-opacity hover:opacity-90"
-            style={{ background: "var(--tb-dark-bg)" }}
-          >
-            <span className="inline-flex items-center justify-center w-11 h-11 rounded-full bg-white/12 shrink-0">
-              <Trophy size={22} strokeWidth={2} />
-            </span>
-            <span className="flex-1 text-[17px] font-bold tracking-[-0.01em]">
-              I want to organize
-            </span>
-            <ChevronRight size={22} className="opacity-70 group-hover:translate-x-0.5 transition-transform" />
-          </Link>
+        {/* Primary path — Play. */}
+        <Link
+          href="/login?intent=play"
+          className="group flex items-center gap-3.5 min-h-[64px] rounded-[16px] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white pl-4 pr-3 py-3 shadow-[var(--cta-shadow)] transition-colors"
+        >
+          <span className="inline-flex items-center justify-center w-11 h-11 rounded-full bg-white/15 shrink-0 text-[22px] leading-none">
+            🏀
+          </span>
+          <span className="flex-1 text-[17px] font-bold tracking-[-0.01em]">
+            I want to play
+          </span>
+          <ChevronRight size={22} className="opacity-80 group-hover:translate-x-0.5 transition-transform" />
+        </Link>
+
+        <div className="flex items-center gap-3 my-4">
+          <span className="h-px flex-1 bg-[color:var(--hairline)]" />
+          <span className="text-[11px] uppercase tracking-[0.12em] text-[color:var(--text-4)]">or</span>
+          <span className="h-px flex-1 bg-[color:var(--hairline)]" />
         </div>
 
-        <div className="text-center mt-5 text-[13px] text-[color:var(--text-3)]">
+        {/* Secondary paths — Coach / Organize / Watch. */}
+        <div className="flex flex-col gap-3">
+          <PathCard
+            href="/login?intent=coach"
+            emoji="📋"
+            title="Coach a team"
+            sub="Roster · enter tournaments"
+          />
+          <PathCard
+            href="/login?intent=organize"
+            emoji="🗂️"
+            title="Run a league or tournament"
+            sub="League · tourney · frat / campus"
+          />
+          <PathCard
+            href="/discover"
+            emoji="👀"
+            title="Just here to watch"
+            sub="Follow players · scores"
+          />
+        </div>
+
+        <div className="text-center mt-6 text-[13px] text-[color:var(--text-3)]">
           Already play in a league?{" "}
           <Link href="/login" className="font-semibold text-[color:var(--brand)] hover:underline">
             Sign in
           </Link>
         </div>
 
-        <div className="flex items-center justify-center gap-2 mt-7 flex-wrap">
+        <div className="flex items-center justify-center gap-2 mt-6 flex-wrap">
           {["Free to join", "All ages", "No app needed"].map((t) => (
             <span
               key={t}
@@ -77,16 +90,40 @@ export default async function FrontDoor() {
             </span>
           ))}
         </div>
-
-        <div className="text-center mt-8">
-          <Link
-            href="/discover"
-            className="text-[12.5px] text-[color:var(--text-3)] hover:text-[color:var(--text)]"
-          >
-            Browse leagues & teams →
-          </Link>
-        </div>
       </div>
     </main>
+  );
+}
+
+function PathCard({
+  href,
+  emoji,
+  title,
+  sub,
+}: {
+  href: string;
+  emoji: string;
+  title: string;
+  sub: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group flex items-center gap-3.5 rounded-[16px] bg-[color:var(--surface)] border border-[color:var(--hairline-2)] px-4 py-3.5 hover:bg-[color:var(--surface-2)] transition-colors"
+    >
+      <span className="inline-flex items-center justify-center w-12 h-12 rounded-[12px] bg-[color:var(--surface-2)] text-[24px] leading-none shrink-0 group-hover:bg-[color:var(--surface)]">
+        {emoji}
+      </span>
+      <span className="flex-1 min-w-0">
+        <span className="block font-bold text-[16px] tracking-[-0.01em] leading-tight">
+          {title}
+        </span>
+        <span className="block text-[12.5px] text-[color:var(--text-3)] mt-0.5">{sub}</span>
+      </span>
+      <ChevronRight
+        size={18}
+        className="text-[color:var(--text-3)] group-hover:text-[color:var(--text)] shrink-0"
+      />
+    </Link>
   );
 }
