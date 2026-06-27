@@ -29,7 +29,7 @@ export default async function FrontDoor() {
 
   return (
     <main className="min-h-[100dvh] flex justify-center bg-[color:var(--bg)] px-4 sm:px-6 py-4 sm:py-6">
-      <div className="w-full max-w-[600px] flex flex-col overflow-hidden rounded-[26px] bg-[color:var(--surface)] border border-[color:var(--hairline-2)] shadow-[0_2px_22px_rgba(0,0,0,.06)] pb-9">
+      <div className="w-full max-w-[600px] flex flex-col pb-9">
         {/* ---------- HERO (always dark, full-bleed top of the card) ---------- */}
         <section
           className="relative overflow-hidden text-white px-6 pt-10 pb-20"
@@ -69,7 +69,7 @@ export default async function FrontDoor() {
         </section>
 
         {/* ---------- PLAY — straddles hero / light boundary ---------- */}
-        <div className="relative z-10 px-4 -mt-12">
+        <div className="relative z-10 w-[80%] mx-auto -mt-12">
           <Link
             href="/login?intent=play"
             className="group relative overflow-hidden flex items-center gap-4 min-h-[96px] rounded-[20px] text-white px-5 py-4 transition-[filter] hover:brightness-[1.04]"
@@ -102,7 +102,7 @@ export default async function FrontDoor() {
         </div>
 
         {/* ---------- OR divider ---------- */}
-        <div className="flex items-center gap-3 px-4 my-5">
+        <div className="flex items-center gap-3 w-[80%] mx-auto my-5">
           <span className="h-px flex-1 bg-[color:var(--hairline)]" />
           <span className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--text-4)]">
             or
@@ -111,7 +111,7 @@ export default async function FrontDoor() {
         </div>
 
         {/* ---------- Coach / Organize / Watch ---------- */}
-        <div className="flex flex-col gap-3 px-4">
+        <div className="flex flex-col gap-3 w-[80%] mx-auto">
           <PathCard
             href="/login?intent=coach"
             icon={<TeamIcon size={26} />}
