@@ -104,7 +104,7 @@ export default async function FrontDoor() {
             <Brand height={34} />
           </Link>
           <Link
-            href="/login"
+            href="https://www.bdlpickup.com/login"
             className="inline-flex items-center justify-center h-9 px-4 rounded-full border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[14px] font-bold text-[color:var(--text)] hover:bg-[color:var(--surface-2)] transition-colors"
           >
             Sign in
@@ -127,7 +127,7 @@ export default async function FrontDoor() {
             <p className="text-center mt-3 text-[13.5px] text-white/70">
               Not {known.name}?{" "}
               <Link
-                href="/login"
+                href="https://www.bdlpickup.com/login"
                 className="font-bold text-[#7CB0FF] hover:underline"
               >
                 Sign in to another account
@@ -199,8 +199,8 @@ function WelcomeCell({ known }: { known: Known | null }) {
   const continueHref = known
     ? known.hasSession
       ? "/home"
-      : "/login"
-    : "/login";
+      : "https://www.bdlpickup.com/login"
+    : "https://www.bdlpickup.com/login";
 
   return (
     <div
