@@ -130,13 +130,13 @@ export default async function FrontDoor() {
         {/* ---------- Compact "Basketball starts here." banner ---------- */}
         <div className="px-4 sm:px-5 pt-5">
           <div
-            className="relative overflow-hidden rounded-[18px] text-white px-6 py-9"
+            className="relative overflow-hidden rounded-[18px] text-white px-6 py-10"
             style={{
               backgroundColor: "#0A0E14",
               backgroundImage:
-                "linear-gradient(100deg, rgba(6,9,13,.93) 0%, rgba(6,9,13,.66) 58%, rgba(6,9,13,.42) 100%), url(/hero-court.jpg)",
+                "linear-gradient(100deg, rgba(6,9,13,.85) 0%, rgba(6,9,13,.50) 46%, rgba(6,9,13,.16) 100%), url(/hero-court.jpg)",
               backgroundSize: "cover, cover",
-              backgroundPosition: "center, center 60%",
+              backgroundPosition: "center, center bottom",
             }}
           >
             <h1 className="text-[32px] font-extrabold tracking-[-0.035em] leading-[0.98]">
