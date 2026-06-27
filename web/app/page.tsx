@@ -232,7 +232,7 @@ function WelcomeCell({ known }: { known: Known | null }) {
 
       <div className="flex-1 min-w-0">
         <div className="text-[12px] font-semibold text-white/80 leading-none">
-          {known ? "Welcome back" : "Welcome to BDL"}
+          {known ? "Welcome back" : "Welcome Back to BDL"}
         </div>
         <div className="text-[19px] font-extrabold leading-tight truncate mt-0.5">
           {known ? known.name : "Ball Don't Lie"}
