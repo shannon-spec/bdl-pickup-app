@@ -3,6 +3,12 @@ import { redirect } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
 import { Brand } from "@/components/bdl/brand";
+import {
+  BasketballIcon,
+  TrophyIcon,
+  TeamIcon,
+  StarIcon,
+} from "@/components/bdl/sport-icons";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -36,8 +42,8 @@ export default async function FrontDoor() {
           href="/login?intent=play"
           className="group flex items-center gap-3.5 min-h-[64px] rounded-[16px] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white pl-4 pr-3 py-3 shadow-[var(--cta-shadow)] transition-colors"
         >
-          <span className="inline-flex items-center justify-center w-11 h-11 rounded-full bg-white/15 shrink-0 text-[22px] leading-none">
-            🏀
+          <span className="inline-flex items-center justify-center w-11 h-11 rounded-full bg-white/15 shrink-0 text-white">
+            <BasketballIcon size={24} />
           </span>
           <span className="flex-1 text-[17px] font-bold tracking-[-0.01em]">
             I want to play
@@ -55,19 +61,19 @@ export default async function FrontDoor() {
         <div className="flex flex-col gap-3">
           <PathCard
             href="/login?intent=coach"
-            emoji="📋"
+            icon={<TeamIcon size={24} />}
             title="Coach a team"
             sub="Roster · enter tournaments"
           />
           <PathCard
             href="/login?intent=organize"
-            emoji="🗂️"
+            icon={<TrophyIcon size={24} />}
             title="Run a league or tournament"
             sub="League · tourney · frat / campus"
           />
           <PathCard
             href="/discover"
-            emoji="👀"
+            icon={<StarIcon size={24} />}
             title="Just here to watch"
             sub="Follow players · scores"
           />
@@ -97,12 +103,12 @@ export default async function FrontDoor() {
 
 function PathCard({
   href,
-  emoji,
+  icon,
   title,
   sub,
 }: {
   href: string;
-  emoji: string;
+  icon: React.ReactNode;
   title: string;
   sub: string;
 }) {
@@ -111,8 +117,8 @@ function PathCard({
       href={href}
       className="group flex items-center gap-3.5 rounded-[16px] bg-[color:var(--surface)] border border-[color:var(--hairline-2)] px-4 py-3.5 hover:bg-[color:var(--surface-2)] transition-colors"
     >
-      <span className="inline-flex items-center justify-center w-12 h-12 rounded-[12px] bg-[color:var(--surface-2)] text-[24px] leading-none shrink-0 group-hover:bg-[color:var(--surface)]">
-        {emoji}
+      <span className="inline-flex items-center justify-center w-12 h-12 rounded-[12px] bg-[color:var(--surface-2)] text-[color:var(--text)] shrink-0 group-hover:bg-[color:var(--surface)]">
+        {icon}
       </span>
       <span className="flex-1 min-w-0">
         <span className="block font-bold text-[16px] tracking-[-0.01em] leading-tight">
