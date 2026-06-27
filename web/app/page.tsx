@@ -101,7 +101,7 @@ export default async function FrontDoor() {
         {/* ---------- Header: logo left, Sign in right ---------- */}
         <header className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-[color:var(--hairline)]">
           <Link href="/" aria-label="BDL home" className="min-w-0">
-            <Brand height={34} />
+            <Brand height={43} />
           </Link>
           <Link
             href="https://www.bdlpickup.com/login"
