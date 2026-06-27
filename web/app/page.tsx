@@ -111,41 +111,35 @@ export default async function FrontDoor() {
           </Link>
         </header>
 
-        {/* ---------- Welcome-back / anonymous cell (rivals blue) ---------- */}
-        <div className="px-4 sm:px-5 pt-5">
+        {/* ---------- Court-photo backdrop: welcome cell + headline ---------- */}
+        <section
+          className="relative px-4 sm:px-5 pt-6 pb-9 text-white"
+          style={{
+            backgroundColor: "#0A0E14",
+            backgroundImage:
+              "linear-gradient(100deg, rgba(6,9,13,.86) 0%, rgba(6,9,13,.55) 46%, rgba(6,9,13,.22) 100%), url(/hero-court.jpg)",
+            backgroundSize: "cover, cover",
+            backgroundPosition: "center, center bottom",
+          }}
+        >
           <WelcomeCell known={known} />
           {known && (
-            <p className="text-center mt-3 text-[13.5px] text-[color:var(--text-3)]">
+            <p className="text-center mt-3 text-[13.5px] text-white/70">
               Not {known.name}?{" "}
               <Link
                 href="/login"
-                className="font-bold text-[color:var(--brand)] hover:underline"
+                className="font-bold text-[#7CB0FF] hover:underline"
               >
                 Sign in to another account
               </Link>
             </p>
           )}
-        </div>
-
-        {/* ---------- Compact "Basketball starts here." banner ---------- */}
-        <div className="px-4 sm:px-5 pt-5">
-          <div
-            className="relative overflow-hidden rounded-[18px] text-white px-6 py-10"
-            style={{
-              backgroundColor: "#0A0E14",
-              backgroundImage:
-                "linear-gradient(100deg, rgba(6,9,13,.85) 0%, rgba(6,9,13,.50) 46%, rgba(6,9,13,.16) 100%), url(/hero-court.jpg)",
-              backgroundSize: "cover, cover",
-              backgroundPosition: "center, center bottom",
-            }}
-          >
-            <h1 className="text-[32px] font-extrabold tracking-[-0.035em] leading-[0.98]">
-              Basketball
-              <br />
-              starts here<span style={{ color: "#EA6A2B" }}>.</span>
-            </h1>
-          </div>
-        </div>
+          <h1 className="mt-7 text-[32px] font-extrabold tracking-[-0.035em] leading-[0.98]">
+            Basketball
+            <br />
+            starts here<span style={{ color: "#EA6A2B" }}>.</span>
+          </h1>
+        </section>
 
         {/* ---------- New-to-BDL group ---------- */}
         <div className="px-4 sm:px-5 pt-6">
