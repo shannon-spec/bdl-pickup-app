@@ -74,8 +74,8 @@ export default async function FrontDoor() {
           <PathCard
             href="/discover"
             icon={<StarIcon size={24} />}
-            title="Just here to watch"
-            sub="Follow players · scores"
+            title="Stay updated"
+            sub="Players · schedules · scores · brackets"
           />
         </div>
 
