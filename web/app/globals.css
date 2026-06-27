@@ -288,11 +288,11 @@
 .ftr-blurb {
   max-width: 360px;
   margin: 18px 0 0;
-  font: 400 13.5px/1.55 var(--font);
+  font: 400 10.8px/1.55 var(--font);
   color: var(--text-3);
 }
 .ftr-col h4 {
-  font: 600 11px/1 var(--font);
+  font: 600 8.8px/1 var(--font);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-3);
@@ -301,7 +301,7 @@
 .ftr-col a {
   display: block;
   padding: 6px 0;
-  font: 500 13.5px/1 var(--font);
+  font: 500 10.8px/1 var(--font);
   color: var(--text);
   text-decoration: none;
   transition: color .15s ease;
@@ -309,7 +309,7 @@
 .ftr-col a:hover { color: var(--brand-ink); }
 .ftr-ai { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
 .ftr-ai-label {
-  font: 600 11px/1 var(--font);
+  font: 600 8.8px/1 var(--font);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-3);
@@ -337,12 +337,12 @@
   background: transparent;
 }
 .au-square > span {
-  font: 700 12px/1 var(--font);
+  font: 700 9.6px/1 var(--font);
   color: var(--gold);
   letter-spacing: -0.02em;
 }
 .au-word {
-  font: 600 14px/1 var(--font);
+  font: 600 11.2px/1 var(--font);
   color: var(--text);
   letter-spacing: -0.01em;
 }
@@ -354,7 +354,7 @@
   gap: 16px;
   padding-top: 20px;
   border-top: 1px solid var(--hairline);
-  font-size: 12.5px;
+  font-size: 10px;
   color: var(--text-3);
 }
 .ftr-copy { color: var(--text-3); }
@@ -380,7 +380,7 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--up) 18%, transparent);
 }
 .ftr-version {
-  font: 500 11.5px/1 var(--mono);
+  font: 500 9.2px/1 var(--mono);
   color: var(--text-3);
   margin-left: 14px;
 }
