@@ -255,14 +255,15 @@
    Global Footer
    ==================================================================== */
 .bdl-footer {
-  background: var(--bg);
+  margin-top: 96px;
+  background: var(--surface);
   border-top: 1px solid var(--hairline);
   color: var(--text-3);
 }
 .ftr-inner {
   max-width: 1240px;
   margin: 0 auto;
-  padding: 48px clamp(20px,3vw,32px) 32px;
+  padding: 48px clamp(32px,6vw,72px) 32px;
 }
 .ftr-grid {
   display: grid;
