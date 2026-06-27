@@ -36,17 +36,11 @@ export default async function FrontDoor() {
           style={{
             backgroundColor: "#0A0E14",
             backgroundImage:
-              "url(/hero-court.jpg), radial-gradient(120% 90% at 85% 30%, rgba(234,106,43,.28), transparent 55%), radial-gradient(130% 120% at 20% 0%, #11161f 0%, #070a0f 70%)",
+              "linear-gradient(95deg, rgba(8,11,16,.84) 0%, rgba(8,11,16,.52) 48%, rgba(8,11,16,.30) 100%), linear-gradient(180deg, rgba(8,11,16,.30) 0%, transparent 38%, rgba(8,11,16,.66) 100%), url(/hero-court.jpg)",
             backgroundSize: "cover, cover, cover",
-            backgroundPosition: "center, center, center",
+            backgroundPosition: "center, center, center 28%",
           }}
         >
-          {/* faint basketball, upper-right (decorative; the photo overrides) */}
-          <BasketballIcon
-            size={230}
-            className="pointer-events-none absolute -right-12 top-6 opacity-[0.10] text-white"
-          />
-
           <div className="relative flex flex-col items-center text-center">
             <Image
               src="/bdl-lockup-dark.png"

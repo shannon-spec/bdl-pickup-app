@@ -29,9 +29,9 @@ const LOCKUP_RATIO = 1000 / 340;
 const HERO_SCENE: React.CSSProperties = {
   backgroundColor: "#0A0E14",
   backgroundImage:
-    "url(/hero-court.jpg), radial-gradient(120% 200% at 88% 40%, rgba(234,106,43,.26), transparent 55%), radial-gradient(130% 240% at 18% 0%, #11161f 0%, #070a0f 75%)",
-  backgroundSize: "cover, cover, cover",
-  backgroundPosition: "center 35%, center, center",
+    "linear-gradient(180deg, rgba(8,11,16,.86) 0%, rgba(8,11,16,.92) 100%), url(/hero-court.jpg)",
+  backgroundSize: "cover, cover",
+  backgroundPosition: "center, center 22%",
 };
 
 /** Dark-on-dark control button (theme/bell/sign-out) for the hero header. */
