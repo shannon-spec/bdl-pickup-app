@@ -1,18 +1,164 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ChevronRight, Plus, Trophy, CalendarDays, Users2 } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
-import { ComingSoon } from "@/components/bdl/coming-soon";
+import { getMyContexts } from "@/lib/queries/contexts";
+import { TopBar } from "@/components/bdl/top-bar";
+import { ContextHeader } from "@/components/bdl/context-header/context-header";
+import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
+import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
+import { LeagueAvatar } from "@/components/bdl/league-avatar";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Manage · BDL" };
 
+const TYPE_LABEL: Record<string, string> = {
+  LEAGUE: "League",
+  TOURNAMENT: "Tournament",
+  COMMUNITY: "Community",
+};
+
+function manageHref(type: string, id: string) {
+  if (type === "LEAGUE") return `/manage/league/${id}`;
+  if (type === "TOURNAMENT") return `/manage/tournament/${id}`;
+  return `/manage/community/${id}`;
+}
+
+function initials(name: string) {
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0])
+      .join("")
+      .toUpperCase() || "•"
+  );
+}
+
 export default async function ManagePage() {
   const session = await readSession();
   if (!session) redirect("/login?next=/manage");
+
+  const all = await getMyContexts(session);
+  // Organizer surfaces only — leagues/tournaments/communities you administer.
+  const mine = all.filter((c) => c.manage && c.type !== "TEAM");
+
   return (
-    <ComingSoon
-      active="/manage"
-      title="Manage console"
-      blurb="Run your leagues, tournaments, and communities from one place. The full console is on the way — create a league or team from the buttons in your header for now."
-    />
+    <>
+      <TopBar active="/manage" />
+      <PageFrame>
+        <ContextHeader />
+
+        <SectionHead
+          title="Manage"
+          right={
+            <Link
+              href="/manage/new"
+              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--r-lg)] bg-[color:var(--brand)] text-white text-[12px] font-bold tracking-[0.03em] uppercase hover:bg-[color:var(--brand-hover)]"
+            >
+              <Plus size={15} /> Create
+            </Link>
+          }
+        />
+
+        {mine.length === 0 ? (
+          <CreateFirst />
+        ) : (
+          <div className="flex flex-col gap-2.5">
+            {mine.map((c) => (
+              <Link
+                key={`${c.type}:${c.id}`}
+                href={manageHref(c.type, c.id)}
+                className="group flex items-center gap-3.5 rounded-[14px] bg-[color:var(--surface)] border border-[color:var(--hairline-2)] px-3.5 py-3 hover:bg-[color:var(--surface-2)] transition-colors"
+              >
+                <LeagueAvatar
+                  kind={c.avatarKind}
+                  color={c.avatarColor}
+                  emoji={c.avatarEmoji}
+                  abbr={initials(c.name)}
+                  size={40}
+                />
+                <span className="flex-1 min-w-0">
+                  <span className="block font-bold text-[15px] tracking-[-0.01em] truncate">
+                    {c.name}
+                  </span>
+                  <span className="block text-[12px] text-[color:var(--text-3)] mt-0.5">
+                    {TYPE_LABEL[c.type] ?? c.type} ·{" "}
+                    {c.role.charAt(0) + c.role.slice(1).toLowerCase()}
+                  </span>
+                </span>
+                <ChevronRight
+                  size={18}
+                  className="text-[color:var(--text-3)] group-hover:text-[color:var(--text)] shrink-0"
+                />
+              </Link>
+            ))}
+          </div>
+        )}
+      </PageFrame>
+      <MobileBottomBar active="home" />
+    </>
+  );
+}
+
+function CreateFirst() {
+  const opts = [
+    {
+      href: "/manage/new?type=LEAGUE",
+      icon: <CalendarDays size={18} />,
+      title: "Start a league",
+      sub: "Recurring play · seasons · standings",
+    },
+    {
+      href: "/manage/new?type=TOURNAMENT",
+      icon: <Trophy size={18} />,
+      title: "Run a tournament",
+      sub: "Divisions · brackets · one or few days",
+    },
+    {
+      href: "/manage/new?type=COMMUNITY",
+      icon: <Users2 size={18} />,
+      title: "Create a community",
+      sub: "Frat / campus / gym — owns many events",
+    },
+  ];
+  return (
+    <section className="rounded-[16px] bg-[color:var(--surface-2)] p-7 flex flex-col items-center text-center gap-4">
+      <div>
+        <h2 className="text-[18px] font-extrabold tracking-[-0.02em]">
+          Run your first event
+        </h2>
+        <p className="text-[13.5px] text-[color:var(--text-2)] mt-1 max-w-[420px]">
+          Create a league, tournament, or community and publish it in a few
+          minutes. Invite co-organizers and share a join link.
+        </p>
+      </div>
+      <div className="w-full max-w-[440px] flex flex-col gap-2.5">
+        {opts.map((o) => (
+          <Link
+            key={o.href}
+            href={o.href}
+            className="group flex items-center gap-3.5 rounded-[14px] bg-[color:var(--surface)] border border-[color:var(--hairline-2)] px-4 py-3.5 hover:bg-[color:var(--surface-2)] transition-colors text-left"
+          >
+            <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-[color:var(--brand-soft)] text-[color:var(--brand-ink)] shrink-0">
+              {o.icon}
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block font-bold text-[14.5px] tracking-[-0.01em]">
+                {o.title}
+              </span>
+              <span className="block text-[12px] text-[color:var(--text-3)] mt-0.5">
+                {o.sub}
+              </span>
+            </span>
+            <ChevronRight
+              size={18}
+              className="text-[color:var(--text-3)] group-hover:text-[color:var(--text)] shrink-0"
+            />
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 }
