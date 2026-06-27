@@ -10,6 +10,7 @@ import {
   requestOtp,
   verifyOtp,
 } from "@/lib/auth/otp";
+import { clearRememberedLogin } from "@/lib/cookies/last-login";
 
 const input =
   "h-12 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface-2)] px-3 text-[16px] text-[color:var(--text)] outline-none focus:border-[color:var(--brand)] focus:ring-2 focus:ring-[color:var(--brand-soft)]";
@@ -23,15 +24,20 @@ type Mode = "email" | "phone" | "password";
 export function LoginForm({
   intent,
   next,
+  remembered = null,
 }: {
   intent: "play" | "coach" | "organize" | null;
   next: string | null;
+  remembered?: { kind: "email" | "phone"; value: string } | null;
 }) {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>("email");
+  const [mode, setMode] = useState<Mode>(
+    remembered?.kind === "phone" ? "phone" : "email",
+  );
 
   const [step, setStep] = useState<"id" | "code">("id");
-  const [identifier, setIdentifier] = useState("");
+  const [identifier, setIdentifier] = useState(remembered?.value ?? "");
+  const [greet, setGreet] = useState<boolean>(!!remembered);
   const [code, setCode] = useState("");
   const [devCode, setDevCode] = useState<string | null>(null);
   const [delivered, setDelivered] = useState(true);
@@ -56,6 +62,17 @@ export function LoginForm({
     setDevCode(null);
     setDelivered(true);
     setError(null);
+    setGreet(false);
+  };
+
+  // "Not you?" — forget the remembered identifier on this device.
+  const notYou = () => {
+    setGreet(false);
+    setIdentifier("");
+    setMode("email");
+    start(async () => {
+      await clearRememberedLogin();
+    });
   };
 
   const sendCode = () =>
@@ -129,6 +146,21 @@ export function LoginForm({
     <div className="flex flex-col gap-3">
       {step === "id" ? (
         <>
+          {greet && (
+            <div className="flex items-center justify-between gap-2 rounded-[var(--r-md)] bg-[color:var(--brand-soft)] px-3 py-2">
+              <span className="text-[13px] text-[color:var(--text-2)] min-w-0 truncate">
+                👋 Welcome back,{" "}
+                <strong className="text-[color:var(--text)]">{remembered?.value}</strong>
+              </span>
+              <button
+                type="button"
+                onClick={notYou}
+                className="shrink-0 text-[12px] font-semibold text-[color:var(--brand)] hover:underline"
+              >
+                Not you?
+              </button>
+            </div>
+          )}
           <label className="flex flex-col gap-1.5">
             <span className={label}>{idLabel}</span>
             <input

@@ -7,6 +7,7 @@ import { headers } from "next/headers";
 import { db, players, authOtp } from "@/lib/db";
 import { emailHash, encryptOptional } from "@/lib/crypto/secrets";
 import { createSession, writeSessionCookie } from "./session";
+import { setRememberedLogin } from "@/lib/cookies/last-login";
 
 const CODE_TTL_MIN = 10;
 const MAX_SENDS_PER_WINDOW = 5; // per identifier, per window
@@ -158,6 +159,7 @@ export async function verifyEmailOtp(
 
   const token = await createSession({ adminId: "", username: e, role: "player", playerId: player.id });
   await writeSessionCookie(token);
+  await setRememberedLogin("email", e); // recognize this device next time
   return { ok: true, redirect: redirectFor(isNew, !!player.firstName?.trim(), opts) };
 }
 
@@ -243,5 +245,6 @@ export async function verifyOtp(
   }
   const token = await createSession({ adminId: "", username: `+${normalized}`, role: "player", playerId: player.id });
   await writeSessionCookie(token);
+  await setRememberedLogin("phone", `+${normalized}`); // recognize this device next time
   return { ok: true, redirect: redirectFor(isNew, !!player.firstName?.trim(), opts) };
 }

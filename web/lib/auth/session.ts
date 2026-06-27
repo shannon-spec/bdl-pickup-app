@@ -37,7 +37,7 @@ function getSecret(): Uint8Array {
 
 export async function createSession(
   data: Pick<Session, "adminId" | "username" | "role" | "playerId">,
-  maxAgeSeconds = 60 * 60 * 24 * 30, // 30 days
+  maxAgeSeconds = 60 * 60 * 24 * 90, // 90 days (rolling — refreshed on each visit by middleware)
 ): Promise<string> {
   const jwt = await new SignJWT(data as unknown as Record<string, unknown>)
     .setProtectedHeader({ alg: ALG })
@@ -75,7 +75,7 @@ export async function readSession(): Promise<Session | null> {
   return verifySession(token);
 }
 
-export async function writeSessionCookie(token: string, maxAgeSeconds = 60 * 60 * 24 * 30) {
+export async function writeSessionCookie(token: string, maxAgeSeconds = 60 * 60 * 24 * 90) {
   const store = await cookies();
   store.set({
     name: COOKIE,

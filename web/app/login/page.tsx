@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { readSession } from "@/lib/auth/session";
+import { getRememberedLogin } from "@/lib/cookies/last-login";
 import { Brand } from "@/components/bdl/brand";
 import { LoginForm } from "./login-form";
 
@@ -13,6 +14,7 @@ export default async function LoginPage({
   const sp = await searchParams;
   const session = await readSession();
   if (session) redirect(sp.next?.startsWith("/") ? sp.next : "/home");
+  const remembered = await getRememberedLogin();
 
   const intent =
     sp.intent === "organize"
@@ -58,7 +60,7 @@ export default async function LoginPage({
             <p className="text-[13px] text-[color:var(--text-3)] mt-1">{sub}</p>
           </div>
         </div>
-        <LoginForm intent={intent} next={sp.next ?? null} />
+        <LoginForm intent={intent} next={sp.next ?? null} remembered={remembered} />
       </div>
     </main>
   );
