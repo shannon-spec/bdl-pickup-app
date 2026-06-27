@@ -29,7 +29,7 @@ export default async function FrontDoor() {
 
   return (
     <main className="min-h-[100dvh] flex justify-center bg-[color:var(--bg)] px-0 sm:px-6 py-0 sm:py-6">
-      <div className="w-full max-w-[700px] flex flex-col pb-9 overflow-hidden border-0 sm:border border-[#C4C2BA] rounded-none sm:rounded-[20px] shadow-none sm:shadow-[0_8px_34px_rgba(0,0,0,.10)]">
+      <div className="w-full max-w-[750px] flex flex-col pb-9 overflow-hidden border-0 sm:border border-[#C4C2BA] rounded-none sm:rounded-[20px] shadow-none sm:shadow-[0_8px_34px_rgba(0,0,0,.10)]">
         {/* ---------- HERO (always dark, full-bleed top of the card) ---------- */}
         <section
           className="relative overflow-hidden text-white px-6 pt-10 pb-20"
