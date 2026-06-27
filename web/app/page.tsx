@@ -153,25 +153,12 @@ export default async function FrontDoor() {
             New to BDL? Start here
           </p>
           <div className="flex flex-col gap-3">
-            {/* I want to play — primary, centered, no icon */}
-            <Link
+            <PathCard
               href="/login?intent=play"
-              className="group relative flex items-center justify-center rounded-[18px] bg-[color:var(--surface)] border border-[color:var(--hairline-2)] px-5 py-5 shadow-[0_1px_2px_rgba(0,0,0,.04)] hover:bg-[color:var(--surface-2)] transition-colors"
-            >
-              <span className="text-center">
-                <span className="block font-extrabold text-[18px] tracking-[-0.01em] leading-tight">
-                  I want to play
-                </span>
-                <span className="block text-[13px] text-[color:var(--text-3)] mt-1">
-                  Find runs, join teams, play in leagues
-                </span>
-              </span>
-              <ChevronRight
-                size={20}
-                className="absolute right-4 text-[color:var(--text-3)] group-hover:text-[color:var(--text)]"
-              />
-            </Link>
-
+              icon={<BasketballIcon size={26} />}
+              title="I want to play"
+              sub="Find runs, join teams, play in leagues"
+            />
             <PathCard
               href="/soon/coach"
               icon={<TeamIcon size={26} />}
