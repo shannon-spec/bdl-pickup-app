@@ -36,7 +36,7 @@ const HERO_SCENE: React.CSSProperties = {
 
 /** Dark-on-dark control button (theme/bell/sign-out) for the hero header. */
 const DARK_CTRL =
-  "border border-white/15 bg-white/10 text-white/80 hover:text-white hover:bg-white/[0.16] transition-colors";
+  "border border-white/15 bg-white/10 text-white/80 hover:text-white hover:bg-[rgba(124,176,255,0.20)] hover:border-[rgba(124,176,255,0.35)] transition-colors";
 
 const NAV_ITEMS: NavItem[] = [
   { label: "My League", href: "/home", views: ["player", "commissioner"], signedInOnly: true },
