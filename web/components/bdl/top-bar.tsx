@@ -143,7 +143,7 @@ export async function TopBar({
           />
         </Link>
 
-        <nav className="flex items-center justify-center gap-7" aria-label="Primary">
+        <nav className="flex items-center justify-center gap-1" aria-label="Primary">
           {nav.map((item) => {
             const isActive =
               item.href === active ||
@@ -153,9 +153,11 @@ export async function TopBar({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "text-[12px] leading-none font-bold uppercase tracking-[0.07em] transition-colors",
-                  "hover:text-[#7CB0FF]",
-                  isActive ? "text-white" : "text-white/55",
+                  "px-3 py-2 rounded-[10px] text-[12px] leading-none font-bold uppercase tracking-[0.07em] transition-colors",
+                  "hover:bg-[rgba(124,176,255,0.20)] hover:text-white",
+                  isActive
+                    ? "bg-[rgba(124,176,255,0.22)] text-white"
+                    : "text-white/55",
                   !isActive && "max-md:hidden",
                   "max-sm:hidden",
                 )}
