@@ -179,13 +179,6 @@ export function LoginForm({
           <button type="button" onClick={sendCode} disabled={pending || !idValid} className={primaryBtn}>
             {pending ? "Sending…" : sendLabel}
           </button>
-          <button
-            type="button"
-            onClick={() => switchMode(isEmail ? "phone" : "email")}
-            className="text-[12px] text-center text-[color:var(--text-3)] hover:text-[color:var(--text)] mt-1"
-          >
-            {isEmail ? "Use phone instead" : "Use email instead"}
-          </button>
         </>
       ) : (
         <>
