@@ -107,19 +107,19 @@ export default async function FrontDoor() {
         {/* ---------- Coach / Organize / Watch ---------- */}
         <div className="flex flex-col gap-3 w-[80%] mx-auto">
           <PathCard
-            href="/login?intent=coach"
+            href="/soon/coach"
             icon={<TeamIcon size={26} />}
             title="Coach a team"
             sub="Manage rosters, lineups, practices & tournaments"
           />
           <PathCard
-            href="/login?intent=organize"
+            href="/soon/organize"
             icon={<TrophyIcon size={26} />}
             title="Run a league or tournament"
             sub="Create leagues, tournaments & events"
           />
           <PathCard
-            href="/discover"
+            href="/soon/watch"
             icon={<StarIcon size={26} />}
             title="Stay updated"
             sub="Live scores, schedules, players & brackets"
