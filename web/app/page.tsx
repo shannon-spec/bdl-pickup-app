@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ChevronRight, Trophy } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
 import { Brand } from "@/components/bdl/brand";
 
@@ -21,12 +22,12 @@ export default async function FrontDoor() {
       <div className="w-full max-w-[420px] flex flex-col">
         <div className="flex flex-col items-center text-center gap-3 mb-8">
           <Brand height={52} />
-          <h1 className="text-[26px] font-extrabold tracking-[-0.03em] leading-tight">
-            Pickup basketball, organized.
+          <h1 className="text-[34px] font-extrabold tracking-[-0.035em] leading-[1.04] mt-1">
+            Basketball<br />starts here<span style={{ color: "#EA6A2B" }}>.</span>
           </h1>
           <p className="text-[14px] text-[color:var(--text-2)] leading-relaxed max-w-[340px]">
-            Find a run, manage a team, or run your own league or tournament — one
-            account, every role.
+            Find games. Join teams. Run leagues. Host tournaments. Track every
+            stat. All from one account.
           </p>
         </div>
 
@@ -34,15 +35,28 @@ export default async function FrontDoor() {
         <div className="flex flex-col gap-3">
           <Link
             href="/login?intent=play"
-            className="h-13 min-h-[52px] rounded-[14px] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[15px] flex items-center justify-center shadow-[var(--cta-shadow)] transition-colors"
+            className="group flex items-center gap-3.5 min-h-[64px] rounded-[16px] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white pl-4 pr-3 py-3 shadow-[var(--cta-shadow)] transition-colors"
           >
-            Find a run near me
+            <span className="inline-flex items-center justify-center w-11 h-11 rounded-full bg-white/15 shrink-0 text-[22px] leading-none">
+              🏀
+            </span>
+            <span className="flex-1 text-[17px] font-bold tracking-[-0.01em]">
+              I want to play
+            </span>
+            <ChevronRight size={22} className="opacity-80 group-hover:translate-x-0.5 transition-transform" />
           </Link>
           <Link
             href="/login?intent=organize"
-            className="h-13 min-h-[52px] rounded-[14px] bg-[color:var(--surface)] text-[color:var(--text)] font-bold text-[15px] flex items-center justify-center border border-[color:var(--hairline-2)] hover:bg-[color:var(--surface-2)] transition-colors"
+            className="group flex items-center gap-3.5 min-h-[64px] rounded-[16px] text-white pl-4 pr-3 py-3 transition-opacity hover:opacity-90"
+            style={{ background: "var(--tb-dark-bg)" }}
           >
-            Run a league or tournament
+            <span className="inline-flex items-center justify-center w-11 h-11 rounded-full bg-white/12 shrink-0">
+              <Trophy size={22} strokeWidth={2} />
+            </span>
+            <span className="flex-1 text-[17px] font-bold tracking-[-0.01em]">
+              I want to organize
+            </span>
+            <ChevronRight size={22} className="opacity-70 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </div>
 
