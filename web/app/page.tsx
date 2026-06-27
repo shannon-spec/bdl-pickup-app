@@ -1,8 +1,12 @@
 import Link from "next/link";
-import Image from "next/image";
-import { redirect } from "next/navigation";
 import { ChevronRight, Shield, Users, Smartphone } from "lucide-react";
+import { eq } from "drizzle-orm";
 import { readSession } from "@/lib/auth/session";
+import { getRememberedLogin } from "@/lib/cookies/last-login";
+import { db, players } from "@/lib/db";
+import { emailHash } from "@/lib/crypto/secrets";
+import { getMyContexts } from "@/lib/queries/contexts";
+import { Brand } from "@/components/bdl/brand";
 import {
   BasketballIcon,
   TrophyIcon,
@@ -10,132 +14,188 @@ import {
   StarIcon,
 } from "@/components/bdl/sport-icons";
 
-const LOCKUP_RATIO = 1000 / 340;
-
 export const dynamic = "force-dynamic";
 export const metadata = {
   title: "BDL · Ball Don't Lie — pickup basketball, organized",
 };
 
-/**
- * Front Door. Public, server-rendered. Dark court hero + intent CTAs.
- * Signed-in users skip straight to their role home.
- */
-export default async function FrontDoor() {
-  const session = await readSession();
-  if (session) redirect("/home");
+type Known = {
+  name: string;
+  initials: string;
+  avatarUrl: string | null;
+  subline: string;
+  hasSession: boolean;
+};
 
-  const logoH = 56;
+/** Recognize the user from a live session, else from the device's remembered
+ *  identifier. Returns null when we can't (→ anonymous cell). */
+async function resolveKnown(): Promise<Known | null> {
+  const session = await readSession();
+
+  const fromPlayer = async (
+    p: { firstName: string; lastName: string | null; avatarUrl: string | null },
+    hasSession: boolean,
+  ): Promise<Known | null> => {
+    const first = (p.firstName ?? "").trim();
+    if (!first) return null;
+    const initials =
+      `${first[0] ?? ""}${(p.lastName ?? "").trim()[0] ?? ""}`.toUpperCase();
+    let subline = "Pick up where you left off";
+    if (hasSession) {
+      try {
+        const ctx = await getMyContexts(session);
+        if (ctx?.[0]) subline = ctx[0].name;
+      } catch {
+        /* best-effort */
+      }
+    }
+    return { name: first, initials, avatarUrl: p.avatarUrl, subline, hasSession };
+  };
+
+  if (session?.playerId) {
+    const [me] = await db
+      .select({
+        firstName: players.firstName,
+        lastName: players.lastName,
+        avatarUrl: players.avatarUrl,
+      })
+      .from(players)
+      .where(eq(players.id, session.playerId))
+      .limit(1);
+    if (me) {
+      const k = await fromPlayer(me, true);
+      if (k) return k;
+    }
+  }
+
+  // Not signed in (or no name) — try the device's remembered identifier.
+  const remembered = await getRememberedLogin();
+  if (remembered) {
+    const hash =
+      remembered.kind === "email"
+        ? emailHash(remembered.value)
+        : emailHash(remembered.value.replace(/\D/g, ""));
+    const col =
+      remembered.kind === "email" ? players.emailHash : players.phoneHash;
+    const [me] = await db
+      .select({
+        firstName: players.firstName,
+        lastName: players.lastName,
+        avatarUrl: players.avatarUrl,
+      })
+      .from(players)
+      .where(eq(col, hash))
+      .limit(1);
+    if (me) return fromPlayer(me, false);
+  }
+
+  return null;
+}
+
+export default async function FrontDoor() {
+  const known = await resolveKnown();
 
   return (
     <main className="min-h-[100dvh] flex justify-center bg-[color:var(--bg)] px-0 sm:px-6 py-0 sm:py-6">
-      <div className="w-full max-w-[750px] flex flex-col pb-9 overflow-hidden border-0 sm:border border-[#C4C2BA] rounded-none sm:rounded-[20px] shadow-none sm:shadow-[0_8px_34px_rgba(0,0,0,.10)]">
-        {/* ---------- HERO (always dark, full-bleed top of the card) ---------- */}
-        <section
-          className="relative overflow-hidden text-white px-6 pt-10 pb-20"
-          style={{
-            backgroundColor: "#0A0E14",
-            backgroundImage:
-              "linear-gradient(180deg, rgba(6,9,13,.93) 0%, rgba(6,9,13,.82) 42%, rgba(6,9,13,.69) 72%, rgba(6,9,13,.82) 100%), url(/hero-court.jpg)",
-            backgroundSize: "cover, cover",
-            backgroundPosition: "center, center 55%",
-          }}
-        >
-          <div className="relative flex flex-col items-center text-center">
-            <Image
-              src="/bdl-lockup-dark.png"
-              alt="BDL · Ball Don't Lie"
-              width={Math.round(logoH * LOCKUP_RATIO)}
-              height={logoH}
-              priority
-              style={{ height: logoH, width: "auto" }}
-            />
-            <h1 className="mt-5 text-[51px] font-extrabold tracking-[-0.04em] leading-[0.96]">
+      <div className="w-full max-w-[750px] flex flex-col pb-9 overflow-hidden border-0 sm:border border-[#C4C2BA] rounded-none sm:rounded-[20px] shadow-none sm:shadow-[0_8px_34px_rgba(0,0,0,.10)] bg-[color:var(--bg)]">
+        {/* ---------- Header: logo left, Sign in right ---------- */}
+        <header className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-[color:var(--hairline)]">
+          <Link href="/" aria-label="BDL home" className="min-w-0">
+            <Brand height={34} />
+          </Link>
+          <Link
+            href="/login"
+            className="inline-flex items-center justify-center h-9 px-4 rounded-full border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[14px] font-bold text-[color:var(--text)] hover:bg-[color:var(--surface-2)] transition-colors"
+          >
+            Sign in
+          </Link>
+        </header>
+
+        {/* ---------- Welcome-back / anonymous cell (rivals blue) ---------- */}
+        <div className="px-4 sm:px-5 pt-5">
+          <WelcomeCell known={known} />
+          {known && (
+            <p className="text-center mt-3 text-[13.5px] text-[color:var(--text-3)]">
+              Not {known.name}?{" "}
+              <Link
+                href="/login"
+                className="font-bold text-[color:var(--brand)] hover:underline"
+              >
+                Sign in to another account
+              </Link>
+            </p>
+          )}
+        </div>
+
+        {/* ---------- Compact "Basketball starts here." banner ---------- */}
+        <div className="px-4 sm:px-5 pt-5">
+          <div
+            className="relative overflow-hidden rounded-[18px] text-white px-6 py-9"
+            style={{
+              backgroundColor: "#0A0E14",
+              backgroundImage:
+                "linear-gradient(100deg, rgba(6,9,13,.93) 0%, rgba(6,9,13,.66) 58%, rgba(6,9,13,.42) 100%), url(/hero-court.jpg)",
+              backgroundSize: "cover, cover",
+              backgroundPosition: "center, center 60%",
+            }}
+          >
+            <h1 className="text-[32px] font-extrabold tracking-[-0.035em] leading-[0.98]">
               Basketball
               <br />
               starts here<span style={{ color: "#EA6A2B" }}>.</span>
             </h1>
-            <p className="mt-4 text-[14.5px] text-white/75 leading-relaxed max-w-[300px] sm:max-w-[440px]">
-              Find games. Join teams. Run leagues. Host tournaments. Track every
-              stat. All from one account.
-            </p>
           </div>
-        </section>
-
-        {/* ---------- PLAY — straddles hero / light boundary ---------- */}
-        <div className="relative z-10 w-[80%] mx-auto -mt-12">
-          <Link
-            href="/login?intent=play"
-            className="group relative overflow-hidden flex items-center gap-4 min-h-[96px] rounded-[20px] text-white px-5 py-4 transition-[filter] hover:brightness-[1.04]"
-            style={{
-              backgroundImage:
-                "linear-gradient(135deg, #1F84FF 0%, #0D6FE0 100%)",
-              boxShadow: "0 14px 34px rgba(13,139,255,.38)",
-            }}
-          >
-            <BasketballIcon
-              size={210}
-              className="pointer-events-none absolute -right-8 top-1/2 -translate-y-1/2 opacity-[0.14] text-white"
-            />
-            <span className="relative inline-flex items-center justify-center w-14 h-14 rounded-full bg-white/12 ring-[1.5px] ring-[#EA6A2B] shrink-0 text-white">
-              <BasketballIcon size={30} />
-            </span>
-            <span className="relative flex-1 min-w-0">
-              <span className="block text-[22px] font-extrabold tracking-[-0.02em] leading-tight">
-                I want to play
-              </span>
-              <span className="block text-[14px] text-white/85 mt-0.5">
-                Find runs, join teams, play in leagues
-              </span>
-            </span>
-            <ChevronRight
-              size={24}
-              className="relative opacity-80 group-hover:translate-x-0.5 transition-transform shrink-0"
-            />
-          </Link>
         </div>
 
-        {/* ---------- Coach / Organize / Watch ---------- */}
-        <div className="flex flex-col gap-3 w-[80%] mx-auto mt-7">
-          <PathCard
-            href="/soon/coach"
-            icon={<TeamIcon size={26} />}
-            title="Coach a team"
-            sub="Manage rosters, lineups, practices & tournaments"
-          />
-          <PathCard
-            href="/soon/organize"
-            icon={<TrophyIcon size={26} />}
-            title="Run a league or tournament"
-            sub="Create leagues, tournaments & events"
-          />
-          <PathCard
-            href="/soon/watch"
-            icon={<StarIcon size={26} />}
-            title="Stay updated"
-            sub="Live scores, schedules, players & brackets"
-          />
-        </div>
+        {/* ---------- New-to-BDL group ---------- */}
+        <div className="px-4 sm:px-5 pt-6">
+          <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-[color:var(--text-3)] mb-3">
+            New to BDL? Start here
+          </p>
+          <div className="flex flex-col gap-3">
+            {/* I want to play — primary, centered, no icon */}
+            <Link
+              href="/login?intent=play"
+              className="group relative flex items-center justify-center rounded-[18px] bg-[color:var(--surface)] border border-[color:var(--hairline-2)] px-5 py-5 shadow-[0_1px_2px_rgba(0,0,0,.04)] hover:bg-[color:var(--surface-2)] transition-colors"
+            >
+              <span className="text-center">
+                <span className="block font-extrabold text-[18px] tracking-[-0.01em] leading-tight">
+                  I want to play
+                </span>
+                <span className="block text-[13px] text-[color:var(--text-3)] mt-1">
+                  Find runs, join teams, play in leagues
+                </span>
+              </span>
+              <ChevronRight
+                size={20}
+                className="absolute right-4 text-[color:var(--text-3)] group-hover:text-[color:var(--text)]"
+              />
+            </Link>
 
-        {/* ---------- Sign in ---------- */}
-        <div className="text-center mt-7 text-[14px] text-[color:var(--text-2)]">
-          Already play in a league?{" "}
-          <Link
-            href="/login"
-            className="inline-flex items-center gap-0.5 font-bold text-[color:var(--brand)] hover:underline"
-          >
-            Sign in
-            <ChevronRight size={15} className="mt-0.5" />
-          </Link>
+            <PathCard
+              href="/soon/coach"
+              icon={<TeamIcon size={26} />}
+              title="Coach a team"
+              sub="Manage rosters, lineups, practices & tournaments"
+            />
+            <PathCard
+              href="/soon/organize"
+              icon={<TrophyIcon size={26} />}
+              title="Run a league or tournament"
+              sub="Create leagues, tournaments & events"
+            />
+            <PathCard
+              href="/soon/watch"
+              icon={<StarIcon size={26} />}
+              title="Stay updated"
+              sub="Live scores, schedules, players & brackets"
+            />
+          </div>
         </div>
 
         {/* ---------- Trust strip ---------- */}
-        <div className="grid grid-cols-3 mt-8 px-2">
-          <Trust
-            icon={<Shield size={22} />}
-            label="FREE TO JOIN"
-            sub="Always"
-          />
+        <div className="grid grid-cols-3 mt-8 px-3">
+          <Trust icon={<Shield size={22} />} label="FREE TO JOIN" sub="Always" />
           <Trust
             icon={<Users size={22} />}
             label="ALL AGES"
@@ -151,6 +211,64 @@ export default async function FrontDoor() {
         </div>
       </div>
     </main>
+  );
+}
+
+function WelcomeCell({ known }: { known: Known | null }) {
+  const continueHref = known
+    ? known.hasSession
+      ? "/home"
+      : "/login"
+    : "/login";
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-[18px] text-white px-4 py-4 flex items-center gap-3.5"
+      style={{
+        backgroundImage: "linear-gradient(135deg, #1F84FF 0%, #0D6FE0 100%)",
+        boxShadow: "0 12px 30px rgba(13,139,255,.32)",
+      }}
+    >
+      {/* avatar */}
+      {known?.avatarUrl ? (
+        <span className="inline-flex w-12 h-12 rounded-full overflow-hidden shrink-0 ring-2 ring-white/40">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={known.avatarUrl}
+            alt=""
+            className="w-full h-full object-cover"
+          />
+        </span>
+      ) : known ? (
+        <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white text-[#0D6FE0] font-extrabold text-[15px] shrink-0">
+          {known.initials}
+        </span>
+      ) : (
+        <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/15 text-white shrink-0">
+          <BasketballIcon size={26} />
+        </span>
+      )}
+
+      <div className="flex-1 min-w-0">
+        <div className="text-[12px] font-semibold text-white/80 leading-none">
+          {known ? "Welcome back" : "Welcome to BDL"}
+        </div>
+        <div className="text-[19px] font-extrabold leading-tight truncate mt-0.5">
+          {known ? known.name : "Ball Don't Lie"}
+        </div>
+        <div className="text-[12.5px] text-white/75 truncate mt-0.5">
+          {known ? known.subline : "Sign in to track your games"}
+        </div>
+      </div>
+
+      <Link
+        href={continueHref}
+        className="shrink-0 inline-flex items-center gap-1 h-10 px-4 rounded-[12px] bg-white text-[#0D6FE0] font-bold text-[14px] hover:brightness-[0.97] transition-[filter]"
+      >
+        {known ? "Continue" : "Sign in"}
+        <ChevronRight size={16} />
+      </Link>
+    </div>
   );
 }
 
