@@ -28,7 +28,8 @@
     "db:migrate:league-teams": "node --env-file=.env.local scripts/migrate-league-teams.mjs",
     "db:migrate:game-stats": "node --env-file=.env.local scripts/migrate-game-stats.mjs",
     "db:migrate:game-stats-reb": "node --env-file=.env.local scripts/migrate-game-stats-reb.mjs",
-    "db:migrate:contexts": "node --env-file=.env.local scripts/migrate-contexts.mjs"
+    "db:migrate:contexts": "node --env-file=.env.local scripts/migrate-contexts.mjs",
+    "db:migrate:organize": "node --env-file=.env.local scripts/migrate-organize.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.106.0",

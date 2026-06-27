@@ -23,6 +23,7 @@ import {
   timestamp,
   date,
   time,
+  jsonb,
   primaryKey,
   index,
   uniqueIndex,
@@ -89,6 +90,38 @@ export const membershipStatusEnum = pgEnum("membership_status", [
 ]);
 
 export const adminRoleEnum = pgEnum("admin_role", ["owner", "super_admin"]);
+
+/* ----- Organize Console enums ----- */
+export const playStyleEnum = pgEnum("play_style", [
+  "PICKUP_AUTOBALANCE",
+  "FIXED_TEAMS",
+]);
+export const tournamentFormatEnum = pgEnum("tournament_format", [
+  "SINGLE_ELIM",
+  "DOUBLE_ELIM",
+  "ROUND_ROBIN",
+  "POOL_TO_BRACKET",
+]);
+export const registrationModeEnum = pgEnum("registration_mode", [
+  "OPEN",
+  "INVITE",
+]);
+export const registrationStatusEnum = pgEnum("registration_status", [
+  "pending",
+  "confirmed",
+  "waitlist",
+]);
+export const divisionAgeBandEnum = pgEnum("division_age_band", [
+  "youth",
+  "hs",
+  "open",
+  "o35",
+  "custom",
+]);
+export const organizeInvitationStatusEnum = pgEnum(
+  "organize_invitation_status",
+  ["pending", "accepted", "revoked", "expired"],
+);
 
 export const inviteStatusEnum = pgEnum("invite_status", [
   "pending",
@@ -289,6 +322,13 @@ export const leagues = pgTable("leagues", {
   venueAddress: text("venue_address"),
   venueLat: doublePrecision("venue_lat"),
   venueLng: doublePrecision("venue_lng"),
+  /* ----- Organize Console (league config + community ownership) ----- */
+  playStyle: playStyleEnum("play_style"),
+  seasonLength: integer("season_length"),
+  communityId: uuid("community_id").references(() => communities.id, {
+    onDelete: "set null",
+  }),
+  published: boolean("published").notNull().default(true),
   /** Soft-hide flag — null = visible; non-null = hidden from list
    *  views. Replaces destructive deletes for leagues; destructive
    *  `deleteLeague` is intentionally blocked at the action layer.
@@ -451,6 +491,15 @@ export const tournaments = pgTable(
       onDelete: "set null",
     }),
     format: gameFormatEnum("format").notNull().default("5v5"),
+    /* ----- Organize Console (tournament config) ----- */
+    bracketFormat: tournamentFormatEnum("bracket_format"),
+    teamSize: text("team_size"),
+    registrationMode: registrationModeEnum("registration_mode")
+      .notNull()
+      .default("OPEN"),
+    entryFeeCents: integer("entry_fee_cents"),
+    endsAt: date("ends_at"),
+    published: boolean("published").notNull().default(false),
     startDate: date("start_date"),
     description: text("description"),
     avatarKind: text("avatar_kind").notNull().default("monogram"),
@@ -504,6 +553,171 @@ export const venues = pgTable("venues", {
     .defaultNow()
     .$onUpdate(() => new Date()),
 });
+
+/* ============== ORGANIZE CONSOLE ============== */
+
+/* First-class division on a league or tournament (age band + skill tier). */
+export const divisions = pgTable(
+  "divisions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    contextType: contextTypeEnum("context_type").notNull(),
+    contextId: uuid("context_id").notNull(),
+    name: text("name").notNull(),
+    ageBand: divisionAgeBandEnum("age_band").notNull().default("open"),
+    ageBandCustom: text("age_band_custom"),
+    skillTier: playerLevelEnum("skill_tier"),
+    cap: integer("cap"),
+    registrationOpen: boolean("registration_open").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("divisions_context_idx").on(t.contextType, t.contextId)],
+);
+
+/* A team/individual entry into a division. */
+export const registrations = pgTable(
+  "registrations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    divisionId: uuid("division_id")
+      .notNull()
+      .references(() => divisions.id, { onDelete: "cascade" }),
+    teamId: uuid("team_id").references(() => teams.id, { onDelete: "set null" }),
+    playerId: uuid("player_id").references(() => players.id, {
+      onDelete: "set null",
+    }),
+    teamName: text("team_name"),
+    status: registrationStatusEnum("status").notNull().default("pending"),
+    seed: integer("seed"),
+    paid: boolean("paid").notNull().default(false),
+    createdBy: uuid("created_by").references(() => players.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("registrations_division_idx").on(t.divisionId)],
+);
+
+/* Bracket match. Entering a result advances the winner to next_match_id. */
+export const matches = pgTable(
+  "matches",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    divisionId: uuid("division_id")
+      .notNull()
+      .references(() => divisions.id, { onDelete: "cascade" }),
+    round: integer("round").notNull(),
+    slot: integer("slot").notNull(),
+    homeRegistrationId: uuid("home_registration_id").references(
+      () => registrations.id,
+      { onDelete: "set null" },
+    ),
+    awayRegistrationId: uuid("away_registration_id").references(
+      () => registrations.id,
+      { onDelete: "set null" },
+    ),
+    homeScore: integer("home_score"),
+    awayScore: integer("away_score"),
+    winnerRegistrationId: uuid("winner_registration_id").references(
+      () => registrations.id,
+      { onDelete: "set null" },
+    ),
+    // Self-FK (handled in DB); left unreferenced here to avoid a circular type.
+    nextMatchId: uuid("next_match_id"),
+    nextSlotIsHome: boolean("next_slot_is_home"),
+    locked: boolean("locked").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("matches_division_idx").on(t.divisionId)],
+);
+
+/* A court/time slot bound to a league game or a tournament match. */
+export const scheduleSlots = pgTable(
+  "schedule_slots",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    contextType: contextTypeEnum("context_type").notNull(),
+    contextId: uuid("context_id").notNull(),
+    venueId: uuid("venue_id").references(() => venues.id, {
+      onDelete: "set null",
+    }),
+    court: text("court"),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    endsAt: timestamp("ends_at", { withTimezone: true }),
+    gameId: uuid("game_id").references(() => games.id, { onDelete: "set null" }),
+    matchId: uuid("match_id").references(() => matches.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("schedule_slots_context_idx").on(t.contextType, t.contextId)],
+);
+
+/* Co-organizer / role-grant invite for a context. */
+export const organizeInvitations = pgTable(
+  "organize_invitations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    contextType: contextTypeEnum("context_type").notNull(),
+    contextId: uuid("context_id").notNull(),
+    roleGranted: membershipRoleEnum("role_granted").notNull(),
+    channel: text("channel").notNull(), // phone | email | link
+    destination: text("destination"),
+    token: varchar("token", { length: 64 }).notNull(),
+    status: organizeInvitationStatusEnum("status").notNull().default("pending"),
+    invitedBy: uuid("invited_by").references(() => players.id, {
+      onDelete: "set null",
+    }),
+    acceptedBy: uuid("accepted_by").references(() => players.id, {
+      onDelete: "set null",
+    }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("organize_invitations_token_uq").on(t.token),
+    index("organize_invitations_context_idx").on(t.contextType, t.contextId),
+  ],
+);
+
+/* Resumable create-wizard draft. */
+export const eventDrafts = pgTable(
+  "event_drafts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    type: contextTypeEnum("type").notNull(),
+    data: jsonb("data").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("event_drafts_creator_idx").on(t.createdBy)],
+);
+
+export type Division = typeof divisions.$inferSelect;
+export type Registration = typeof registrations.$inferSelect;
+export type Match = typeof matches.$inferSelect;
+export type ScheduleSlot = typeof scheduleSlots.$inferSelect;
+export type OrganizeInvitation = typeof organizeInvitations.$inferSelect;
+export type EventDraft = typeof eventDrafts.$inferSelect;
 
 /* Short-lived phone OTP codes for passwordless sign-in. */
 export const authOtp = pgTable(
