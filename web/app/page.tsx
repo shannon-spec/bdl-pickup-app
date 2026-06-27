@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronRight, Shield, Users, Smartphone } from "lucide-react";
 import { eq } from "drizzle-orm";
 import { readSession } from "@/lib/auth/session";
+import { signOut } from "@/lib/auth/actions";
 import { getRememberedLogin } from "@/lib/cookies/last-login";
 import { db, players } from "@/lib/db";
 import { emailHash } from "@/lib/crypto/secrets";
@@ -103,12 +104,23 @@ export default async function FrontDoor() {
           <Link href="/" aria-label="BDL home" className="min-w-0">
             <Brand height={43} />
           </Link>
-          <Link
-            href="https://www.bdlpickup.com/login"
-            className="inline-flex items-center justify-center h-9 px-4 rounded-full border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[14px] font-bold text-[color:var(--text)] hover:bg-[color:var(--surface-2)] transition-colors"
-          >
-            Sign in
-          </Link>
+          {known?.hasSession ? (
+            <form action={signOut}>
+              <button
+                type="submit"
+                className="inline-flex items-center justify-center h-9 px-4 rounded-full border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[14px] font-bold text-[color:var(--text)] hover:bg-[color:var(--surface-2)] transition-colors"
+              >
+                Sign out
+              </button>
+            </form>
+          ) : (
+            <Link
+              href="https://www.bdlpickup.com/login"
+              className="inline-flex items-center justify-center h-9 px-4 rounded-full border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[14px] font-bold text-[color:var(--text)] hover:bg-[color:var(--surface-2)] transition-colors"
+            >
+              Sign in
+            </Link>
+          )}
         </header>
 
         {/* ---------- Court-photo backdrop: welcome cell + headline ---------- */}
