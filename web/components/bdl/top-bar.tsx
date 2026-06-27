@@ -1,8 +1,9 @@
 import Link from "next/link";
+import Image from "next/image";
 import { eq } from "drizzle-orm";
 import { Bell, LogOut, Settings } from "lucide-react";
-import { Brand } from "./brand";
 import { ThemeToggle } from "./theme-toggle";
+import { BasketballIcon } from "./sport-icons";
 import { signOut } from "@/lib/auth/actions";
 import { readSession } from "@/lib/auth/session";
 import { getViewCaps, type View } from "@/lib/auth/view";
@@ -21,6 +22,21 @@ type NavItem = {
   /** Small badge after the label, e.g. "beta". */
   badge?: string;
 };
+
+const LOCKUP_RATIO = 1000 / 340;
+
+/** Dark hero scene shared with the Front Door, scoped to the header. */
+const HERO_SCENE: React.CSSProperties = {
+  backgroundColor: "#0A0E14",
+  backgroundImage:
+    "url(/hero-court.jpg), radial-gradient(120% 200% at 88% 40%, rgba(234,106,43,.26), transparent 55%), radial-gradient(130% 240% at 18% 0%, #11161f 0%, #070a0f 75%)",
+  backgroundSize: "cover, cover, cover",
+  backgroundPosition: "center 35%, center, center",
+};
+
+/** Dark-on-dark control button (theme/bell/sign-out) for the hero header. */
+const DARK_CTRL =
+  "border border-white/15 bg-white/10 text-white/80 hover:text-white hover:bg-white/[0.16] transition-colors";
 
 const NAV_ITEMS: NavItem[] = [
   { label: "My League", href: "/home", views: ["player", "commissioner"], signedInOnly: true },
@@ -98,22 +114,33 @@ export async function TopBar({
   return (
     <header
       className={cn(
-        "sticky top-0 z-[var(--z-sticky)] w-full",
-        "border-b border-[color:var(--hairline)]",
-        "backdrop-blur-[18px] backdrop-saturate-[140%]",
+        "sticky top-0 z-[var(--z-sticky)] w-full overflow-hidden",
+        "border-b border-white/10 text-white",
       )}
-      style={{ background: "var(--topbar-bg)" }}
+      style={HERO_SCENE}
     >
+      {/* faint basketball scene element, mirrored from the Front Door */}
+      <BasketballIcon
+        size={150}
+        className="pointer-events-none absolute -right-6 -top-10 opacity-[0.10] text-white"
+      />
       <div
         className={cn(
-          "mx-auto max-w-[1240px]",
+          "relative z-10 mx-auto max-w-[1240px]",
           "grid grid-cols-[auto_1fr_auto] items-center",
           "h-[64px] px-[clamp(14px,3vw,28px)]",
           "gap-4",
         )}
       >
         <Link href="/home" aria-label="BDL home" className="min-w-0">
-          <Brand />
+          <Image
+            src="/bdl-lockup-dark.png"
+            alt="BDL · Ball Don't Lie"
+            width={Math.round(38 * LOCKUP_RATIO)}
+            height={38}
+            priority
+            style={{ height: 38, width: "auto" }}
+          />
         </Link>
 
         <nav className="flex items-center justify-center gap-7" aria-label="Primary">
@@ -126,11 +153,9 @@ export async function TopBar({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "text-[13.5px] leading-none font-medium transition-colors",
-                  "hover:text-[color:var(--text)]",
-                  isActive
-                    ? "text-[color:var(--text)] font-semibold"
-                    : "text-[color:var(--text-3)]",
+                  "text-[12px] leading-none font-bold uppercase tracking-[0.07em] transition-colors",
+                  "hover:text-[#7CB0FF]",
+                  isActive ? "text-white" : "text-white/55",
                   !isActive && "max-md:hidden",
                   "max-sm:hidden",
                 )}
@@ -139,7 +164,7 @@ export async function TopBar({
                 <span className="inline-flex items-center gap-1.5">
                   {item.label}
                   {item.badge && (
-                    <span className="inline-flex items-center h-[15px] px-1.5 rounded-full bg-[color:var(--brand-soft)] text-[color:var(--brand-ink)] text-[8.5px] font-bold uppercase tracking-[0.06em]">
+                    <span className="inline-flex items-center h-[15px] px-1.5 rounded-full bg-white/15 text-white text-[8.5px] font-bold uppercase tracking-[0.06em]">
                       {item.badge}
                     </span>
                   )}
@@ -150,12 +175,15 @@ export async function TopBar({
         </nav>
 
         <div className="flex items-center gap-2">
-          <ThemeToggle />
+          <ThemeToggle className={DARK_CTRL} />
           {showSettings && (
             <Link
               href="/admin"
               aria-label="Admin"
-              className="relative inline-flex items-center justify-center w-[34px] h-[34px] rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[color:var(--text-2)] hover:text-[color:var(--text)] transition-colors"
+              className={cn(
+                "relative inline-flex items-center justify-center w-[34px] h-[34px] rounded-[var(--r-lg)]",
+                DARK_CTRL,
+              )}
             >
               <Settings size={16} />
             </Link>
@@ -175,9 +203,7 @@ export async function TopBar({
             className={cn(
               "relative inline-flex items-center justify-center",
               "w-[34px] h-[34px] rounded-[var(--r-lg)]",
-              "border border-[color:var(--hairline-2)] bg-[color:var(--surface)]",
-              "text-[color:var(--text-2)] hover:text-[color:var(--text)]",
-              "transition-colors",
+              DARK_CTRL,
             )}
           >
             <Bell size={16} />
@@ -199,7 +225,7 @@ export async function TopBar({
               <Link
                 href="/account"
                 aria-label="Account"
-                className="relative inline-flex items-center justify-center w-[34px] h-[34px] rounded-full overflow-hidden border border-[color:var(--hairline-2)] hover:opacity-90 transition-opacity"
+                className="relative inline-flex items-center justify-center w-[34px] h-[34px] rounded-full overflow-hidden border border-white/20 hover:opacity-90 transition-opacity"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -231,9 +257,7 @@ export async function TopBar({
                 className={cn(
                   "relative inline-flex items-center justify-center",
                   "w-[34px] h-[34px] rounded-[var(--r-lg)]",
-                  "border border-[color:var(--hairline-2)] bg-[color:var(--surface)]",
-                  "text-[color:var(--text-2)] hover:text-[color:var(--text)]",
-                  "transition-colors",
+                  DARK_CTRL,
                 )}
               >
                 <LogOut size={16} />
@@ -244,10 +268,8 @@ export async function TopBar({
               href="/login"
               className={cn(
                 "inline-flex items-center justify-center h-[34px] px-3 rounded-[var(--r-lg)]",
-                "border border-[color:var(--hairline-2)] bg-[color:var(--surface)]",
                 "text-[12px] font-bold uppercase tracking-[0.06em]",
-                "text-[color:var(--text-2)] hover:text-[color:var(--text)]",
-                "transition-colors",
+                DARK_CTRL,
               )}
             >
               Sign in
