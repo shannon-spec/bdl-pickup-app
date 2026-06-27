@@ -28,7 +28,7 @@ export default async function FrontDoor() {
   const logoH = 56;
 
   return (
-    <main className="min-h-[100dvh] flex justify-center bg-[color:var(--bg)] px-4 sm:px-6 py-4 sm:py-6">
+    <main className="min-h-[100dvh] flex justify-center bg-[color:var(--bg)] px-0 sm:px-6 py-4 sm:py-6">
       <div className="w-full max-w-[600px] flex flex-col pb-9 overflow-hidden border border-[#C4C2BA] rounded-[20px] shadow-[0_8px_34px_rgba(0,0,0,.10)]">
         {/* ---------- HERO (always dark, full-bleed top of the card) ---------- */}
         <section
