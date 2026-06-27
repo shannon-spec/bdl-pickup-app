@@ -36,7 +36,7 @@ const HERO_SCENE: React.CSSProperties = {
 
 /** Dark-on-dark control button (theme/bell/sign-out) for the hero header. */
 const DARK_CTRL =
-  "border border-white/15 bg-white/10 text-white/80 hover:text-white hover:bg-[rgba(77,163,255,0.16)] hover:border-[rgba(77,163,255,0.40)] transition-colors";
+  "border border-white/15 bg-white/10 text-white/80 hover:text-white hover:bg-[rgba(150,195,255,0.26)] hover:border-[rgba(150,195,255,0.45)] transition-colors";
 
 const NAV_ITEMS: NavItem[] = [
   { label: "My League", href: "/home", views: ["player", "commissioner"], signedInOnly: true },
@@ -154,9 +154,9 @@ export async function TopBar({
                 href={item.href}
                 className={cn(
                   "px-3 py-2 rounded-[10px] text-[12px] leading-none font-bold uppercase tracking-[0.07em] transition-colors",
-                  "hover:bg-[rgba(77,163,255,0.16)] hover:text-white",
+                  "hover:bg-[rgba(150,195,255,0.26)] hover:text-white",
                   isActive
-                    ? "bg-[rgba(77,163,255,0.18)] text-white"
+                    ? "bg-[rgba(150,195,255,0.30)] text-white"
                     : "text-white/55",
                   !isActive && "max-md:hidden",
                   "max-sm:hidden",
