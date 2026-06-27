@@ -95,17 +95,8 @@ export default async function FrontDoor() {
           </Link>
         </div>
 
-        {/* ---------- OR divider ---------- */}
-        <div className="flex items-center gap-3 w-[80%] mx-auto my-5">
-          <span className="h-px flex-1 bg-[color:var(--hairline)]" />
-          <span className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--text-4)]">
-            or
-          </span>
-          <span className="h-px flex-1 bg-[color:var(--hairline)]" />
-        </div>
-
         {/* ---------- Coach / Organize / Watch ---------- */}
-        <div className="flex flex-col gap-3 w-[80%] mx-auto">
+        <div className="flex flex-col gap-3 w-[80%] mx-auto mt-7">
           <PathCard
             href="/soon/coach"
             icon={<TeamIcon size={26} />}
