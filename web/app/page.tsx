@@ -56,7 +56,7 @@ export default async function FrontDoor() {
               priority
               style={{ height: logoH, width: "auto" }}
             />
-            <h1 className="mt-5 text-[46px] font-extrabold tracking-[-0.04em] leading-[0.96]">
+            <h1 className="mt-5 text-[51px] font-extrabold tracking-[-0.04em] leading-[0.96]">
               Basketball
               <br />
               starts here<span style={{ color: "#EA6A2B" }}>.</span>
