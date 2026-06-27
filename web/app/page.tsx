@@ -36,7 +36,7 @@ export default async function FrontDoor() {
           style={{
             backgroundColor: "#0A0E14",
             backgroundImage:
-              "linear-gradient(180deg, rgba(8,11,16,.90) 0%, rgba(8,11,16,.62) 42%, rgba(8,11,16,.34) 72%, rgba(8,11,16,.52) 100%), url(/hero-court.jpg)",
+              "linear-gradient(180deg, rgba(6,9,13,.95) 0%, rgba(6,9,13,.82) 42%, rgba(6,9,13,.66) 72%, rgba(6,9,13,.80) 100%), url(/hero-court.jpg)",
             backgroundSize: "cover, cover",
             backgroundPosition: "center, center 55%",
           }}
