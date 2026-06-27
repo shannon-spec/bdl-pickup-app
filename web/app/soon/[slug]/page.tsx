@@ -104,8 +104,8 @@ export default async function ComingSoonPage({
           </span>
         </div>
 
-        <span className="inline-flex items-center gap-2 h-7 px-3 rounded-full bg-[rgba(120,185,255,0.18)] border border-[rgba(120,185,255,0.40)] text-[11px] font-bold uppercase tracking-[0.14em]">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#7CB0FF] animate-pulse" />
+        <span className="inline-flex items-center gap-2 h-7 px-3 rounded-full bg-[rgba(234,106,43,0.20)] border border-[rgba(234,106,43,0.45)] text-[11px] font-bold uppercase tracking-[0.14em]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#EA6A2B] animate-pulse" />
           Coming soon
         </span>
 
