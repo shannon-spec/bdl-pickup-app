@@ -255,7 +255,7 @@
    Global Footer
    ==================================================================== */
 .bdl-footer {
-  margin-top: 96px;
+  margin-top: 72px;
   background: var(--surface);
   border-top: 1px solid var(--hairline);
   color: var(--text-3);
