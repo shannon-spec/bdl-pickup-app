@@ -40,7 +40,16 @@ export default async function LoginPage({
           : "Ball Don't Lie Pickup";
 
   return (
-    <main className="min-h-[100dvh] flex items-center justify-center px-4 py-8">
+    <main
+      className="min-h-[100dvh] flex items-center justify-center px-4 py-8"
+      style={{
+        backgroundColor: "#0A0E14",
+        backgroundImage:
+          "linear-gradient(180deg, rgba(6,9,13,.90) 0%, rgba(6,9,13,.80) 50%, rgba(6,9,13,.93) 100%), url(/hero-court.jpg)",
+        backgroundSize: "cover, cover",
+        backgroundPosition: "center, center",
+      }}
+    >
       <div className="w-full max-w-[400px] rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-6 sm:p-8">
         <div className="flex flex-col items-center gap-4 mb-6">
           <Brand height={56} />
