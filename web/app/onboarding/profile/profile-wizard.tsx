@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateMyProfile } from "@/lib/actions/profile";
+import { AvatarUploader } from "@/components/bdl/avatar-uploader";
 
 export type ProfileValues = {
   firstName: string;
@@ -43,7 +44,17 @@ const PROGRESS_KEYS: (keyof ProfileValues)[] = [
   "highestLevel",
 ];
 
-export function ProfileWizard({ initial }: { initial: ProfileValues }) {
+export function ProfileWizard({
+  initial,
+  playerId,
+  avatarUrl,
+  initials,
+}: {
+  initial: ProfileValues;
+  playerId: string;
+  avatarUrl: string | null;
+  initials: string;
+}) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [v, setV] = useState<ProfileValues>(initial);
@@ -83,6 +94,23 @@ export function ProfileWizard({ initial }: { initial: ProfileValues }) {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* headshot */}
+      <div className="flex items-center gap-4">
+        <AvatarUploader
+          playerId={playerId}
+          currentUrl={avatarUrl}
+          initials={initials}
+        />
+        <div>
+          <div className="text-[14px] font-bold tracking-[-0.01em]">
+            Add a headshot
+          </div>
+          <div className="text-[12.5px] text-[color:var(--text-3)]">
+            Completes your community profile (optional).
+          </div>
+        </div>
+      </div>
+
       {/* progress */}
       <div className="flex items-center gap-3">
         <div className="flex-1 h-2 rounded-full bg-[color:var(--surface-2)] overflow-hidden">

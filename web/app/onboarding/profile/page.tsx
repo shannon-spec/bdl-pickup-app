@@ -27,6 +27,7 @@ export default async function OnboardingProfilePage() {
       weight: players.weight,
       highestLevel: players.highestLevel,
       level: players.level,
+      avatarUrl: players.avatarUrl,
     })
     .from(players)
     .where(eq(players.id, session.playerId))
@@ -54,7 +55,7 @@ export default async function OnboardingProfilePage() {
         <div className="flex items-center justify-between">
           <Brand height={34} />
           <span className="text-[12px] font-semibold text-[color:var(--text-3)]">
-            Join BDL · Step 2
+            Phase 1 · Step 2 · Joining BDL
           </span>
         </div>
         <div>
@@ -66,7 +67,15 @@ export default async function OnboardingProfilePage() {
             see it when you request to join.
           </p>
         </div>
-        <ProfileWizard initial={initial} />
+        <ProfileWizard
+          initial={initial}
+          playerId={session.playerId}
+          avatarUrl={me?.avatarUrl ?? null}
+          initials={
+            `${(me?.firstName ?? "")[0] ?? ""}${(me?.lastName ?? "")[0] ?? ""}`.toUpperCase() ||
+            "•"
+          }
+        />
       </div>
     </main>
   );
