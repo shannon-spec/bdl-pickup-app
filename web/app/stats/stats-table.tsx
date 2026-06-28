@@ -70,14 +70,14 @@ function AwardBadge({ k, size = 20 }: { k: AwardKeyT; size?: number }) {
 
 export function AwardKey() {
   return (
-    <div className="flex items-center gap-x-4 gap-y-2 flex-wrap rounded-[12px] bg-[color:var(--surface)] px-4 py-3 shadow-[inset_0_0_0_1px_var(--hairline-2)]">
-      <span className="text-[10px] font-bold tracking-[0.12em] uppercase text-[color:var(--text-3)]">
+    <div className="flex items-center gap-x-5 gap-y-2.5 flex-wrap rounded-[14px] bg-[color:var(--surface)] px-5 py-3.5 shadow-[inset_0_0_0_1px_var(--hairline-2)]">
+      <span className="text-[12px] font-bold tracking-[0.12em] uppercase text-[color:var(--text-3)]">
         Key
       </span>
       {AWARD_ORDER.map((k) => (
         <span key={k} className="inline-flex items-center gap-1.5">
-          <AwardBadge k={k} size={22} />
-          <span className="text-[12px] text-[color:var(--text-2)]">
+          <AwardBadge k={k} size={26} />
+          <span className="text-[14px] text-[color:var(--text-2)]">
             {AWARDS[k].label}
           </span>
         </span>
