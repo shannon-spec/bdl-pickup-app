@@ -17,6 +17,8 @@ import {
   Globe,
   Mail,
   Smartphone,
+  ChevronDown,
+  Pencil,
 } from "lucide-react";
 import { PlayerAvatar } from "@/components/bdl/player-avatar";
 import {
@@ -85,6 +87,7 @@ export function MessageCenterClient({
   const canBroadcastLeague = canLeague;
   const canBroadcastGlobal = canGlobal;
 
+  const [composeOpen, setComposeOpen] = useState(false);
   const [audience, setAudience] = useState<Audience>("single");
   const [recipient, setRecipient] = useState<MessageablePlayer | null>(null);
   const [pickerQuery, setPickerQuery] = useState("");
@@ -261,12 +264,26 @@ export function MessageCenterClient({
 
   return (
     <>
-      {/* Compose card */}
-      <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-5 flex flex-col gap-3.5">
-        <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)]">
-          Compose
-        </div>
+      {/* Compose card — collapsed by default so the inbox sits up top */}
+      <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-4 flex flex-col gap-3.5">
+        <button
+          type="button"
+          onClick={() => setComposeOpen((o) => !o)}
+          className="flex items-center justify-between w-full"
+          aria-expanded={composeOpen}
+        >
+          <span className="inline-flex items-center gap-2 text-[12.5px] font-bold text-[color:var(--text)]">
+            <Pencil size={14} className="text-[color:var(--brand)]" />
+            Compose a message
+          </span>
+          <ChevronDown
+            size={18}
+            className={`text-[color:var(--text-3)] transition-transform ${composeOpen ? "rotate-180" : ""}`}
+          />
+        </button>
 
+        {composeOpen && (
+          <>
         {/* Audience picker — only show toggles when there's more than one option */}
         {(canBroadcastLeague || canBroadcastGlobal) && (
           <div className="flex flex-col gap-1.5">
@@ -600,6 +617,8 @@ export function MessageCenterClient({
             <Send size={13} /> {sendLabel}
           </button>
         </div>
+          </>
+        )}
       </div>
 
       {/* Inbox — announcements + alerts the viewer received */}
