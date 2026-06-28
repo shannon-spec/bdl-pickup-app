@@ -10,7 +10,7 @@ import { getViewCaps, type View } from "@/lib/auth/view";
 import { db, players } from "@/lib/db";
 import { getUnreadAnnouncementCount } from "@/lib/queries/announcements";
 import { getUnreadMessageCount } from "@/lib/queries/messages";
-import { getMyTeamsForSwitcher } from "@/lib/queries/teams";
+import { MoreMenu } from "./top-bar-more";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -38,16 +38,23 @@ const HERO_SCENE: React.CSSProperties = {
 const DARK_CTRL =
   "border border-white/15 bg-white/10 text-white/80 hover:text-white hover:bg-[rgba(120,185,255,0.38)] hover:border-[rgba(120,185,255,0.55)] transition-colors";
 
-const NAV_ITEMS: NavItem[] = [
-  { label: "My League", href: "/home", views: ["player", "commissioner"], signedInOnly: true },
-  { label: "Leagues", href: "/leagues", views: ["commissioner", "admin"] },
-  { label: "Games", href: "/games", views: ["player", "commissioner", "admin"] },
-  { label: "Players", href: "/players", views: ["player", "commissioner", "admin"] },
-  { label: "Commissioners", href: "/admin/commissioners", views: ["admin"] },
+// Primary nav — the few things most people want; the context switcher
+// (under the bar) handles which league/team is active.
+const PRIMARY_NAV: NavItem[] = [
+  { label: "Home", href: "/home", views: ["player", "commissioner", "admin"], signedInOnly: true },
   { label: "Discover", href: "/discover", views: ["player", "commissioner", "admin"] },
   { label: "Leaderboard", href: "/leaderboard", views: ["player", "commissioner", "admin"] },
+  { label: "Manage", href: "/manage", views: ["player", "commissioner", "admin"], signedInOnly: true },
+];
+
+// Everything else lives under the "More ▾" overflow menu.
+const MORE_NAV: NavItem[] = [
+  { label: "Games", href: "/games", views: ["player", "commissioner", "admin"] },
+  { label: "Players", href: "/players", views: ["player", "commissioner", "admin"] },
   { label: "Stats", href: "/stats", views: ["player", "commissioner", "admin"], badge: "beta" },
   { label: "Activity", href: "/activity", views: ["player", "commissioner", "admin"] },
+  { label: "Leagues", href: "/leagues", views: ["commissioner", "admin"] },
+  { label: "Commissioners", href: "/admin/commissioners", views: ["admin"] },
 ];
 
 export async function TopBar({
@@ -60,25 +67,14 @@ export async function TopBar({
   const view = caps.view;
 
   const isSignedIn = !!session;
-  const visibleNav = NAV_ITEMS.filter(
-    (item) => item.views.includes(view) && (isSignedIn || !item.signedInOnly),
-  );
-
-  // "My Team" — shown when the viewer is on a team (a real travel team or
-  // a league side), just after "My League". Links to that team's page;
-  // league sides link to their league.
-  const myTeams = session?.playerId ? await getMyTeamsForSwitcher(session) : [];
-  const nav: NavItem[] = [...visibleNav];
-  if (myTeams[0]) {
-    const myTeamItem: NavItem = {
-      label: "My Team",
-      href: myTeams[0].href ?? `/teams/${myTeams[0].id}`,
-      views: [view],
-    };
-    const afterLeague = nav.findIndex((n) => n.href === "/home");
-    if (afterLeague >= 0) nav.splice(afterLeague + 1, 0, myTeamItem);
-    else nav.unshift(myTeamItem);
-  }
+  const canSee = (item: NavItem) =>
+    item.views.includes(view) && (isSignedIn || !item.signedInOnly);
+  const nav = PRIMARY_NAV.filter(canSee);
+  const moreItems = MORE_NAV.filter(canSee).map((i) => ({
+    label: i.label,
+    href: i.href,
+    badge: i.badge,
+  }));
 
   const showSettings = view === "admin";
 
@@ -145,9 +141,7 @@ export async function TopBar({
 
         <nav className="flex items-center justify-center gap-1" aria-label="Primary">
           {nav.map((item) => {
-            const isActive =
-              item.href === active ||
-              (item.label === "My Team" && (active?.startsWith("/teams") ?? false));
+            const isActive = item.href === active;
             return (
               <Link
                 key={item.href}
@@ -163,17 +157,11 @@ export async function TopBar({
                 )}
                 data-active={isActive || undefined}
               >
-                <span className="inline-flex items-center gap-1.5">
-                  {item.label}
-                  {item.badge && (
-                    <span className="inline-flex items-center h-[15px] px-1.5 rounded-full bg-white/15 text-white text-[8.5px] font-bold uppercase tracking-[0.06em]">
-                      {item.badge}
-                    </span>
-                  )}
-                </span>
+                {item.label}
               </Link>
             );
           })}
+          <MoreMenu items={moreItems} active={active} />
         </nav>
 
         <div className="flex items-center gap-2">
