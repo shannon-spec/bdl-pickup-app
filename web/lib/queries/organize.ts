@@ -1,0 +1,177 @@
+import { and, asc, eq, inArray } from "drizzle-orm";
+import {
+  db,
+  tournaments,
+  tournamentMembers,
+  divisions,
+  registrations,
+  matches,
+  teams,
+} from "@/lib/db";
+import { isAdminLike } from "@/lib/auth/perms";
+import type { Session } from "@/lib/auth/session";
+
+export type RegRow = {
+  id: string;
+  label: string;
+  seed: number | null;
+  status: "pending" | "confirmed" | "waitlist";
+  paid: boolean;
+};
+
+export type MatchRow = {
+  id: string;
+  round: number;
+  slot: number;
+  homeRegistrationId: string | null;
+  awayRegistrationId: string | null;
+  homeScore: number | null;
+  awayScore: number | null;
+  winnerRegistrationId: string | null;
+  nextMatchId: string | null;
+  nextSlotIsHome: boolean | null;
+  locked: boolean;
+};
+
+export type ManageDivision = {
+  id: string;
+  name: string;
+  ageBand: string;
+  skillTier: string | null;
+  cap: number | null;
+  registrationOpen: boolean;
+  registrations: RegRow[];
+  matches: MatchRow[];
+};
+
+export type ManageTournament = {
+  id: string;
+  name: string;
+  slug: string | null;
+  teamSize: string | null;
+  bracketFormat: string | null;
+  registrationMode: string;
+  entryFeeCents: number | null;
+  published: boolean;
+  startDate: string | null;
+  endsAt: string | null;
+  avatarKind: string;
+  avatarColor: string;
+  avatarEmoji: string | null;
+  canManage: boolean;
+  divisions: ManageDivision[];
+};
+
+async function canManageTournament(
+  session: Session | null,
+  tournamentId: string,
+): Promise<boolean> {
+  if (isAdminLike(session)) return true;
+  if (!session?.playerId) return false;
+  const [row] = await db
+    .select({ role: tournamentMembers.role })
+    .from(tournamentMembers)
+    .where(
+      and(
+        eq(tournamentMembers.tournamentId, tournamentId),
+        eq(tournamentMembers.playerId, session.playerId),
+      ),
+    )
+    .limit(1);
+  return row?.role === "DIRECTOR" || row?.role === "COMMISSIONER";
+}
+
+export async function getManageTournament(
+  session: Session | null,
+  id: string,
+): Promise<ManageTournament | null> {
+  const [t] = await db.select().from(tournaments).where(eq(tournaments.id, id)).limit(1);
+  if (!t || t.hiddenAt) return null;
+
+  const canManage = await canManageTournament(session, id);
+
+  const divRows = await db
+    .select()
+    .from(divisions)
+    .where(and(eq(divisions.contextType, "TOURNAMENT"), eq(divisions.contextId, id)))
+    .orderBy(asc(divisions.sortOrder));
+
+  const divIds = divRows.map((d) => d.id);
+
+  const regRows = divIds.length
+    ? await db
+        .select({
+          id: registrations.id,
+          divisionId: registrations.divisionId,
+          teamName: registrations.teamName,
+          teamId: registrations.teamId,
+          seed: registrations.seed,
+          status: registrations.status,
+          paid: registrations.paid,
+          joinedName: teams.name,
+        })
+        .from(registrations)
+        .leftJoin(teams, eq(registrations.teamId, teams.id))
+        .where(inArray(registrations.divisionId, divIds))
+    : [];
+
+  const matchRows = divIds.length
+    ? await db
+        .select()
+        .from(matches)
+        .where(inArray(matches.divisionId, divIds))
+        .orderBy(asc(matches.round), asc(matches.slot))
+    : [];
+
+  const divisionsOut: ManageDivision[] = divRows.map((d) => ({
+    id: d.id,
+    name: d.name,
+    ageBand: d.ageBand,
+    skillTier: d.skillTier,
+    cap: d.cap,
+    registrationOpen: d.registrationOpen,
+    registrations: regRows
+      .filter((r) => r.divisionId === d.id)
+      .map((r) => ({
+        id: r.id,
+        label: r.teamName?.trim() || r.joinedName || "Entry",
+        seed: r.seed,
+        status: r.status,
+        paid: r.paid,
+      }))
+      .sort((a, b) => (a.seed ?? 999) - (b.seed ?? 999)),
+    matches: matchRows
+      .filter((m) => m.divisionId === d.id)
+      .map((m) => ({
+        id: m.id,
+        round: m.round,
+        slot: m.slot,
+        homeRegistrationId: m.homeRegistrationId,
+        awayRegistrationId: m.awayRegistrationId,
+        homeScore: m.homeScore,
+        awayScore: m.awayScore,
+        winnerRegistrationId: m.winnerRegistrationId,
+        nextMatchId: m.nextMatchId,
+        nextSlotIsHome: m.nextSlotIsHome,
+        locked: m.locked,
+      })),
+  }));
+
+  return {
+    id: t.id,
+    name: t.name,
+    slug: t.slug,
+    teamSize: t.teamSize,
+    bracketFormat: t.bracketFormat,
+    registrationMode: t.registrationMode,
+    entryFeeCents: t.entryFeeCents,
+    published: t.published,
+    startDate: t.startDate,
+    endsAt: t.endsAt,
+    avatarKind: t.avatarKind,
+    avatarColor: t.avatarColor,
+    avatarEmoji: t.avatarEmoji,
+    canManage,
+    divisions: divisionsOut,
+  };
+}
