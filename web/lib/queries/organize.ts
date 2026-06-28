@@ -1,6 +1,11 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import {
   db,
+  leagues,
+  leaguePlayers,
+  leagueCommissioners,
+  players,
+  scheduleSlots,
   tournaments,
   tournamentMembers,
   divisions,
@@ -8,7 +13,7 @@ import {
   matches,
   teams,
 } from "@/lib/db";
-import { isAdminLike } from "@/lib/auth/perms";
+import { isAdminLike, canManageLeague } from "@/lib/auth/perms";
 import type { Session } from "@/lib/auth/session";
 
 export type RegRow = {
@@ -62,6 +67,84 @@ export type ManageTournament = {
   canManage: boolean;
   divisions: ManageDivision[];
 };
+
+export type ManageLeague = {
+  id: string;
+  name: string;
+  days: number[] | null;
+  startTime: string | null;
+  startDate: string | null;
+  playStyle: string | null;
+  seasonLength: number | null;
+  venueName: string | null;
+  venueAddress: string | null;
+  published: boolean;
+  avatarKind: string;
+  avatarColor: string;
+  avatarEmoji: string | null;
+  canManage: boolean;
+  members: { id: string; name: string }[];
+  commissioners: { id: string; name: string }[];
+  slots: { id: string; startsAt: string; court: string | null }[];
+};
+
+export async function getManageLeague(
+  session: Session | null,
+  id: string,
+): Promise<ManageLeague | null> {
+  const [lg] = await db.select().from(leagues).where(eq(leagues.id, id)).limit(1);
+  if (!lg || lg.hiddenAt) return null;
+
+  const canManage = await canManageLeague(session, id);
+
+  const memberRows = await db
+    .select({ id: players.id, first: players.firstName, last: players.lastName })
+    .from(leaguePlayers)
+    .innerJoin(players, eq(leaguePlayers.playerId, players.id))
+    .where(eq(leaguePlayers.leagueId, id));
+  const commRows = await db
+    .select({ id: players.id, first: players.firstName, last: players.lastName })
+    .from(leagueCommissioners)
+    .innerJoin(players, eq(leagueCommissioners.playerId, players.id))
+    .where(eq(leagueCommissioners.leagueId, id));
+
+  const slotRows = await db
+    .select()
+    .from(scheduleSlots)
+    .where(
+      and(
+        eq(scheduleSlots.contextType, "LEAGUE"),
+        eq(scheduleSlots.contextId, id),
+      ),
+    )
+    .orderBy(asc(scheduleSlots.startsAt));
+
+  const nm = (f: string, l: string | null) => `${f} ${l ?? ""}`.trim();
+
+  return {
+    id: lg.id,
+    name: lg.name,
+    days: (lg.days as number[] | null) ?? null,
+    startTime: lg.startTime,
+    startDate: lg.startDate,
+    playStyle: lg.playStyle,
+    seasonLength: lg.seasonLength,
+    venueName: lg.venueName,
+    venueAddress: lg.venueAddress,
+    published: lg.published,
+    avatarKind: lg.avatarKind,
+    avatarColor: lg.avatarColor,
+    avatarEmoji: lg.avatarEmoji,
+    canManage,
+    members: memberRows.map((r) => ({ id: r.id, name: nm(r.first, r.last) })),
+    commissioners: commRows.map((r) => ({ id: r.id, name: nm(r.first, r.last) })),
+    slots: slotRows.map((s) => ({
+      id: s.id,
+      startsAt: s.startsAt.toISOString(),
+      court: s.court,
+    })),
+  };
+}
 
 /** Public read of a published tournament by slug (canManage=false). */
 export async function getPublicTournament(
