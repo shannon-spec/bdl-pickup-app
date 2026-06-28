@@ -137,6 +137,7 @@ export const sponsorStatusEnum = pgEnum("sponsor_status", [
   "pending",
   "accepted",
   "declined",
+  "hold",
 ]);
 
 export const inviteStatusEnum = pgEnum("invite_status", [
@@ -759,6 +760,7 @@ export const joinRequests = pgTable(
       onDelete: "set null",
     }),
     sponsorStatus: sponsorStatusEnum("sponsor_status"),
+    sponsorGrade: playerLevelEnum("sponsor_grade"),
     decidedBy: uuid("decided_by").references(() => players.id, {
       onDelete: "set null",
     }),

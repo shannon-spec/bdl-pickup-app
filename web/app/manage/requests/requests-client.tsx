@@ -85,6 +85,11 @@ function RequestCard({ r }: { r: ManagerRequest }) {
         (r.sponsorStatus === "accepted" ? (
           <span className="self-start inline-flex items-center gap-1 h-6 px-2.5 rounded-full bg-[color:var(--up-soft)] text-[color:var(--up)] text-[11px] font-bold">
             ⭐ Sponsored by {r.sponsorName}
+            {r.sponsorGrade ? ` · grades ${r.sponsorGrade}` : ""}
+          </span>
+        ) : r.sponsorStatus === "hold" ? (
+          <span className="self-start inline-flex items-center gap-1 h-6 px-2.5 rounded-full bg-[color:var(--warn-soft)] text-[color:var(--warn)] text-[11px] font-semibold">
+            Sponsor held · {r.sponsorName}
           </span>
         ) : r.sponsorStatus === "pending" ? (
           <span className="self-start inline-flex items-center gap-1 h-6 px-2.5 rounded-full bg-[color:var(--surface-2)] text-[color:var(--text-3)] text-[11px] font-semibold">

@@ -18,8 +18,13 @@ async function main() {
   );
   console.log("enum sponsor_status ok");
 
+  // 'hold' added later — safe to re-run.
+  await sql`ALTER TYPE sponsor_status ADD VALUE IF NOT EXISTS 'hold'`;
+
   await sql`ALTER TABLE join_requests ADD COLUMN IF NOT EXISTS sponsor_player_id uuid REFERENCES players(id) ON DELETE SET NULL`;
   await sql`ALTER TABLE join_requests ADD COLUMN IF NOT EXISTS sponsor_status sponsor_status`;
+  // Sponsor's optional grade of the player (reuses player_level), shown to the commissioner.
+  await sql`ALTER TABLE join_requests ADD COLUMN IF NOT EXISTS sponsor_grade player_level`;
   await sql`CREATE INDEX IF NOT EXISTS join_requests_sponsor_idx ON join_requests(sponsor_player_id, sponsor_status)`;
   console.log("join_requests sponsor columns ok");
 

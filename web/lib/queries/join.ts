@@ -106,6 +106,7 @@ export type ManagerRequest = {
   createdAt: string;
   sponsorName: string | null;
   sponsorStatus: string | null;
+  sponsorGrade: string | null;
   player: {
     id: string;
     name: string;
@@ -200,6 +201,7 @@ export async function getPendingRequestsForManager(
           })()
         : null,
       sponsorStatus: r.sponsorStatus ?? null,
+      sponsorGrade: r.sponsorGrade ?? null,
       player: {
         id: r.playerId,
         name,

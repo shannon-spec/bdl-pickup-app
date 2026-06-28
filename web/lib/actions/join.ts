@@ -270,10 +270,19 @@ export async function requestToJoin(
   return { ok: true, data: null };
 }
 
-/** Sponsor accepts/declines a referral. On accept, the commissioners get a DM. */
+type Grade =
+  | "Novice"
+  | "Intermediate"
+  | "Advanced"
+  | "Game Changer"
+  | "Pro";
+
+/** Sponsor approves / holds / declines a referral, with an optional grade.
+ *  On approve, the commissioners get a DM note (incl. the grade). */
 export async function decideSponsor(
   requestId: string,
-  accept: boolean,
+  decision: "accept" | "hold" | "decline",
+  grade?: Grade | null,
 ): Promise<ActionResult<null>> {
   const session = await readSession();
   if (!session?.playerId) return { ok: false, error: "Not signed in." };
@@ -288,12 +297,14 @@ export async function decideSponsor(
   if (req.sponsorStatus !== "pending")
     return { ok: false, error: "Already decided." };
 
+  const status =
+    decision === "accept" ? "accepted" : decision === "hold" ? "hold" : "declined";
   await db
     .update(joinRequests)
-    .set({ sponsorStatus: accept ? "accepted" : "declined" })
+    .set({ sponsorStatus: status, sponsorGrade: grade ?? null })
     .where(eq(joinRequests.id, requestId));
 
-  if (accept) {
+  if (decision === "accept") {
     const type = req.contextType as CtxType;
     const [reqName, sponsorN, ctxName, commIds] = await Promise.all([
       playerName(req.playerId),
@@ -301,11 +312,12 @@ export async function decideSponsor(
       getContextName(type, req.contextId),
       getCommissionerIds(type, req.contextId),
     ]);
+    const gradeNote = grade ? ` — sponsor grades them ${grade}` : "";
     for (const cid of commIds) {
       await notifyPlayer(
         session.playerId,
         cid,
-        `⭐ ${reqName} was sponsored by ${sponsorN} for their request to join ${ctxName}.`,
+        `⭐ ${reqName} was sponsored by ${sponsorN} for their request to join ${ctxName}${gradeNote}.`,
       );
     }
   }

@@ -26,11 +26,22 @@ function SponsorCard({ r }: { r: SponsorRequest }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [grade, setGrade] = useState("");
 
-  const decide = (accept: boolean) =>
+  const decide = (decision: "accept" | "hold" | "decline") =>
     start(async () => {
       setError(null);
-      const res = await decideSponsor(r.id, accept);
+      const res = await decideSponsor(
+        r.id,
+        decision,
+        (grade || null) as
+          | "Novice"
+          | "Intermediate"
+          | "Advanced"
+          | "Game Changer"
+          | "Pro"
+          | null,
+      );
       if (!res.ok) return setError(res.error);
       router.refresh();
     });
@@ -61,20 +72,51 @@ function SponsorCard({ r }: { r: SponsorRequest }) {
         </p>
       )}
 
+      <label className="flex flex-col gap-1">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[color:var(--text-3)]">
+          Grade this player (optional)
+        </span>
+        <select
+          value={grade}
+          onChange={(e) => setGrade(e.target.value)}
+          className="h-10 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface-2)] px-3 text-[14px] outline-none focus:border-[color:var(--brand)]"
+        >
+          <option value="">No grade</option>
+          {["Novice", "Intermediate", "Advanced", "Game Changer", "Pro"].map(
+            (g) => (
+              <option key={g} value={g}>
+                {g}
+              </option>
+            ),
+          )}
+        </select>
+        <span className="text-[11px] text-[color:var(--text-3)]">
+          Shared with the commissioner to help their decision.
+        </span>
+      </label>
+
       {error && <div className="text-[12px] text-[color:var(--down)]">{error}</div>}
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <button
           type="button"
-          onClick={() => decide(true)}
+          onClick={() => decide("accept")}
           disabled={pending}
           className="h-10 rounded-[var(--r-lg)] border border-[color:var(--up)] text-[color:var(--up)] bg-[color:var(--up-soft)] text-[12px] font-bold uppercase tracking-[0.04em] disabled:opacity-60"
         >
-          Accept &amp; vouch
+          Approve
         </button>
         <button
           type="button"
-          onClick={() => decide(false)}
+          onClick={() => decide("hold")}
+          disabled={pending}
+          className="h-10 rounded-[var(--r-lg)] border border-[color:var(--warn)] text-[color:var(--warn)] bg-[color:var(--warn-soft)] text-[12px] font-bold uppercase tracking-[0.04em] disabled:opacity-60"
+        >
+          Hold
+        </button>
+        <button
+          type="button"
+          onClick={() => decide("decline")}
           disabled={pending}
           className="h-10 rounded-[var(--r-lg)] border border-[color:var(--down)] text-[color:var(--down)] bg-[color:var(--down-soft)] text-[12px] font-bold uppercase tracking-[0.04em] disabled:opacity-60"
         >
