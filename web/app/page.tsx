@@ -98,7 +98,7 @@ export default async function FrontDoor() {
 
   return (
     <main className="flex items-start justify-center bg-[color:var(--bg)] px-0 sm:px-6 py-0 sm:py-6">
-      <div className="w-full max-w-[750px] flex flex-col pb-3 overflow-hidden border-0 sm:border border-[#C4C2BA] rounded-none sm:rounded-[20px] shadow-none sm:shadow-[0_8px_34px_rgba(0,0,0,.10)] bg-[color:var(--bg)]">
+      <div className="w-full max-w-[750px] flex flex-col pb-8 overflow-hidden border-0 sm:border border-[#C4C2BA] rounded-none sm:rounded-[20px] shadow-none sm:shadow-[0_8px_34px_rgba(0,0,0,.10)] bg-[color:var(--bg)]">
         {/* ---------- Header: logo left, Sign in right ---------- */}
         <header className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-[color:var(--hairline)]">
           <Link href="/" aria-label="BDL home" className="min-w-0">
