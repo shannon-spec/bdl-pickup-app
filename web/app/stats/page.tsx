@@ -11,6 +11,7 @@ import {
   getMyCommissionerLeagueIds,
 } from "@/lib/auth/perms";
 import { db, leagues } from "@/lib/db";
+import { getActiveLeagueId } from "@/lib/cookies/active-league";
 import { getLeaguePlayerStats } from "@/lib/queries/player-stats";
 import { StatsTable, AwardKey } from "./stats-table";
 
@@ -51,11 +52,20 @@ export default async function StatsPage({
     }
   }
 
+  // Stats are always scoped to a single league (no "All leagues" view).
+  // Default to the explicit param → active-league cookie → first in scope.
+  const activeLeagueId = await getActiveLeagueId();
+  const selectedLeagueId =
+    sp.league || activeLeagueId || scopeLeagueIds?.[0] || null;
+
   const data = await getLeaguePlayerStats({
-    leagueId: sp.league || null,
+    leagueId: selectedLeagueId,
     year: sp.year || null,
     scopeLeagueIds,
   });
+  // If nothing resolved yet (e.g. admin without an active league), fall back
+  // to the first available league so a real league is always selected.
+  const effectiveLeagueId = selectedLeagueId || data.leagueOptions[0]?.id || null;
 
   return (
     <>
@@ -73,7 +83,7 @@ export default async function StatsPage({
         />
 
         <FilterBar
-          leagueId={sp.league || null}
+          leagueId={effectiveLeagueId}
           year={sp.year || "all"}
           leagues={data.leagueOptions}
           years={data.yearOptions}
@@ -137,9 +147,6 @@ function FilterBar({
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <FilterPill href={linkFor(null, year)} active={!leagueId}>
-        All leagues
-      </FilterPill>
       {leagues.map((l) => (
         <FilterPill key={l.id} href={linkFor(l.id, year)} active={leagueId === l.id}>
           {l.name}
