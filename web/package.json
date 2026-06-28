@@ -32,7 +32,8 @@
     "db:migrate:organize": "node --env-file=.env.local scripts/migrate-organize.mjs",
     "db:seed:owner": "node --env-file=.env.local scripts/seed-owner.mjs",
     "db:migrate:join-requests": "node --env-file=.env.local scripts/migrate-join-requests.mjs",
-    "db:migrate:visibility": "node --env-file=.env.local scripts/migrate-visibility.mjs"
+    "db:migrate:visibility": "node --env-file=.env.local scripts/migrate-visibility.mjs",
+    "db:migrate:sponsor": "node --env-file=.env.local scripts/migrate-sponsor.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.106.0",

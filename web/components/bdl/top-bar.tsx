@@ -53,6 +53,7 @@ const MORE_NAV: NavItem[] = [
   { label: "Players", href: "/players", views: ["player", "commissioner", "admin"] },
   { label: "Stats", href: "/stats", views: ["player", "commissioner", "admin"], badge: "beta" },
   { label: "Activity", href: "/activity", views: ["player", "commissioner", "admin"] },
+  { label: "Sponsorships", href: "/sponsor", views: ["player", "commissioner", "admin"], signedInOnly: true },
   { label: "Leagues", href: "/leagues", views: ["commissioner", "admin"] },
   { label: "Commissioners", href: "/admin/commissioners", views: ["admin"] },
 ];

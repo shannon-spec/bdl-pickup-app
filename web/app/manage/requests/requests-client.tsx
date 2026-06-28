@@ -81,6 +81,17 @@ function RequestCard({ r }: { r: ManagerRequest }) {
         </p>
       )}
 
+      {r.sponsorName &&
+        (r.sponsorStatus === "accepted" ? (
+          <span className="self-start inline-flex items-center gap-1 h-6 px-2.5 rounded-full bg-[color:var(--up-soft)] text-[color:var(--up)] text-[11px] font-bold">
+            ⭐ Sponsored by {r.sponsorName}
+          </span>
+        ) : r.sponsorStatus === "pending" ? (
+          <span className="self-start inline-flex items-center gap-1 h-6 px-2.5 rounded-full bg-[color:var(--surface-2)] text-[color:var(--text-3)] text-[11px] font-semibold">
+            Sponsor pending · {r.sponsorName}
+          </span>
+        ) : null)}
+
       {r.status === "hold" && (
         <span className="self-start text-[11px] font-bold uppercase tracking-[0.06em] text-[color:var(--warn)]">
           On hold

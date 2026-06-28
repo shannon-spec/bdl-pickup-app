@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Search, ChevronRight, X, Check, Clock } from "lucide-react";
 import { LeagueAvatar } from "@/components/bdl/league-avatar";
-import { requestToJoin } from "@/lib/actions/join";
+import { requestToJoin, getContextPlayers } from "@/lib/actions/join";
 
 export type JoinStatus = "pending" | "accepted" | "denied" | "hold";
 
@@ -233,14 +233,28 @@ function RequestDialog({
   const [pending, start] = useTransition();
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [sponsors, setSponsors] = useState<{ id: string; name: string }[]>([]);
+  const [sponsorId, setSponsorId] = useState("");
+  const ctxType = item.type === "league" ? "LEAGUE" : "TEAM";
+
+  useEffect(() => {
+    let live = true;
+    getContextPlayers(ctxType, item.id).then((list) => {
+      if (live) setSponsors(list);
+    });
+    return () => {
+      live = false;
+    };
+  }, [ctxType, item.id]);
 
   const send = () =>
     start(async () => {
       setError(null);
       const res = await requestToJoin(
-        item.type === "league" ? "LEAGUE" : "TEAM",
+        ctxType,
         item.id,
         message,
+        sponsorId || null,
       );
       if (!res.ok) return setError(res.error);
       onClose();
@@ -294,6 +308,30 @@ function RequestDialog({
               ))}
             </div>
           </div>
+        )}
+
+        {sponsors.length > 0 && (
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[color:var(--text-3)]">
+              Player sponsor (optional)
+            </span>
+            <select
+              value={sponsorId}
+              onChange={(e) => setSponsorId(e.target.value)}
+              className="h-11 rounded-[var(--r-lg)] border border-[color:var(--hairline-2)] bg-[color:var(--surface-2)] px-3 text-[14px] outline-none focus:border-[color:var(--brand)]"
+            >
+              <option value="">No sponsor</option>
+              {sponsors.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            <span className="text-[11px] text-[color:var(--text-3)]">
+              A current member who&apos;ll vouch for you. They confirm before the
+              commissioner sees it.
+            </span>
+          </label>
         )}
 
         <label className="flex flex-col gap-1.5">

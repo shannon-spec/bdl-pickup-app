@@ -133,6 +133,11 @@ export const contextVisibilityEnum = pgEnum("context_visibility", [
   "CLOSED",
   "PRIVATE",
 ]);
+export const sponsorStatusEnum = pgEnum("sponsor_status", [
+  "pending",
+  "accepted",
+  "declined",
+]);
 
 export const inviteStatusEnum = pgEnum("invite_status", [
   "pending",
@@ -750,6 +755,10 @@ export const joinRequests = pgTable(
     contextId: uuid("context_id").notNull(),
     message: text("message"),
     status: joinRequestStatusEnum("status").notNull().default("pending"),
+    sponsorPlayerId: uuid("sponsor_player_id").references(() => players.id, {
+      onDelete: "set null",
+    }),
+    sponsorStatus: sponsorStatusEnum("sponsor_status"),
     decidedBy: uuid("decided_by").references(() => players.id, {
       onDelete: "set null",
     }),

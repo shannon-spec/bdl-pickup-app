@@ -34,6 +34,68 @@ export async function getMyJoinStatuses(
   return m;
 }
 
+export type SponsorRequest = {
+  id: string;
+  requesterName: string;
+  requesterInitials: string;
+  contextType: string;
+  contextName: string;
+  message: string | null;
+};
+
+/** Pending sponsorship asks for the signed-in player (Player Sponsor flow). */
+export async function getPendingSponsorships(
+  session: Session | null,
+): Promise<SponsorRequest[]> {
+  if (!session?.playerId) return [];
+  const rows = await db
+    .select()
+    .from(joinRequests)
+    .where(
+      and(
+        eq(joinRequests.sponsorPlayerId, session.playerId),
+        eq(joinRequests.sponsorStatus, "pending"),
+      ),
+    )
+    .orderBy(desc(joinRequests.createdAt));
+  if (!rows.length) return [];
+
+  const pids = [...new Set(rows.map((r) => r.playerId))];
+  const pr = await db
+    .select({ id: players.id, f: players.firstName, l: players.lastName })
+    .from(players)
+    .where(inArray(players.id, pids));
+  const pMap = new Map(pr.map((p) => [p.id, p]));
+
+  const nameMap = new Map<string, string>();
+  const ids = (t: string) =>
+    [...new Set(rows.filter((r) => r.contextType === t).map((r) => r.contextId))];
+  const [lg, tm, to, cm] = await Promise.all([
+    ids("LEAGUE").length ? db.select({ id: leagues.id, name: leagues.name }).from(leagues).where(inArray(leagues.id, ids("LEAGUE"))) : Promise.resolve([]),
+    ids("TEAM").length ? db.select({ id: teams.id, name: teams.name }).from(teams).where(inArray(teams.id, ids("TEAM"))) : Promise.resolve([]),
+    ids("TOURNAMENT").length ? db.select({ id: tournaments.id, name: tournaments.name }).from(tournaments).where(inArray(tournaments.id, ids("TOURNAMENT"))) : Promise.resolve([]),
+    ids("COMMUNITY").length ? db.select({ id: communities.id, name: communities.name }).from(communities).where(inArray(communities.id, ids("COMMUNITY"))) : Promise.resolve([]),
+  ]);
+  lg.forEach((r) => nameMap.set(`LEAGUE:${r.id}`, r.name));
+  tm.forEach((r) => nameMap.set(`TEAM:${r.id}`, r.name));
+  to.forEach((r) => nameMap.set(`TOURNAMENT:${r.id}`, r.name));
+  cm.forEach((r) => nameMap.set(`COMMUNITY:${r.id}`, r.name));
+
+  return rows.map((r) => {
+    const p = pMap.get(r.playerId);
+    const name = p ? `${p.f} ${p.l ?? ""}`.trim() : "A player";
+    return {
+      id: r.id,
+      requesterName: name,
+      requesterInitials:
+        `${p?.f?.[0] ?? ""}${p?.l?.[0] ?? ""}`.toUpperCase() || "•",
+      contextType: r.contextType,
+      contextName: nameMap.get(`${r.contextType}:${r.contextId}`) ?? "—",
+      message: r.message,
+    };
+  });
+}
+
 export type ManagerRequest = {
   id: string;
   contextType: string;
@@ -42,6 +104,8 @@ export type ManagerRequest = {
   status: "pending" | "hold";
   message: string | null;
   createdAt: string;
+  sponsorName: string | null;
+  sponsorStatus: string | null;
   player: {
     id: string;
     name: string;
@@ -76,8 +140,13 @@ export async function getPendingRequestsForManager(
   });
   if (mine.length === 0) return [];
 
-  // player profiles
-  const playerIds = [...new Set(mine.map((r) => r.playerId))];
+  // player profiles (requesters + any sponsors)
+  const playerIds = [
+    ...new Set([
+      ...mine.map((r) => r.playerId),
+      ...mine.map((r) => r.sponsorPlayerId).filter((x): x is string => !!x),
+    ]),
+  ];
   const pr = await db
     .select({
       id: players.id,
@@ -124,6 +193,13 @@ export async function getPendingRequestsForManager(
       status: r.status as "pending" | "hold",
       message: r.message,
       createdAt: r.createdAt.toISOString(),
+      sponsorName: r.sponsorPlayerId
+        ? (() => {
+            const s = pMap.get(r.sponsorPlayerId);
+            return s ? `${s.first} ${s.last ?? ""}`.trim() : null;
+          })()
+        : null,
+      sponsorStatus: r.sponsorStatus ?? null,
       player: {
         id: r.playerId,
         name,

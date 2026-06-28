@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import {
   db,
   joinRequests,
+  players,
   leaguePlayers,
   leagueCommissioners,
   teamPlayers,
@@ -140,11 +141,80 @@ async function notifyPlayer(fromId: string | null, toId: string, body: string) {
   await db.insert(messages).values({ conversationId: convo.id, senderId: fromId, body });
 }
 
+async function playerName(id: string): Promise<string> {
+  const [p] = await db
+    .select({ f: players.firstName, l: players.lastName })
+    .from(players)
+    .where(eq(players.id, id))
+    .limit(1);
+  return p ? `${p.f} ${p.l ?? ""}`.trim() : "A player";
+}
+
+/** Current members of a context (for the sponsor picker). */
+export async function getContextPlayers(
+  contextType: CtxType,
+  contextId: string,
+): Promise<{ id: string; name: string }[]> {
+  const nm = (f: string, l: string | null) => `${f} ${l ?? ""}`.trim();
+  if (contextType === "LEAGUE") {
+    const rows = await db
+      .select({ id: players.id, f: players.firstName, l: players.lastName })
+      .from(leaguePlayers)
+      .innerJoin(players, eq(leaguePlayers.playerId, players.id))
+      .where(eq(leaguePlayers.leagueId, contextId));
+    return rows.map((r) => ({ id: r.id, name: nm(r.f, r.l) }));
+  }
+  if (contextType === "TEAM") {
+    const rows = await db
+      .select({ id: players.id, f: players.firstName, l: players.lastName })
+      .from(teamPlayers)
+      .innerJoin(players, eq(teamPlayers.playerId, players.id))
+      .where(eq(teamPlayers.teamId, contextId));
+    return rows.map((r) => ({ id: r.id, name: nm(r.f, r.l) }));
+  }
+  const tbl = contextType === "TOURNAMENT" ? tournamentMembers : communityMembers;
+  const ctxCol =
+    contextType === "TOURNAMENT"
+      ? tournamentMembers.tournamentId
+      : communityMembers.communityId;
+  const pCol =
+    contextType === "TOURNAMENT"
+      ? tournamentMembers.playerId
+      : communityMembers.playerId;
+  const rows = await db
+    .select({ id: players.id, f: players.firstName, l: players.lastName })
+    .from(tbl)
+    .innerJoin(players, eq(pCol, players.id))
+    .where(eq(ctxCol, contextId));
+  return rows.map((r) => ({ id: r.id, name: nm(r.f, r.l) }));
+}
+
+async function getCommissionerIds(
+  type: CtxType,
+  id: string,
+): Promise<string[]> {
+  if (type === "LEAGUE") {
+    const r = await db.select({ id: leagueCommissioners.playerId }).from(leagueCommissioners).where(eq(leagueCommissioners.leagueId, id));
+    return r.map((x) => x.id);
+  }
+  if (type === "TEAM") {
+    const r = await db.select({ id: teamCommissioners.playerId }).from(teamCommissioners).where(eq(teamCommissioners.teamId, id));
+    return r.map((x) => x.id);
+  }
+  if (type === "TOURNAMENT") {
+    const r = await db.select({ id: tournamentMembers.playerId }).from(tournamentMembers).where(and(eq(tournamentMembers.tournamentId, id), inArray(tournamentMembers.role, ["DIRECTOR", "COMMISSIONER"])));
+    return r.map((x) => x.id);
+  }
+  const r = await db.select({ id: communityMembers.playerId }).from(communityMembers).where(and(eq(communityMembers.communityId, id), inArray(communityMembers.role, ["DIRECTOR", "COMMISSIONER"])));
+  return r.map((x) => x.id);
+}
+
 /** Player requests to join a league/team/etc. (Phase 2, Step 4). */
 export async function requestToJoin(
   contextType: CtxType,
   contextId: string,
   message: string,
+  sponsorPlayerId?: string | null,
 ): Promise<ActionResult<null>> {
   const session = await readSession();
   if (!session?.playerId)
@@ -172,14 +242,77 @@ export async function requestToJoin(
   if (existing.some((r) => r.status === "pending" || r.status === "hold"))
     return { ok: false, error: "Your request is already in review." };
 
+  const sponsor = sponsorPlayerId && sponsorPlayerId !== pid ? sponsorPlayerId : null;
   await db.insert(joinRequests).values({
     playerId: pid,
     contextType,
     contextId,
     message: message?.trim() || null,
     status: "pending",
+    sponsorPlayerId: sponsor,
+    sponsorStatus: sponsor ? "pending" : null,
   });
+
+  // Ask the chosen sponsor to confirm (DM → bell + /messages + /sponsor).
+  if (sponsor) {
+    const [reqName, ctxName] = await Promise.all([
+      playerName(pid),
+      getContextName(contextType, contextId),
+    ]);
+    await notifyPlayer(
+      pid,
+      sponsor,
+      `${reqName} listed you as their player sponsor for joining ${ctxName}. Accept or decline it on your Sponsorships page.`,
+    );
+  }
+
   revalidatePath("/discover");
+  return { ok: true, data: null };
+}
+
+/** Sponsor accepts/declines a referral. On accept, the commissioners get a DM. */
+export async function decideSponsor(
+  requestId: string,
+  accept: boolean,
+): Promise<ActionResult<null>> {
+  const session = await readSession();
+  if (!session?.playerId) return { ok: false, error: "Not signed in." };
+
+  const [req] = await db
+    .select()
+    .from(joinRequests)
+    .where(eq(joinRequests.id, requestId))
+    .limit(1);
+  if (!req || req.sponsorPlayerId !== session.playerId)
+    return { ok: false, error: "Not allowed." };
+  if (req.sponsorStatus !== "pending")
+    return { ok: false, error: "Already decided." };
+
+  await db
+    .update(joinRequests)
+    .set({ sponsorStatus: accept ? "accepted" : "declined" })
+    .where(eq(joinRequests.id, requestId));
+
+  if (accept) {
+    const type = req.contextType as CtxType;
+    const [reqName, sponsorN, ctxName, commIds] = await Promise.all([
+      playerName(req.playerId),
+      playerName(session.playerId),
+      getContextName(type, req.contextId),
+      getCommissionerIds(type, req.contextId),
+    ]);
+    for (const cid of commIds) {
+      await notifyPlayer(
+        session.playerId,
+        cid,
+        `⭐ ${reqName} was sponsored by ${sponsorN} for their request to join ${ctxName}.`,
+      );
+    }
+  }
+
+  revalidatePath("/sponsor");
+  revalidatePath("/manage/requests");
+  revalidatePath("/messages");
   return { ok: true, data: null };
 }
 
