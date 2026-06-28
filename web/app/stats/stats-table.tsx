@@ -36,23 +36,23 @@ type AwardKeyT =
   | "triple-double";
 
 const AWARDS: Record<AwardKeyT, { src: string; label: string }> = {
-  power: { src: "/awards/power.png", label: "Overall BDL Power Rating" },
-  scoring: { src: "/awards/scoring.png", label: "Leading scorer" },
-  rebound: { src: "/awards/rebound.png", label: "Leading rebounder" },
-  assist: { src: "/awards/assist.png", label: "Leading assists" },
-  steals: { src: "/awards/steals.png", label: "Leading steals" },
-  sharpshooter: { src: "/awards/sharpshooter.png", label: "Leading 3PT %" },
-  "triple-double": { src: "/awards/triple-double.png", label: "Triple-double avg" },
+  power: { src: "/awards/power.png", label: "BDL Power" },
+  scoring: { src: "/awards/scoring.png", label: "Scoring" },
+  rebound: { src: "/awards/rebound.png", label: "Rebounding" },
+  assist: { src: "/awards/assist.png", label: "Assists" },
+  steals: { src: "/awards/steals.png", label: "Steals" },
+  sharpshooter: { src: "/awards/sharpshooter.png", label: "3PT%" },
+  "triple-double": { src: "/awards/triple-double.png", label: "Triple-double" },
 };
 
 const AWARD_ORDER: AwardKeyT[] = [
-  "power",
   "scoring",
   "rebound",
   "assist",
   "steals",
   "sharpshooter",
   "triple-double",
+  "power",
 ];
 
 function AwardBadge({ k, size = 20 }: { k: AwardKeyT; size?: number }) {
@@ -114,10 +114,14 @@ export function StatsTable({
     apg: maxOf((r) => r.apg),
     spg: maxOf((r) => r.spg),
     tp: maxOf((r) => r.tpPct),
+    power: maxOf((r) => r.power),
   };
   const eq = (a: number, b: number) => Math.abs(a - b) < 1e-9;
   const awardsFor = (p: StatLine): AwardKeyT[] => {
     const a: AwardKeyT[] = [];
+    // BDL Power crown → only the single highest power rating.
+    if (p.power !== null && leaders.power > -Infinity && eq(p.power, leaders.power))
+      a.push("power");
     if (p.ppg > 0 && eq(p.ppg, leaders.ppg)) a.push("scoring");
     if (p.rpg > 0 && eq(p.rpg, leaders.rpg)) a.push("rebound");
     if (p.apg > 0 && eq(p.apg, leaders.apg)) a.push("assist");
@@ -219,9 +223,6 @@ export function StatsTable({
                         <span className="font-semibold text-[13.5px]">
                           {p.firstName} {p.lastName}
                         </span>
-                        {p.power !== null && p.power !== undefined && (
-                          <AwardBadge k="power" />
-                        )}
                         {awardsFor(p).map((aw) => (
                           <AwardBadge key={aw} k={aw} />
                         ))}
