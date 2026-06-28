@@ -52,6 +52,10 @@ const POSITIONS: Opt[] = [
 const SPORTS: Opt[] = [
   "Basketball","Volleyball","Pickleball","Soccer","Football","Other",
 ].map((s) => ({ value: s, label: s }));
+const WEIGHTS: Opt[] = Array.from({ length: 53 }, (_, i) => {
+  const w = 90 + i * 5; // 90 → 350
+  return { value: String(w), label: `${w} lbs` };
+});
 const LEVELS: Opt[] = [
   "Rec","Middle school","High school","College","Semi-pro / Pro-am","Pro","Overseas",
 ].map((s) => ({ value: s, label: s }));
@@ -178,7 +182,7 @@ export function ProfileWizard({
         {Select("state", "State", STATES)}
         {Select("heightFt", "Height (ft)", FT)}
         {Select("heightIn", "Height (in)", INCHES)}
-        {Input("weight", "Weight (lbs)", { inputMode: "numeric" })}
+        {Select("weight", "Weight (lbs)", WEIGHTS)}
         {Select("position", "Position", POSITIONS)}
         {Input("zip", "Zip", { inputMode: "numeric" })}
         {Input("college", "College")}
