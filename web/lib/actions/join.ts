@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import {
   db,
@@ -11,6 +11,12 @@ import {
   teamCommissioners,
   tournamentMembers,
   communityMembers,
+  conversations,
+  messages,
+  leagues,
+  teams,
+  tournaments,
+  communities,
 } from "@/lib/db";
 import { readSession, type Session } from "@/lib/auth/session";
 import { isAdminLike, canManageLeague, canManageTeam } from "@/lib/auth/perms";
@@ -79,6 +85,42 @@ async function addToRoster(type: CtxType, id: string, playerId: string) {
     await db.insert(tournamentMembers).values({ tournamentId: id, playerId, role: "PLAYER", status: "active" }).onConflictDoNothing();
   else
     await db.insert(communityMembers).values({ communityId: id, playerId, role: "MEMBER", status: "active" }).onConflictDoNothing();
+}
+
+async function getContextName(type: CtxType, id: string): Promise<string> {
+  if (type === "LEAGUE") {
+    const [r] = await db.select({ n: leagues.name }).from(leagues).where(eq(leagues.id, id)).limit(1);
+    return r?.n ?? "the league";
+  }
+  if (type === "TEAM") {
+    const [r] = await db.select({ n: teams.name }).from(teams).where(eq(teams.id, id)).limit(1);
+    return r?.n ?? "the team";
+  }
+  if (type === "TOURNAMENT") {
+    const [r] = await db.select({ n: tournaments.name }).from(tournaments).where(eq(tournaments.id, id)).limit(1);
+    return r?.n ?? "the tournament";
+  }
+  const [r] = await db.select({ n: communities.name }).from(communities).where(eq(communities.id, id)).limit(1);
+  return r?.n ?? "the community";
+}
+
+/** Deliver a decision as a DM (shows in the bell + /messages). */
+async function notifyPlayer(fromId: string | null, toId: string, body: string) {
+  if (!fromId || fromId === toId) return;
+  const [a, b] = fromId < toId ? [fromId, toId] : [toId, fromId];
+  const fromIsA = fromId === a;
+  const [convo] = await db
+    .insert(conversations)
+    .values({ participantA: a, participantB: b, lastMessageAt: sql`now()` })
+    .onConflictDoUpdate({
+      target: [conversations.participantA, conversations.participantB],
+      set: {
+        lastMessageAt: sql`now()`,
+        ...(fromIsA ? { aClearedAt: sql`null` } : { bClearedAt: sql`null` }),
+      },
+    })
+    .returning({ id: conversations.id });
+  await db.insert(messages).values({ conversationId: convo.id, senderId: fromId, body });
 }
 
 /** Player requests to join a league/team/etc. (Phase 2, Step 4). */
@@ -170,8 +212,19 @@ export async function decideJoinRequest(
     })
     .where(eq(joinRequests.id, requestId));
 
+  // Notify the player of the decision (DM → bell + /messages).
+  const name = await getContextName(type, req.contextId);
+  const body =
+    decision === "accept"
+      ? `🎉 You're in! ${name} accepted your join request.`
+      : decision === "hold"
+        ? `${name} placed your join request on hold — the organizer may follow up for more info.`
+        : `${name} declined your join request for now. You can explore other leagues & teams or re-apply later.`;
+  await notifyPlayer(session.playerId, req.playerId, body);
+
   revalidatePath("/manage/requests");
   revalidatePath("/discover");
+  revalidatePath("/messages");
   return { ok: true, data: null };
 }
 
