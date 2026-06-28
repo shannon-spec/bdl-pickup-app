@@ -277,6 +277,7 @@ function Bracket({
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const isRR = format === "ROUND_ROBIN";
+  const isDE = format === "DOUBLE_ELIM";
 
   const labelOf = useMemo(() => {
     const m = new Map(div.registrations.map((r) => [r.id, r]));
@@ -353,6 +354,36 @@ function Bracket({
       if (!res.ok) return setError(res.error);
       router.refresh();
     });
+
+  const colsOf = (group: string) => {
+    const ms = div.matches.filter((m) => m.bracketGroup === group);
+    const max = ms.reduce((mx, m) => Math.max(mx, m.round), 0);
+    const cols: MatchRow[][] = [];
+    for (let r = 1; r <= max; r++)
+      cols.push(ms.filter((m) => m.round === r).sort((a, b) => a.slot - b.slot));
+    return cols;
+  };
+
+  const renderColumns = (cols: MatchRow[][]) => (
+    <div className="flex gap-4 overflow-x-auto pb-2">
+      {cols.map((col, ri) => (
+        <div
+          key={ri}
+          className="flex flex-col justify-around gap-3 min-w-[190px]"
+        >
+          {col.map((m) => (
+            <MatchBox
+              key={m.id}
+              tournamentId={tournamentId}
+              m={m}
+              labelOf={labelOf}
+              seedOf={seedOf}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
 
   if (div.matches.length === 0) {
     return (
@@ -462,25 +493,29 @@ function Bracket({
             ))}
           </div>
         </>
-      ) : (
-        <div className="flex gap-4 overflow-x-auto pb-2">
-          {rounds.map((col, ri) => (
-            <div
-              key={ri}
-              className="flex flex-col justify-around gap-3 min-w-[200px]"
-            >
-              {col.map((m) => (
-                <MatchBox
-                  key={m.id}
-                  tournamentId={tournamentId}
-                  m={m}
-                  labelOf={labelOf}
-                  seedOf={seedOf}
-                />
-              ))}
-            </div>
-          ))}
+      ) : isDE ? (
+        <div className="flex flex-col gap-5">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[color:var(--text-3)] mb-1.5">
+              Winners bracket
+            </p>
+            {renderColumns(colsOf("W"))}
+          </div>
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[color:var(--text-3)] mb-1.5">
+              Losers bracket
+            </p>
+            {renderColumns(colsOf("L"))}
+          </div>
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[color:var(--text-3)] mb-1.5">
+              Grand final
+            </p>
+            <div className="max-w-[210px]">{renderColumns(colsOf("GF"))}</div>
+          </div>
         </div>
+      ) : (
+        renderColumns(rounds)
       )}
     </div>
   );

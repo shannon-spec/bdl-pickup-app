@@ -30,6 +30,7 @@ export type MatchRow = {
   winnerRegistrationId: string | null;
   nextMatchId: string | null;
   nextSlotIsHome: boolean | null;
+  bracketGroup: string | null;
   locked: boolean;
 };
 
@@ -153,6 +154,7 @@ export async function getManageTournament(
         winnerRegistrationId: m.winnerRegistrationId,
         nextMatchId: m.nextMatchId,
         nextSlotIsHome: m.nextSlotIsHome,
+        bracketGroup: m.bracketGroup,
         locked: m.locked,
       })),
   }));

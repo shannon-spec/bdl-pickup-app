@@ -634,6 +634,10 @@ export const matches = pgTable(
     // Self-FK (handled in DB); left unreferenced here to avoid a circular type.
     nextMatchId: uuid("next_match_id"),
     nextSlotIsHome: boolean("next_slot_is_home"),
+    // Double-elim: where the loser goes + which bracket this match is in.
+    loserNextMatchId: uuid("loser_next_match_id"),
+    loserNextSlotIsHome: boolean("loser_next_slot_is_home"),
+    bracketGroup: text("bracket_group"), // 'W' | 'L' | 'GF' | null
     locked: boolean("locked").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })

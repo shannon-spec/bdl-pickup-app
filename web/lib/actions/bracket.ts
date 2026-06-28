@@ -218,7 +218,19 @@ export async function generateBracket(
     return { ok: true, data: { matches: rows.length } };
   }
 
-  // ---- Single / double elim / pools → single-elim bracket ----
+  // ---- Double elimination (winners + losers bracket + grand final) ----
+  if ((tour?.fmt ?? "SINGLE_ELIM") === "DOUBLE_ELIM") {
+    if (n < 4 || (n & (n - 1)) !== 0) {
+      return {
+        ok: false,
+        error:
+          "Double-elim needs a power-of-two field (4, 8, 16…). Add or drop teams to match.",
+      };
+    }
+    return generateDoubleElim(tournamentId, divisionId, ordered);
+  }
+
+  // ---- Single elim / pools → single-elim bracket ----
   // seedNo (1..n) -> registration id
   const seedToReg = new Map<number, string>();
   ordered.forEach((r, i) => seedToReg.set(i + 1, r.id));
@@ -299,6 +311,112 @@ export async function generateBracket(
   return { ok: true, data: { matches: size - 1 } };
 }
 
+/** Build a full double-elimination bracket for a power-of-two field. */
+async function generateDoubleElim(
+  tournamentId: string,
+  divisionId: string,
+  ordered: { id: string; seed: number | null }[],
+): Promise<ActionResult<{ matches: number }>> {
+  const size = ordered.length;
+  const k = Math.log2(size);
+  const order = seedOrder(size);
+  const seedToReg = new Map<number, string>();
+  ordered.forEach((r, i) => seedToReg.set(i + 1, r.id));
+
+  await db.delete(matches).where(eq(matches.divisionId, divisionId));
+
+  type Desc = {
+    group: "W" | "L" | "GF";
+    round: number;
+    slot: number;
+    home: string | null;
+    away: string | null;
+  };
+  const descs: Desc[] = [];
+
+  // winners bracket
+  for (let r = 1; r <= k; r++) {
+    const count = size / 2 ** r;
+    for (let s = 0; s < count; s++) {
+      const home = r === 1 ? (seedToReg.get(order[2 * s]) ?? null) : null;
+      const away = r === 1 ? (seedToReg.get(order[2 * s + 1]) ?? null) : null;
+      descs.push({ group: "W", round: r, slot: s, home, away });
+    }
+  }
+  // losers bracket — 2(k-1) rounds, alternating minor / major
+  const lbRounds = 2 * (k - 1);
+  for (let lr = 1; lr <= lbRounds; lr++) {
+    const j = Math.ceil(lr / 2);
+    const count = size / 2 ** (j + 1);
+    for (let s = 0; s < count; s++)
+      descs.push({ group: "L", round: lr, slot: s, home: null, away: null });
+  }
+  // grand final
+  descs.push({ group: "GF", round: 1, slot: 0, home: null, away: null });
+
+  const inserted = await db
+    .insert(matches)
+    .values(
+      descs.map((d) => ({
+        divisionId,
+        round: d.round,
+        slot: d.slot,
+        bracketGroup: d.group,
+        homeRegistrationId: d.home,
+        awayRegistrationId: d.away,
+      })),
+    )
+    .returning({
+      id: matches.id,
+      round: matches.round,
+      slot: matches.slot,
+      bracketGroup: matches.bracketGroup,
+    });
+
+  const idOf = (g: string, r: number, s: number) =>
+    inserted.find((m) => m.bracketGroup === g && m.round === r && m.slot === s)!
+      .id;
+
+  const setNext = (from: string, to: string, isHome: boolean) =>
+    db
+      .update(matches)
+      .set({ nextMatchId: to, nextSlotIsHome: isHome })
+      .where(eq(matches.id, from));
+  const setLoser = (from: string, to: string, isHome: boolean) =>
+    db
+      .update(matches)
+      .set({ loserNextMatchId: to, loserNextSlotIsHome: isHome })
+      .where(eq(matches.id, from));
+
+  // winners-bracket links: winner advances in WB (→ GF at the end), loser drops to LB
+  for (let r = 1; r <= k; r++) {
+    const count = size / 2 ** r;
+    for (let m = 0; m < count; m++) {
+      const from = idOf("W", r, m);
+      if (r < k) await setNext(from, idOf("W", r + 1, Math.floor(m / 2)), m % 2 === 0);
+      else await setNext(from, idOf("GF", 1, 0), true);
+      if (r === 1) await setLoser(from, idOf("L", 1, Math.floor(m / 2)), m % 2 === 0);
+      else await setLoser(from, idOf("L", 2 * (r - 1), m), false);
+    }
+  }
+  // losers-bracket links
+  for (let lr = 1; lr <= lbRounds; lr++) {
+    const j = Math.ceil(lr / 2);
+    const count = size / 2 ** (j + 1);
+    const minor = lr % 2 === 1;
+    for (let m = 0; m < count; m++) {
+      const from = idOf("L", lr, m);
+      if (minor) await setNext(from, idOf("L", lr + 1, m), true);
+      else if (lr < lbRounds)
+        await setNext(from, idOf("L", lr + 1, Math.floor(m / 2)), m % 2 === 0);
+      else await setNext(from, idOf("GF", 1, 0), false);
+    }
+  }
+
+  revalidate(tournamentId);
+  return { ok: true, data: { matches: descs.length } };
+}
+
 /** Enter/replace a score; winner auto-advances to the next match slot. */
 export async function enterMatchScore(
   tournamentId: string,
@@ -336,6 +454,22 @@ export async function enterMatchScore(
           : { awayRegistrationId: winner },
       )
       .where(eq(matches.id, m.nextMatchId));
+  }
+
+  // double-elim: drop the loser into the losers bracket
+  if (m.loserNextMatchId) {
+    const loser =
+      winner === m.homeRegistrationId
+        ? m.awayRegistrationId
+        : m.homeRegistrationId;
+    await db
+      .update(matches)
+      .set(
+        m.loserNextSlotIsHome
+          ? { homeRegistrationId: loser }
+          : { awayRegistrationId: loser },
+      )
+      .where(eq(matches.id, m.loserNextMatchId));
   }
 
   revalidate(tournamentId);

@@ -111,6 +111,10 @@ async function main() {
     updated_at timestamptz NOT NULL DEFAULT now()
   )`;
   await sql`CREATE INDEX IF NOT EXISTS matches_division_idx ON matches(division_id)`;
+  // double-elim: loser routing + which bracket the match belongs to
+  await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS loser_next_match_id uuid REFERENCES matches(id) ON DELETE SET NULL`;
+  await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS loser_next_slot_is_home boolean`;
+  await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS bracket_group text`;
   console.log("matches ok");
 
   /* ---------- schedule_slots ---------- */
