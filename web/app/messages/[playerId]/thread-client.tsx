@@ -10,6 +10,31 @@ import {
 } from "@/lib/actions/messages";
 import type { ThreadMessage } from "@/lib/queries/messages";
 
+const URL_RE = /(https?:\/\/[^\s]+)/g;
+
+/** Render a message body with clickable links. */
+function Linkify({ text, mine }: { text: string; mine: boolean }) {
+  return (
+    <>
+      {text.split(URL_RE).map((part, i) =>
+        /^https?:\/\//.test(part) ? (
+          <a
+            key={i}
+            href={part}
+            className={`underline break-all font-semibold ${
+              mine ? "text-white" : "text-[color:var(--brand)]"
+            }`}
+          >
+            {part}
+          </a>
+        ) : (
+          <span key={i}>{part}</span>
+        ),
+      )}
+    </>
+  );
+}
+
 const fmtTime = (iso: string): string => {
   const d = new Date(iso);
   return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -164,7 +189,7 @@ export function ThreadClient({
                           : "bg-[color:var(--surface-2)] text-[color:var(--text)] border border-[color:var(--hairline)] rounded-bl-[4px]"
                       } ${m.sending ? "opacity-70" : ""}`}
                     >
-                      {m.body}
+                      <Linkify text={m.body} mine={m.mine} />
                     </div>
                     <div
                       className={`text-[10px] text-[color:var(--text-4)] num font-[family-name:var(--mono)] ${

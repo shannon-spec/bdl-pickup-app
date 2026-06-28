@@ -262,7 +262,7 @@ export async function requestToJoin(
     await notifyPlayer(
       pid,
       sponsor,
-      `${reqName} listed you as their player sponsor for joining ${ctxName}. Accept or decline it on your Sponsorships page.`,
+      `${reqName} listed you as their player sponsor for joining ${ctxName}. Approve, hold, or decline it here: https://www.bdlpickup.com/sponsor`,
     );
   }
 
