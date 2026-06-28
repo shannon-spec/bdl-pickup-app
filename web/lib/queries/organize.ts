@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import {
   db,
   leagues,
@@ -8,6 +8,9 @@ import {
   scheduleSlots,
   tournaments,
   tournamentMembers,
+  communities,
+  communityMembers,
+  organizeInvitations,
   divisions,
   registrations,
   matches,
@@ -143,6 +146,100 @@ export async function getManageLeague(
       startsAt: s.startsAt.toISOString(),
       court: s.court,
     })),
+  };
+}
+
+export type ManageCommunity = {
+  id: string;
+  name: string;
+  kind: string | null;
+  avatarKind: string;
+  avatarColor: string;
+  avatarEmoji: string | null;
+  canManage: boolean;
+  events: { type: "LEAGUE" | "TOURNAMENT"; id: string; name: string; published: boolean }[];
+  members: { id: string; name: string; role: string }[];
+  pendingInviteTokens: string[];
+};
+
+export async function getManageCommunity(
+  session: Session | null,
+  id: string,
+): Promise<ManageCommunity | null> {
+  const [c] = await db
+    .select()
+    .from(communities)
+    .where(eq(communities.id, id))
+    .limit(1);
+  if (!c || c.hiddenAt) return null;
+
+  let canManage = isAdminLike(session);
+  if (!canManage && session?.playerId) {
+    const [r] = await db
+      .select({ role: communityMembers.role })
+      .from(communityMembers)
+      .where(
+        and(
+          eq(communityMembers.communityId, id),
+          eq(communityMembers.playerId, session.playerId),
+        ),
+      )
+      .limit(1);
+    canManage =
+      r?.role === "DIRECTOR" || r?.role === "COMMISSIONER" || r?.role === "MEMBER";
+  }
+
+  const lgEvents = await db
+    .select({ id: leagues.id, name: leagues.name, published: leagues.published })
+    .from(leagues)
+    .where(and(eq(leagues.communityId, id), isNull(leagues.hiddenAt)));
+  const tEvents = await db
+    .select({ id: tournaments.id, name: tournaments.name, published: tournaments.published })
+    .from(tournaments)
+    .where(and(eq(tournaments.communityId, id), isNull(tournaments.hiddenAt)));
+
+  const memberRows = await db
+    .select({
+      id: players.id,
+      first: players.firstName,
+      last: players.lastName,
+      role: communityMembers.role,
+    })
+    .from(communityMembers)
+    .innerJoin(players, eq(communityMembers.playerId, players.id))
+    .where(eq(communityMembers.communityId, id));
+
+  const invites = canManage
+    ? await db
+        .select({ token: organizeInvitations.token })
+        .from(organizeInvitations)
+        .where(
+          and(
+            eq(organizeInvitations.contextType, "COMMUNITY"),
+            eq(organizeInvitations.contextId, id),
+            eq(organizeInvitations.status, "pending"),
+          ),
+        )
+    : [];
+
+  return {
+    id: c.id,
+    name: c.name,
+    kind: c.kind,
+    avatarKind: c.avatarKind,
+    avatarColor: c.avatarColor,
+    avatarEmoji: c.avatarEmoji,
+    canManage,
+    events: [
+      ...lgEvents.map((e) => ({ type: "LEAGUE" as const, ...e })),
+      ...tEvents.map((e) => ({ type: "TOURNAMENT" as const, ...e })),
+    ],
+    members: memberRows.map((r) => ({
+      id: r.id,
+      name: `${r.first} ${r.last ?? ""}`.trim(),
+      role: r.role,
+    })),
+    pendingInviteTokens: invites.map((i) => i.token),
   };
 }
 

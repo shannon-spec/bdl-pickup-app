@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus, X, Trophy, Check } from "lucide-react";
 import { LeagueAvatar } from "@/components/bdl/league-avatar";
+import { InvitePanel } from "@/components/bdl/invite-panel";
 import {
   addRegistration,
   removeRegistration,
@@ -746,8 +747,14 @@ function Settings({ t }: { t: ManageTournament }) {
           </Link>
         )}
       </div>
+      <div className="flex flex-col gap-2">
+        <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[color:var(--text-3)]">
+          Invite co-directors
+        </p>
+        <InvitePanel contextType="TOURNAMENT" contextId={t.id} />
+      </div>
       <p className="text-[12.5px] text-[color:var(--text-3)]">
-        Schedule, results, and people tools are coming next.
+        Schedule and results tools are coming next.
       </p>
     </div>
   );

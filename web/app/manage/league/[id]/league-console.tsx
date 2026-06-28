@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CalendarDays, AlertTriangle, Check } from "lucide-react";
 import { LeagueAvatar } from "@/components/bdl/league-avatar";
+import { InvitePanel } from "@/components/bdl/invite-panel";
 import {
   generateLeagueSchedule,
   clearLeagueSchedule,
@@ -258,6 +259,12 @@ function Schedule({ lg }: { lg: ManageLeague }) {
 function Members({ lg }: { lg: ManageLeague }) {
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[color:var(--text-3)]">
+          Invite commissioners
+        </p>
+        <InvitePanel contextType="LEAGUE" contextId={lg.id} />
+      </div>
       <div>
         <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[color:var(--text-3)] mb-2">
           Commissioners ({lg.commissioners.length})

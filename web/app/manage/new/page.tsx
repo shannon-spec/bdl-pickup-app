@@ -13,7 +13,7 @@ export const metadata = { title: "Create · Manage · BDL" };
 export default async function NewEventPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string }>;
+  searchParams: Promise<{ type?: string; community?: string }>;
 }) {
   const session = await readSession();
   if (!session?.playerId) redirect("/login?next=/manage/new");
@@ -35,7 +35,7 @@ export default async function NewEventPage({
         >
           <ArrowLeft size={13} /> Manage
         </Link>
-        <NewEventForm initialType={initialType} />
+        <NewEventForm initialType={initialType} communityId={sp.community ?? null} />
       </PageFrame>
       <MobileBottomBar active="home" />
     </>

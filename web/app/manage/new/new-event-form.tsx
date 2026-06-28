@@ -44,7 +44,13 @@ function newDivision(name = "Open"): DivisionInput {
   return { name, ageBand: "open", skillTier: null, cap: null };
 }
 
-export function NewEventForm({ initialType }: { initialType: EventType }) {
+export function NewEventForm({
+  initialType,
+  communityId = null,
+}: {
+  initialType: EventType;
+  communityId?: string | null;
+}) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -120,6 +126,7 @@ export function NewEventForm({ initialType }: { initialType: EventType }) {
       } else {
         input.kind = kind;
       }
+      if (type !== "COMMUNITY" && communityId) input.communityId = communityId;
       const res = await createEvent(input);
       if (!res.ok) {
         setError(res.error);
