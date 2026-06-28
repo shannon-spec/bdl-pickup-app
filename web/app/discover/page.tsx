@@ -73,6 +73,7 @@ export default async function DiscoverPage() {
     avatarEmoji: l.avatarEmoji,
     href: `/leagues/${l.id}`,
     role,
+    visibility: (l.visibility as "OPEN" | "CLOSED" | "PRIVATE") ?? "OPEN",
   });
   const teamItem = (
     t: (typeof allTeams)[number],
@@ -87,6 +88,7 @@ export default async function DiscoverPage() {
     avatarEmoji: t.avatarEmoji,
     href: `/teams/${t.id}`,
     role,
+    visibility: (t.visibility as "OPEN" | "CLOSED" | "PRIVATE") ?? "OPEN",
   });
 
   // "Yours" = where you're ON THE ROSTER (a player). Leagues/teams you only

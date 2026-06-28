@@ -128,6 +128,11 @@ export const joinRequestStatusEnum = pgEnum("join_request_status", [
   "denied",
   "hold",
 ]);
+export const contextVisibilityEnum = pgEnum("context_visibility", [
+  "OPEN",
+  "CLOSED",
+  "PRIVATE",
+]);
 
 export const inviteStatusEnum = pgEnum("invite_status", [
   "pending",
@@ -335,6 +340,7 @@ export const leagues = pgTable("leagues", {
     onDelete: "set null",
   }),
   published: boolean("published").notNull().default(true),
+  visibility: contextVisibilityEnum("visibility").notNull().default("OPEN"),
   /** Soft-hide flag — null = visible; non-null = hidden from list
    *  views. Replaces destructive deletes for leagues; destructive
    *  `deleteLeague` is intentionally blocked at the action layer.
@@ -396,6 +402,7 @@ export const teams = pgTable("teams", {
   state: text("state"),
   description: text("description"),
   defaultFormat: gameFormatEnum("default_format").notNull().default("5v5"),
+  visibility: contextVisibilityEnum("visibility").notNull().default("OPEN"),
   // Avatar — same Apple Contact-poster pattern as leagues.
   avatarKind: text("avatar_kind").notNull().default("monogram"),
   avatarColor: text("avatar_color").notNull().default("brand"),
@@ -451,6 +458,7 @@ export const communities = pgTable(
     name: text("name").notNull(),
     slug: text("slug"),
     kind: text("kind"), // frat | campus | gym | club | other
+    visibility: contextVisibilityEnum("visibility").notNull().default("OPEN"),
     description: text("description"),
     avatarKind: text("avatar_kind").notNull().default("monogram"),
     avatarColor: text("avatar_color").notNull().default("brand"),
@@ -506,6 +514,7 @@ export const tournaments = pgTable(
     entryFeeCents: integer("entry_fee_cents"),
     endsAt: date("ends_at"),
     published: boolean("published").notNull().default(false),
+    visibility: contextVisibilityEnum("visibility").notNull().default("OPEN"),
     startDate: date("start_date"),
     description: text("description"),
     avatarKind: text("avatar_kind").notNull().default("monogram"),

@@ -104,6 +104,23 @@ async function getContextName(type: CtxType, id: string): Promise<string> {
   return r?.n ?? "the community";
 }
 
+async function getVisibility(type: CtxType, id: string): Promise<string> {
+  if (type === "LEAGUE") {
+    const [r] = await db.select({ v: leagues.visibility }).from(leagues).where(eq(leagues.id, id)).limit(1);
+    return r?.v ?? "OPEN";
+  }
+  if (type === "TEAM") {
+    const [r] = await db.select({ v: teams.visibility }).from(teams).where(eq(teams.id, id)).limit(1);
+    return r?.v ?? "OPEN";
+  }
+  if (type === "TOURNAMENT") {
+    const [r] = await db.select({ v: tournaments.visibility }).from(tournaments).where(eq(tournaments.id, id)).limit(1);
+    return r?.v ?? "OPEN";
+  }
+  const [r] = await db.select({ v: communities.visibility }).from(communities).where(eq(communities.id, id)).limit(1);
+  return r?.v ?? "OPEN";
+}
+
 /** Deliver a decision as a DM (shows in the bell + /messages). */
 async function notifyPlayer(fromId: string | null, toId: string, body: string) {
   if (!fromId || fromId === toId) return;
@@ -136,6 +153,10 @@ export async function requestToJoin(
 
   if (await alreadyMember(contextType, contextId, pid))
     return { ok: false, error: "You're already a member." };
+
+  // Private contexts are invite-only — no public join requests.
+  if ((await getVisibility(contextType, contextId)) === "PRIVATE")
+    return { ok: false, error: "This isn't accepting join requests." };
 
   // Re-open a denied/old request, or block duplicate active ones.
   const existing = await db

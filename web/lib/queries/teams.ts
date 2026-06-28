@@ -79,6 +79,7 @@ export type TeamCard = {
   avatarColor: string;
   avatarEmoji: string | null;
   rosterCount: number;
+  visibility: string;
 };
 
 /**
@@ -110,6 +111,7 @@ export async function getTeamCards(opts: {
       avatarKind: teams.avatarKind,
       avatarColor: teams.avatarColor,
       avatarEmoji: teams.avatarEmoji,
+      visibility: teams.visibility,
       rosterCount: sql<number>`(
         SELECT count(*)::int FROM team_players tp WHERE tp.team_id = ${teams.id}
       )`,

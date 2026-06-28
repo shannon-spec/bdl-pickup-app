@@ -20,7 +20,21 @@ export type DiscoverItem = {
   href: string;
   role?: string;
   status?: JoinStatus | null;
+  visibility?: "OPEN" | "CLOSED" | "PRIVATE";
 };
+
+function VisibilityPill({ v }: { v: "OPEN" | "CLOSED" | "PRIVATE" }) {
+  const map = {
+    OPEN: { label: "Open", cls: "bg-[color:var(--up-soft)] text-[color:var(--up)]" },
+    CLOSED: { label: "Closed", cls: "bg-[color:var(--warn-soft)] text-[color:var(--warn)]" },
+    PRIVATE: { label: "Private", cls: "bg-[color:var(--surface-2)] text-[color:var(--text-3)]" },
+  }[v];
+  return (
+    <span className={`shrink-0 inline-flex items-center h-6 px-2.5 rounded-full text-[10.5px] font-bold uppercase tracking-[0.06em] ${map.cls}`}>
+      {map.label}
+    </span>
+  );
+}
 
 function initials(name: string) {
   return (
@@ -154,8 +168,10 @@ function RequestRow({
   onRequest: () => void;
 }) {
   const st = item.status;
-  return (
-    <div className="flex items-center gap-3.5 rounded-[14px] bg-[color:var(--surface)] border border-[color:var(--hairline-2)] px-3.5 py-3">
+  const vis = item.visibility ?? "OPEN";
+  const isPrivate = vis === "PRIVATE";
+  const inner = (
+    <>
       <LeagueAvatar kind={item.avatarKind} color={item.avatarColor} emoji={item.avatarEmoji} abbr={initials(item.name)} size={40} />
       <span className="flex-1 min-w-0">
         <span className="block font-bold text-[15px] tracking-[-0.01em] truncate">{item.name}</span>
@@ -163,30 +179,43 @@ function RequestRow({
           {item.location || (item.type === "league" ? "League" : "Team")}
         </span>
       </span>
-      {st === "pending" ? (
-        <span className="shrink-0 inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[color:var(--warn-soft)] text-[color:var(--warn)] text-[11px] font-bold">
-          <Clock size={12} /> Pending
-        </span>
-      ) : st === "hold" ? (
-        <span className="shrink-0 inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[color:var(--warn-soft)] text-[color:var(--warn)] text-[11px] font-bold">
-          On hold
-        </span>
-      ) : !signedIn ? (
-        <Link
-          href="/login?next=/discover"
-          className="shrink-0 inline-flex items-center h-8 px-3 rounded-[var(--r-lg)] bg-[color:var(--brand-soft)] text-[color:var(--brand-ink)] text-[12px] font-bold"
-        >
-          Request to join
-        </Link>
+    </>
+  );
+  return (
+    <div className="flex items-center gap-2.5 rounded-[14px] bg-[color:var(--surface)] border border-[color:var(--hairline-2)] px-3.5 py-3">
+      {isPrivate ? (
+        <div className="flex items-center gap-3.5 flex-1 min-w-0">{inner}</div>
       ) : (
-        <button
-          type="button"
-          onClick={onRequest}
-          className="shrink-0 inline-flex items-center h-8 px-3 rounded-[var(--r-lg)] bg-[color:var(--brand-soft)] text-[color:var(--brand-ink)] text-[12px] font-bold hover:brightness-95"
-        >
-          {st === "denied" ? "Re-request" : "Request to join"}
-        </button>
+        <Link href={item.href} className="flex items-center gap-3.5 flex-1 min-w-0 hover:opacity-90">
+          {inner}
+        </Link>
       )}
+      <VisibilityPill v={vis} />
+      {!isPrivate &&
+        (st === "pending" ? (
+          <span className="shrink-0 inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[color:var(--warn-soft)] text-[color:var(--warn)] text-[11px] font-bold">
+            <Clock size={12} /> Pending
+          </span>
+        ) : st === "hold" ? (
+          <span className="shrink-0 inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-[color:var(--warn-soft)] text-[color:var(--warn)] text-[11px] font-bold">
+            On hold
+          </span>
+        ) : !signedIn ? (
+          <Link
+            href="/login?next=/discover"
+            className="shrink-0 inline-flex items-center h-8 px-3 rounded-[var(--r-lg)] bg-[color:var(--brand-soft)] text-[color:var(--brand-ink)] text-[12px] font-bold"
+          >
+            Request to join
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={onRequest}
+            className="shrink-0 inline-flex items-center h-8 px-3 rounded-[var(--r-lg)] bg-[color:var(--brand-soft)] text-[color:var(--brand-ink)] text-[12px] font-bold hover:brightness-95"
+          >
+            {st === "denied" ? "Re-request" : "Request to join"}
+          </button>
+        ))}
     </div>
   );
 }

@@ -42,6 +42,7 @@ export type CreateEventInput = {
   type: "LEAGUE" | "TOURNAMENT" | "COMMUNITY";
   name: string;
   publish: boolean;
+  visibility?: "OPEN" | "CLOSED" | "PRIVATE";
   // shared / venue
   venueName?: string;
   venueAddress?: string;
@@ -146,6 +147,7 @@ export async function createEvent(
           venueName: input.venueName || null,
           venueAddress: input.venueAddress || null,
           published: input.publish,
+          visibility: input.visibility ?? "OPEN",
         })
         .returning({ id: leagues.id });
       await db
@@ -172,6 +174,7 @@ export async function createEvent(
           startDate: input.startDate || null,
           endsAt: input.endsAt || null,
           published: input.publish,
+          visibility: input.visibility ?? "OPEN",
           createdBy: me,
         })
         .returning({ id: tournaments.id });
@@ -199,6 +202,7 @@ export async function createEvent(
         name,
         slug: slugify(name),
         kind: input.kind || "other",
+        visibility: input.visibility ?? "OPEN",
         createdBy: me,
       })
       .returning({ id: communities.id });

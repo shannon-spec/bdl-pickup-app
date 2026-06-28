@@ -83,6 +83,10 @@ export function NewEventForm({
   // community
   const [kind, setKind] = useState("frat");
 
+  // join policy (all types)
+  const [visibility, setVisibility] =
+    useState<NonNullable<CreateEventInput["visibility"]>>("OPEN");
+
   // divisions
   const [divisions, setDivisions] = useState<DivisionInput[]>([newDivision()]);
 
@@ -130,6 +134,7 @@ export function NewEventForm({
         input.kind = kind;
       }
       if (type !== "COMMUNITY" && communityId) input.communityId = communityId;
+      input.visibility = visibility;
       const res = await createEvent(input);
       if (!res.ok) {
         setError(res.error);
@@ -499,6 +504,36 @@ export function NewEventForm({
           </div>
         </div>
       )}
+
+      {/* join policy */}
+      <div>
+        <label className={label}>Join policy</label>
+        <div className="grid grid-cols-3 gap-2">
+          {(
+            [
+              ["OPEN", "Open", "Anyone can request"],
+              ["CLOSED", "Closed", "Listed · can request"],
+              ["PRIVATE", "Private", "Hidden — invite only"],
+            ] as const
+          ).map(([val, lbl, sub]) => (
+            <button
+              key={val}
+              type="button"
+              onClick={() => setVisibility(val)}
+              className={`flex flex-col items-start gap-0.5 rounded-[12px] border px-3 py-2 text-left transition-colors ${
+                visibility === val
+                  ? "border-[color:var(--brand)] bg-[color:var(--brand-soft)]"
+                  : "border-[color:var(--hairline-2)] bg-[color:var(--surface)] hover:bg-[color:var(--surface-2)]"
+              }`}
+            >
+              <span className="text-[13px] font-bold leading-none">{lbl}</span>
+              <span className="text-[10.5px] text-[color:var(--text-3)] leading-tight">
+                {sub}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       {error && (
         <div className="text-[13px] text-[color:var(--down)] bg-[color:var(--down-soft)] rounded-[var(--r-md)] px-3 py-2">
