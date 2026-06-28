@@ -363,6 +363,18 @@ export async function decideJoinRequest(
 
   if (decision === "accept") {
     await addToRoster(type, req.contextId, req.playerId);
+    // Carry the sponsor's grade onto the league roster, if one was given.
+    if (type === "LEAGUE" && req.sponsorGrade) {
+      await db
+        .update(leaguePlayers)
+        .set({ leagueLevel: req.sponsorGrade })
+        .where(
+          and(
+            eq(leaguePlayers.leagueId, req.contextId),
+            eq(leaguePlayers.playerId, req.playerId),
+          ),
+        );
+    }
   }
   await db
     .update(joinRequests)
@@ -391,6 +403,7 @@ export async function decideJoinRequest(
   revalidatePath("/manage/requests");
   revalidatePath("/discover");
   revalidatePath("/messages");
+  revalidatePath("/players");
   return { ok: true, data: null };
 }
 
