@@ -76,9 +76,8 @@ async function matchCode(idHash: string, code: string): Promise<{ ok: true } | {
 }
 
 function redirectFor(isNew: boolean, hasName: boolean, opts: { intent?: string; next?: string }): string {
-  const needsWelcome = isNew || !hasName;
-  const intentQs = opts.intent ? `?intent=${encodeURIComponent(opts.intent)}` : "";
-  if (needsWelcome) return `/welcome${intentQs}`;
+  // New (or still-nameless) accounts build their community profile first.
+  if (isNew || !hasName) return "/onboarding/profile";
   return opts.next && opts.next.startsWith("/") ? opts.next : "/home";
 }
 
