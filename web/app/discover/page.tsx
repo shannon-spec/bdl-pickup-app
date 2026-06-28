@@ -87,8 +87,10 @@ export default async function DiscoverPage() {
     role,
   });
 
-  const mineLeagueIds = new Set([...myLeague, ...commLeague]);
-  const mineTeamIds = new Set([...myTeam, ...coachTeam]);
+  // "Yours" = where you're ON THE ROSTER (a player). Leagues/teams you only
+  // commission or coach are managed in the Manage tab, not "your teams" here.
+  const mineLeagueIds = new Set(myLeague);
+  const mineTeamIds = new Set(myTeam);
 
   const yourLeagues = allLeagues
     .filter((l) => mineLeagueIds.has(l.id))
