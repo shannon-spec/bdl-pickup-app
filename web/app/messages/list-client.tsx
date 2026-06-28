@@ -4,7 +4,6 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Bell,
   Check,
   CheckCheck,
   Eraser,
@@ -18,6 +17,8 @@ import {
   Mail,
   Smartphone,
   ChevronDown,
+  Megaphone,
+  ChevronRight,
   Pencil,
 } from "lucide-react";
 import { PlayerAvatar } from "@/components/bdl/player-avatar";
@@ -101,13 +102,47 @@ export function MessageCenterClient({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState<
-    null | "conversations" | "inbox" | "broadcasts"
+    null | "conversations" | "inbox" | "broadcasts" | "all"
   >(null);
   // Optimistic read state for inbox — flips immediately on click.
   const [inboxReadLocal, setInboxReadLocal] = useState<Set<string>>(
     new Set(inbox.filter((i) => i.readAt).map((i) => i.id)),
   );
   const inboxUnread = inbox.filter((i) => !inboxReadLocal.has(i.id)).length;
+  // Which announcement is expanded in the unified feed (accordion).
+  const [openAnn, setOpenAnn] = useState<string | null>(null);
+
+  const convoUnread = conversations.filter((c) => c.unreadCount > 0).length;
+  const totalUnread = inboxUnread + convoUnread;
+
+  // Unified, email-style feed: announcements + conversations, newest first.
+  const feed = useMemo(() => {
+    const items: Array<
+      | { kind: "ann"; id: string; ts: number; ann: InboxItem }
+      | { kind: "convo"; id: string; ts: number; convo: ConversationListItem }
+    > = [];
+    for (const i of inbox)
+      items.push({
+        kind: "ann",
+        id: `a:${i.id}`,
+        ts: new Date(i.createdAt).getTime(),
+        ann: i,
+      });
+    for (const c of conversations)
+      items.push({
+        kind: "convo",
+        id: `c:${c.conversationId}`,
+        ts: new Date(c.lastMessageAt).getTime(),
+        convo: c,
+      });
+    items.sort((a, b) => b.ts - a.ts);
+    return items;
+  }, [inbox, conversations]);
+
+  const toggleAnn = (item: InboxItem) => {
+    setOpenAnn((cur) => (cur === item.id ? null : item.id));
+    onMarkInboxRead(item.id);
+  };
 
   const onMarkInboxRead = (id: string) => {
     if (inboxReadLocal.has(id)) return;
@@ -218,6 +253,9 @@ export function MessageCenterClient({
       if (kind === "conversations") await clearAllConversations();
       else if (kind === "inbox") await clearInbox();
       else if (kind === "broadcasts") await clearAuthoredBroadcasts();
+      else if (kind === "all") {
+        await Promise.all([clearInbox(), clearAllConversations()]);
+      }
       router.refresh();
     });
   };
@@ -621,7 +659,7 @@ export function MessageCenterClient({
         )}
       </div>
 
-      {/* Inbox — announcements + alerts the viewer received */}
+      {/* Unified inbox — announcements + direct messages, one email-style list */}
       <div className="flex items-center justify-between gap-3 mt-2">
         <div className="inline-flex items-center gap-2.5">
           <span
@@ -632,7 +670,7 @@ export function MessageCenterClient({
             Inbox
           </span>
           <span className="text-[12px] font-medium text-[color:var(--text-4)] num">
-            {inboxUnread > 0 ? `${inboxUnread} unread` : inbox.length}
+            {totalUnread > 0 ? `${totalUnread} unread` : feed.length}
           </span>
         </div>
         <div className="inline-flex items-center gap-2">
@@ -646,180 +684,212 @@ export function MessageCenterClient({
               <CheckCheck size={11} /> Mark all read
             </button>
           )}
-          {inbox.length > 0 && (
+          {feed.length > 0 && (
             <button
               type="button"
-              onClick={() => setConfirmClear("inbox")}
+              onClick={() => setConfirmClear("all")}
               disabled={pending}
               className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[11px] font-semibold tracking-[0.04em] uppercase border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[color:var(--text-3)] hover:text-[color:var(--text)] disabled:opacity-60"
             >
-              <Eraser size={11} /> Clear inbox
+              <Eraser size={11} /> Clear all
             </button>
           )}
         </div>
       </div>
 
-      {inbox.length === 0 ? (
-        <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-8 text-center text-[color:var(--text-3)] text-[13px]">
-          <Bell
-            size={20}
-            className="mx-auto mb-2 text-[color:var(--text-4)]"
-          />
-          No announcements yet. League broadcasts and global updates will
-          land here.
-        </div>
-      ) : (
-        <div className="flex flex-col gap-2">
-          {inbox.map((item) => {
-            const isRead = inboxReadLocal.has(item.id);
-            return (
-              <article
-                key={item.id}
-                onClick={() => onMarkInboxRead(item.id)}
-                className={`relative rounded-[14px] border p-4 cursor-pointer transition-colors ${
-                  isRead
-                    ? "border-[color:var(--hairline-2)] bg-[color:var(--surface)]"
-                    : "border-[color:var(--brand-soft)] bg-[color:var(--brand-soft)]/30"
-                }`}
-              >
-                {!isRead && (
-                  <span
-                    aria-hidden
-                    className="absolute top-4 left-4 w-2 h-2 rounded-full bg-[color:var(--brand)]"
-                  />
-                )}
-                <div className={!isRead ? "pl-5" : ""}>
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span
-                      className={`inline-flex items-center h-5 px-2 rounded-full text-[10px] font-bold tracking-[0.05em] uppercase ${
-                        item.scope === "global"
-                          ? "bg-[color:var(--brand)] text-white"
-                          : "bg-[color:var(--surface-2)] text-[color:var(--text-2)] border border-[color:var(--hairline)]"
-                      }`}
-                    >
-                      {item.scope === "global"
-                        ? "Global"
-                        : item.leagueName ?? "League"}
-                    </span>
-                    <span className="text-[11px] text-[color:var(--text-4)] font-[family-name:var(--mono)] num">
-                      {fmtRelative(item.createdAt)}
-                    </span>
-                    {item.authorName && (
-                      <span className="text-[11px] text-[color:var(--text-3)]">
-                        · {item.authorName}
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="font-bold text-[15px] text-[color:var(--text)] mb-1.5">
-                    {item.headline}
-                  </h3>
-                  <p className="text-[13px] text-[color:var(--text-2)] leading-relaxed whitespace-pre-wrap">
-                    {item.body}
-                  </p>
-                  {item.ctaLabel && item.ctaUrl && (
-                    <div className="mt-3" onClick={(e) => e.stopPropagation()}>
-                      <Link
-                        href={item.ctaUrl}
-                        className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--r-md)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[11.5px] tracking-[0.05em] uppercase"
-                      >
-                        {item.ctaLabel}
-                      </Link>
-                    </div>
-                  )}
-                  {isRead && item.readAt && (
-                    <div className="text-[10.5px] text-[color:var(--text-4)] mt-2 inline-flex items-center gap-1">
-                      <Check size={11} /> Read
-                    </div>
-                  )}
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Conversations list */}
-      <div className="flex items-center justify-between gap-3 mt-2">
-        <div className="inline-flex items-center gap-2.5">
-          <span
-            aria-hidden
-            className="w-[3px] h-[12px] rounded-sm bg-[color:var(--brand)]"
-          />
-          <span className="text-[11.5px] font-bold tracking-[0.14em] uppercase text-[color:var(--text-2)]">
-            Conversations
-          </span>
-          <span className="text-[12px] font-medium text-[color:var(--text-4)] num">
-            {conversations.length}
-          </span>
-        </div>
-        {conversations.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setConfirmClear("conversations")}
-            disabled={pending}
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[11px] font-semibold tracking-[0.04em] uppercase border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[color:var(--text-3)] hover:text-[color:var(--text)] disabled:opacity-60"
-          >
-            <Eraser size={11} /> Clear recent
-          </button>
-        )}
-      </div>
-
-      {conversations.length === 0 ? (
+      {feed.length === 0 ? (
         <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-10 text-center text-[color:var(--text-3)] text-[13.5px]">
-          No conversations yet — send a direct message above.
+          <Mail size={20} className="mx-auto mb-2 text-[color:var(--text-4)]" />
+          Your inbox is empty. Announcements and direct messages will land
+          here — send one above to get started.
         </div>
       ) : (
         <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] overflow-hidden">
-          {conversations.map((c) => {
-            const isMine = c.lastSenderId === viewerId;
-            const preview =
-              c.lastBody === null
-                ? "—"
-                : isMine
-                  ? `You: ${c.lastBody}`
-                  : c.lastBody;
-            return (
-              <Link
-                key={c.conversationId}
-                href={`/messages/${c.otherPlayerId}`}
-                className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3 border-t border-[color:var(--hairline)] first:border-t-0 hover:bg-[color:var(--surface-2)] transition-colors"
-              >
-                <PlayerAvatar
-                  url={c.otherAvatarUrl}
-                  initials={initials(c.otherFirstName, c.otherLastName)}
-                  size={40}
-                />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span
-                      className={`truncate text-[14px] ${
-                        c.unreadCount > 0
-                          ? "font-bold text-[color:var(--text)]"
-                          : "font-semibold text-[color:var(--text)]"
-                      }`}
-                    >
-                      {c.otherFirstName} {c.otherLastName}
-                    </span>
-                    {c.unreadCount > 0 && (
-                      <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[10px] font-extrabold tracking-[0.04em] bg-[color:var(--brand)] text-white">
-                        {c.unreadCount}
-                      </span>
+          {feed.map((item) => {
+            // ── Direct message row → opens the thread to reply ──────────
+            if (item.kind === "convo") {
+              const c = item.convo;
+              const unread = c.unreadCount > 0;
+              const isMine = c.lastSenderId === viewerId;
+              const preview =
+                c.lastBody === null
+                  ? "—"
+                  : isMine
+                    ? `You: ${c.lastBody}`
+                    : c.lastBody;
+              return (
+                <Link
+                  key={item.id}
+                  href={`/messages/${c.otherPlayerId}`}
+                  className={`group grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3.5 border-t border-[color:var(--hairline)] first:border-t-0 transition-colors ${
+                    unread
+                      ? "bg-[color:var(--brand-soft)]/25 hover:bg-[color:var(--brand-soft)]/40"
+                      : "hover:bg-[color:var(--surface-2)]"
+                  }`}
+                >
+                  <div className="relative shrink-0">
+                    <PlayerAvatar
+                      url={c.otherAvatarUrl}
+                      initials={initials(c.otherFirstName, c.otherLastName)}
+                      size={42}
+                    />
+                    {unread && (
+                      <span
+                        aria-hidden
+                        className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-[color:var(--brand)] ring-2 ring-[color:var(--surface)]"
+                      />
                     )}
                   </div>
-                  <div
-                    className={`truncate text-[12.5px] ${
-                      c.unreadCount > 0
-                        ? "text-[color:var(--text-2)] font-medium"
-                        : "text-[color:var(--text-3)]"
-                    }`}
-                  >
-                    {preview}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span
+                        className={`truncate text-[14px] ${
+                          unread
+                            ? "font-bold text-[color:var(--text)]"
+                            : "font-semibold text-[color:var(--text)]"
+                        }`}
+                      >
+                        {c.otherFirstName} {c.otherLastName}
+                      </span>
+                      <span className="shrink-0 inline-flex items-center h-[18px] px-1.5 rounded-full text-[9.5px] font-bold tracking-[0.06em] uppercase bg-[color:var(--surface-2)] text-[color:var(--text-3)] border border-[color:var(--hairline)]">
+                        Direct
+                      </span>
+                      {unread && (
+                        <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full text-[10px] font-extrabold tracking-[0.04em] bg-[color:var(--brand)] text-white">
+                          {c.unreadCount}
+                        </span>
+                      )}
+                    </div>
+                    <div
+                      className={`truncate text-[12.5px] ${
+                        unread
+                          ? "text-[color:var(--text-2)] font-medium"
+                          : "text-[color:var(--text-3)]"
+                      }`}
+                    >
+                      {preview}
+                    </div>
                   </div>
-                </div>
-                <div className="text-[10.5px] text-[color:var(--text-4)] font-[family-name:var(--mono)] num">
-                  {fmtRelative(c.lastMessageAt)}
-                </div>
-              </Link>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-[10.5px] text-[color:var(--text-4)] font-[family-name:var(--mono)] num">
+                      {fmtRelative(c.lastMessageAt)}
+                    </span>
+                    <ChevronRight
+                      size={15}
+                      className="text-[color:var(--text-4)] group-hover:text-[color:var(--text-2)] transition-colors"
+                    />
+                  </div>
+                </Link>
+              );
+            }
+
+            // ── Announcement row → expands inline for full detail ───────
+            const a = item.ann;
+            const isRead = inboxReadLocal.has(a.id);
+            const isOpen = openAnn === a.id;
+            const teaser = a.body.replace(/\s+/g, " ").trim();
+            return (
+              <div
+                key={item.id}
+                className={`border-t border-[color:var(--hairline)] first:border-t-0 transition-colors ${
+                  !isRead && !isOpen ? "bg-[color:var(--brand-soft)]/25" : ""
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleAnn(a)}
+                  aria-expanded={isOpen}
+                  className={`w-full grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3.5 text-left transition-colors ${
+                    !isRead && !isOpen
+                      ? "hover:bg-[color:var(--brand-soft)]/40"
+                      : "hover:bg-[color:var(--surface-2)]"
+                  }`}
+                >
+                  <div className="relative shrink-0">
+                    <span
+                      className={`inline-flex items-center justify-center w-[42px] h-[42px] rounded-full ${
+                        a.scope === "global"
+                          ? "bg-[color:var(--brand)] text-white"
+                          : "bg-[color:var(--brand-soft)] text-[color:var(--brand-ink,var(--brand))]"
+                      }`}
+                    >
+                      {a.scope === "global" ? (
+                        <Globe size={18} />
+                      ) : (
+                        <Megaphone size={18} />
+                      )}
+                    </span>
+                    {!isRead && (
+                      <span
+                        aria-hidden
+                        className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-[color:var(--brand)] ring-2 ring-[color:var(--surface)]"
+                      />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span
+                        className={`truncate text-[14px] ${
+                          !isRead
+                            ? "font-bold text-[color:var(--text)]"
+                            : "font-semibold text-[color:var(--text)]"
+                        }`}
+                      >
+                        {a.headline}
+                      </span>
+                      <span
+                        className={`shrink-0 inline-flex items-center h-[18px] px-1.5 rounded-full text-[9.5px] font-bold tracking-[0.06em] uppercase ${
+                          a.scope === "global"
+                            ? "bg-[color:var(--brand-soft)] text-[color:var(--brand-ink,var(--brand))]"
+                            : "bg-[color:var(--surface-2)] text-[color:var(--text-3)] border border-[color:var(--hairline)]"
+                        }`}
+                      >
+                        {a.scope === "global"
+                          ? "Global"
+                          : a.leagueName ?? "League"}
+                      </span>
+                    </div>
+                    <div className="truncate text-[12.5px] text-[color:var(--text-3)]">
+                      {teaser}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-[10.5px] text-[color:var(--text-4)] font-[family-name:var(--mono)] num">
+                      {fmtRelative(a.createdAt)}
+                    </span>
+                    <ChevronDown
+                      size={15}
+                      className={`text-[color:var(--text-4)] transition-transform ${isOpen ? "rotate-180" : ""}`}
+                    />
+                  </div>
+                </button>
+
+                {isOpen && (
+                  <div className="px-4 pb-4 pl-[70px] -mt-1">
+                    {a.authorName && (
+                      <div className="text-[11px] text-[color:var(--text-3)] mb-2">
+                        From {a.authorName} · {fmtRelative(a.createdAt)}
+                      </div>
+                    )}
+                    <p className="text-[13px] text-[color:var(--text-2)] leading-relaxed whitespace-pre-wrap">
+                      {a.body}
+                    </p>
+                    {a.ctaLabel && a.ctaUrl && (
+                      <div className="mt-3">
+                        <Link
+                          href={a.ctaUrl}
+                          className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--r-md)] bg-[color:var(--brand)] hover:bg-[color:var(--brand-hover)] text-white font-bold text-[11.5px] tracking-[0.05em] uppercase"
+                        >
+                          {a.ctaLabel}
+                        </Link>
+                      </div>
+                    )}
+                    <div className="text-[10.5px] text-[color:var(--text-4)] mt-3 inline-flex items-center gap-1">
+                      <Check size={11} /> Read
+                    </div>
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
@@ -909,14 +979,18 @@ export function MessageCenterClient({
                 ? "Clear recent messages?"
                 : confirmClear === "inbox"
                   ? "Clear your inbox?"
-                  : "Clear recent broadcasts?"}
+                  : confirmClear === "all"
+                    ? "Clear your inbox?"
+                    : "Clear recent broadcasts?"}
             </div>
             <p className="text-[13px] text-[color:var(--text-3)] leading-relaxed">
               {confirmClear === "conversations"
                 ? "This hides every conversation from your list. The other people still see the threads — and any new messages they send will bring the conversation back."
                 : confirmClear === "inbox"
                   ? "This hides every announcement currently in your inbox. New broadcasts sent after now will still arrive — and other recipients are unaffected."
-                  : "This hides your authored broadcasts from this list. Recipients still see them in their inboxes — only your sent history is cleared."}
+                  : confirmClear === "all"
+                    ? "This clears both your announcements and your direct-message list. Other people still see their threads, new messages bring conversations back, and future broadcasts still arrive."
+                    : "This hides your authored broadcasts from this list. Recipients still see them in their inboxes — only your sent history is cleared."}
             </p>
             <div className="flex justify-end gap-2 mt-1">
               <button
