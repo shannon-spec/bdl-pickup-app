@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Pencil } from "lucide-react";
 import { notFound } from "next/navigation";
 import { readSession } from "@/lib/auth/session";
 import { canManageLeague } from "@/lib/auth/perms";
@@ -104,6 +106,14 @@ export default async function LeagueDetailPage({
               </Pill>
             </div>
           </div>
+          {canManage && (
+            <Link
+              href={`/leagues/${detail.league.id}/edit`}
+              className="shrink-0 inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full bg-[color:var(--surface-2)] text-[11px] font-bold tracking-[0.05em] uppercase text-[color:var(--text-2)] hover:text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-soft)] transition-colors max-sm:self-start"
+            >
+              <Pencil size={12} strokeWidth={2.25} /> Edit league
+            </Link>
+          )}
         </div>
 
         {canManage && <LeagueDetailClient detail={detail} isAdmin={isAdmin} />}
