@@ -36,6 +36,12 @@ const LEVELS = [
   "Pro",
 ] as const;
 
+const VISIBILITY_OPTIONS = [
+  ["OPEN", "Open", "Anyone can request"],
+  ["CLOSED", "Closed", "Listed · can request"],
+  ["PRIVATE", "Private", "Hidden — invite only"],
+] as const;
+
 /**
  * Shared league create/edit form body. Used by both the legacy sheet
  * (Add League) and the dedicated /leagues/[id]/edit full page.
@@ -66,6 +72,9 @@ export function LeagueForm({
   );
   const [avatarEmoji, setAvatarEmoji] = useState<string>(
     editing?.avatarEmoji ?? "",
+  );
+  const [visibility, setVisibility] = useState<"OPEN" | "CLOSED" | "PRIVATE">(
+    (editing?.visibility as "OPEN" | "CLOSED" | "PRIVATE") ?? "OPEN",
   );
 
   // Initials follow the league name as the user types.
@@ -309,6 +318,33 @@ export function LeagueForm({
           ))}
         </select>
       </Field>
+
+      {/* Join policy — Open / Closed / Private */}
+      <input type="hidden" name="visibility" value={visibility} />
+      <div className="flex flex-col gap-1.5">
+        <span className="text-[11px] font-semibold tracking-[0.12em] uppercase text-[color:var(--text-3)]">
+          Join policy
+        </span>
+        <div className="grid grid-cols-3 gap-2 max-sm:grid-cols-1">
+          {VISIBILITY_OPTIONS.map(([val, lbl, sub]) => (
+            <button
+              key={val}
+              type="button"
+              onClick={() => setVisibility(val)}
+              className={`flex flex-col items-start gap-0.5 rounded-[var(--r-lg)] border px-3 py-2 text-left transition-colors ${
+                visibility === val
+                  ? "border-[color:var(--brand)] bg-[color:var(--brand-soft)]"
+                  : "border-[color:var(--hairline-2)] bg-[color:var(--surface-2)] hover:bg-[color:var(--surface)]"
+              }`}
+            >
+              <span className="text-[13px] font-bold leading-none">{lbl}</span>
+              <span className="text-[10.5px] text-[color:var(--text-3)] leading-tight">
+                {sub}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
       <Row>
         <Field label="Team A Name">
           <input
