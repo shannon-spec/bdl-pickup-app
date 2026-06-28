@@ -46,11 +46,14 @@ function newDivision(name = "Open"): DivisionInput {
 
 export function NewEventForm({
   initialType,
+  allowedTypes,
   communityId = null,
 }: {
   initialType: EventType;
+  allowedTypes: EventType[];
   communityId?: string | null;
 }) {
+  const typeChoices = TYPES.filter((t) => allowedTypes.includes(t.key));
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -142,38 +145,47 @@ export function NewEventForm({
         Create an event
       </h1>
 
-      {/* type selector */}
-      <div className="grid grid-cols-3 gap-2">
-        {TYPES.map((t) => {
-          const on = type === t.key;
-          return (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setType(t.key)}
-              className={`flex flex-col items-start gap-1 rounded-[14px] border px-3 py-2.5 text-left transition-colors ${
-                on
-                  ? "border-[color:var(--brand)] bg-[color:var(--brand-soft)]"
-                  : "border-[color:var(--hairline-2)] bg-[color:var(--surface)] hover:bg-[color:var(--surface-2)]"
-              }`}
-            >
-              <span
-                className={
+      {/* type selector — only the types you're allowed to create */}
+      {typeChoices.length > 1 && (
+        <div
+          className="grid gap-2"
+          style={{
+            gridTemplateColumns: `repeat(${typeChoices.length}, minmax(0, 1fr))`,
+          }}
+        >
+          {typeChoices.map((t) => {
+            const on = type === t.key;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setType(t.key)}
+                className={`flex flex-col items-start gap-1 rounded-[14px] border px-3 py-2.5 text-left transition-colors ${
                   on
-                    ? "text-[color:var(--brand-ink)]"
-                    : "text-[color:var(--text-3)]"
-                }
+                    ? "border-[color:var(--brand)] bg-[color:var(--brand-soft)]"
+                    : "border-[color:var(--hairline-2)] bg-[color:var(--surface)] hover:bg-[color:var(--surface-2)]"
+                }`}
               >
-                {t.icon}
-              </span>
-              <span className="text-[13px] font-bold leading-none">{t.label}</span>
-              <span className="text-[10.5px] text-[color:var(--text-3)] leading-none">
-                {t.sub}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+                <span
+                  className={
+                    on
+                      ? "text-[color:var(--brand-ink)]"
+                      : "text-[color:var(--text-3)]"
+                  }
+                >
+                  {t.icon}
+                </span>
+                <span className="text-[13px] font-bold leading-none">
+                  {t.label}
+                </span>
+                <span className="text-[10.5px] text-[color:var(--text-3)] leading-none">
+                  {t.sub}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* basics */}
       <div>

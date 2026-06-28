@@ -71,6 +71,62 @@ export type ManageTournament = {
   divisions: ManageDivision[];
 };
 
+export type CreateCaps = {
+  league: boolean;
+  tournament: boolean;
+  community: boolean;
+  any: boolean;
+};
+
+/** Who may create what. Leagues require an existing commissioner; tournaments
+ *  and communities require an existing organizer (director). Admins: anything.
+ *  Plain players: nothing — they must be invited into a role first. */
+export async function getCreateCaps(
+  session: Session | null,
+): Promise<CreateCaps> {
+  if (isAdminLike(session))
+    return { league: true, tournament: true, community: true, any: true };
+  if (!session?.playerId)
+    return { league: false, tournament: false, community: false, any: false };
+  const me = session.playerId;
+
+  const [commish] = await db
+    .select({ id: leagueCommissioners.leagueId })
+    .from(leagueCommissioners)
+    .where(eq(leagueCommissioners.playerId, me))
+    .limit(1);
+  const isCommish = !!commish;
+
+  const [tDir] = await db
+    .select({ id: tournamentMembers.tournamentId })
+    .from(tournamentMembers)
+    .where(
+      and(
+        eq(tournamentMembers.playerId, me),
+        eq(tournamentMembers.role, "DIRECTOR"),
+      ),
+    )
+    .limit(1);
+  const [cDir] = await db
+    .select({ id: communityMembers.communityId })
+    .from(communityMembers)
+    .where(
+      and(
+        eq(communityMembers.playerId, me),
+        inArray(communityMembers.role, ["DIRECTOR", "COMMISSIONER"]),
+      ),
+    )
+    .limit(1);
+  const isOrganizer = !!tDir || !!cDir;
+
+  return {
+    league: isCommish,
+    tournament: isOrganizer,
+    community: isOrganizer,
+    any: isCommish || isOrganizer,
+  };
+}
+
 export type ManageLeague = {
   id: string;
   name: string;

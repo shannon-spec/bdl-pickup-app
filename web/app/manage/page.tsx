@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ChevronRight, Plus, Trophy, CalendarDays, Users2 } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
 import { getMyContexts } from "@/lib/queries/contexts";
+import { getCreateCaps, type CreateCaps } from "@/lib/queries/organize";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
@@ -43,6 +44,7 @@ export default async function ManagePage() {
   const all = await getMyContexts(session);
   // Organizer surfaces only — leagues/tournaments/communities you administer.
   const mine = all.filter((c) => c.manage && c.type !== "TEAM");
+  const caps = await getCreateCaps(session);
 
   return (
     <>
@@ -53,17 +55,23 @@ export default async function ManagePage() {
         <SectionHead
           title="Manage"
           right={
-            <Link
-              href="/manage/new"
-              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--r-lg)] bg-[color:var(--brand)] text-white text-[12px] font-bold tracking-[0.03em] uppercase hover:bg-[color:var(--brand-hover)]"
-            >
-              <Plus size={15} /> Create
-            </Link>
+            caps.any ? (
+              <Link
+                href="/manage/new"
+                className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--r-lg)] bg-[color:var(--brand)] text-white text-[12px] font-bold tracking-[0.03em] uppercase hover:bg-[color:var(--brand-hover)]"
+              >
+                <Plus size={15} /> Create
+              </Link>
+            ) : undefined
           }
         />
 
         {mine.length === 0 ? (
-          <CreateFirst />
+          caps.any ? (
+            <CreateFirst caps={caps} />
+          ) : (
+            <NoRole />
+          )
         ) : (
           <div className="flex flex-col gap-2.5">
             {mine.map((c) => (
@@ -102,27 +110,53 @@ export default async function ManagePage() {
   );
 }
 
-function CreateFirst() {
+function NoRole() {
+  return (
+    <section className="rounded-[16px] bg-[color:var(--surface-2)] p-8 flex flex-col items-center text-center gap-3">
+      <h2 className="text-[18px] font-extrabold tracking-[-0.02em]">
+        Nothing to manage yet
+      </h2>
+      <p className="text-[13.5px] text-[color:var(--text-2)] max-w-[420px]">
+        Creating leagues is for commissioners and tournaments for organizers. Ask
+        an existing organizer to invite you, and you&apos;ll be able to run it
+        here.
+      </p>
+      <Link
+        href="/discover"
+        className="inline-flex items-center h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] text-white text-[12px] font-bold uppercase tracking-[0.04em] hover:bg-[color:var(--brand-hover)]"
+      >
+        Browse games
+      </Link>
+    </section>
+  );
+}
+
+function CreateFirst({ caps }: { caps: CreateCaps }) {
   const opts = [
-    {
+    caps.league && {
       href: "/manage/new?type=LEAGUE",
       icon: <CalendarDays size={18} />,
       title: "Start a league",
       sub: "Recurring play · seasons · standings",
     },
-    {
+    caps.tournament && {
       href: "/manage/new?type=TOURNAMENT",
       icon: <Trophy size={18} />,
       title: "Run a tournament",
       sub: "Divisions · brackets · one or few days",
     },
-    {
+    caps.community && {
       href: "/manage/new?type=COMMUNITY",
       icon: <Users2 size={18} />,
       title: "Create a community",
       sub: "Frat / campus / gym — owns many events",
     },
-  ];
+  ].filter(Boolean) as {
+    href: string;
+    icon: React.ReactNode;
+    title: string;
+    sub: string;
+  }[];
   return (
     <section className="rounded-[16px] bg-[color:var(--surface-2)] p-7 flex flex-col items-center text-center gap-4">
       <div>

@@ -13,6 +13,7 @@ import {
   divisions,
 } from "@/lib/db";
 import { readSession } from "@/lib/auth/session";
+import { getCreateCaps } from "@/lib/queries/organize";
 
 export type ActionResult<T = unknown> =
   | { ok: true; data: T }
@@ -110,6 +111,24 @@ export async function createEvent(
   const me = session.playerId;
   const name = input.name?.trim();
   if (!name) return { ok: false, error: "Give it a name." };
+
+  // Role gate: leagues → commissioners, tournaments/communities → organizers.
+  const caps = await getCreateCaps(session);
+  const allowed =
+    input.type === "LEAGUE"
+      ? caps.league
+      : input.type === "TOURNAMENT"
+        ? caps.tournament
+        : caps.community;
+  if (!allowed) {
+    return {
+      ok: false,
+      error:
+        input.type === "LEAGUE"
+          ? "Only commissioners can create leagues. Ask an organizer to add you."
+          : "Only organizers can create this. Ask an organizer to add you.",
+    };
+  }
 
   try {
     if (input.type === "LEAGUE") {
