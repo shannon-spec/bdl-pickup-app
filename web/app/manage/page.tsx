@@ -2,9 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronRight, Trophy, CalendarDays, Users2 } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
+import { isAdminLike } from "@/lib/auth/perms";
 import { getMyContexts } from "@/lib/queries/contexts";
 import { getCreateCaps, type CreateCaps } from "@/lib/queries/organize";
 import { CreateMenu } from "@/components/bdl/create-menu";
+import { DeleteEventButton } from "@/components/bdl/delete-event-button";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
@@ -46,6 +48,7 @@ export default async function ManagePage() {
   // Organizer surfaces only — leagues/tournaments/communities you administer.
   const mine = all.filter((c) => c.manage && c.type !== "TEAM");
   const caps = await getCreateCaps(session);
+  const isAdmin = isAdminLike(session);
 
   return (
     <>
@@ -67,32 +70,43 @@ export default async function ManagePage() {
         ) : (
           <div className="flex flex-col gap-2.5">
             {mine.map((c) => (
-              <Link
+              <div
                 key={`${c.type}:${c.id}`}
-                href={manageHref(c.type, c.id)}
-                className="group flex items-center gap-3.5 rounded-[14px] bg-[color:var(--surface)] border border-[color:var(--hairline-2)] px-3.5 py-3 hover:bg-[color:var(--surface-2)] transition-colors"
+                className="group flex items-center gap-2 rounded-[14px] bg-[color:var(--surface)] border border-[color:var(--hairline-2)] pr-2.5 hover:bg-[color:var(--surface-2)] transition-colors"
               >
-                <LeagueAvatar
-                  kind={c.avatarKind}
-                  color={c.avatarColor}
-                  emoji={c.avatarEmoji}
-                  abbr={initials(c.name)}
-                  size={40}
-                />
-                <span className="flex-1 min-w-0">
-                  <span className="block font-bold text-[15px] tracking-[-0.01em] truncate">
-                    {c.name}
+                <Link
+                  href={manageHref(c.type, c.id)}
+                  className="flex items-center gap-3.5 flex-1 min-w-0 pl-3.5 py-3"
+                >
+                  <LeagueAvatar
+                    kind={c.avatarKind}
+                    color={c.avatarColor}
+                    emoji={c.avatarEmoji}
+                    abbr={initials(c.name)}
+                    size={40}
+                  />
+                  <span className="flex-1 min-w-0">
+                    <span className="block font-bold text-[15px] tracking-[-0.01em] truncate">
+                      {c.name}
+                    </span>
+                    <span className="block text-[12px] text-[color:var(--text-3)] mt-0.5">
+                      {TYPE_LABEL[c.type] ?? c.type} ·{" "}
+                      {c.role.charAt(0) + c.role.slice(1).toLowerCase()}
+                    </span>
                   </span>
-                  <span className="block text-[12px] text-[color:var(--text-3)] mt-0.5">
-                    {TYPE_LABEL[c.type] ?? c.type} ·{" "}
-                    {c.role.charAt(0) + c.role.slice(1).toLowerCase()}
-                  </span>
-                </span>
-                <ChevronRight
-                  size={18}
-                  className="text-[color:var(--text-3)] group-hover:text-[color:var(--text)] shrink-0"
-                />
-              </Link>
+                  <ChevronRight
+                    size={18}
+                    className="text-[color:var(--text-3)] group-hover:text-[color:var(--text)] shrink-0"
+                  />
+                </Link>
+                {isAdmin && (
+                  <DeleteEventButton
+                    type={c.type as "LEAGUE" | "TOURNAMENT" | "COMMUNITY"}
+                    id={c.id}
+                    name={c.name}
+                  />
+                )}
+              </div>
             ))}
           </div>
         )}

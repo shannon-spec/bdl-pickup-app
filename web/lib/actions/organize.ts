@@ -1,6 +1,7 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import {
   db,
@@ -13,6 +14,7 @@ import {
   divisions,
 } from "@/lib/db";
 import { readSession } from "@/lib/auth/session";
+import { isAdminLike } from "@/lib/auth/perms";
 import { getCreateCaps } from "@/lib/queries/organize";
 
 export type ActionResult<T = unknown> =
@@ -218,4 +220,22 @@ export async function createEvent(
     console.error("[createEvent]", e);
     return { ok: false, error: "Couldn't create it. Try again." };
   }
+}
+
+/** Admin-only: remove an event (soft-hide — reversible, keeps data). */
+export async function deleteEvent(
+  type: "LEAGUE" | "TOURNAMENT" | "COMMUNITY",
+  id: string,
+): Promise<ActionResult<null>> {
+  const session = await readSession();
+  if (!isAdminLike(session))
+    return { ok: false, error: "Only admins can delete events." };
+  const now = new Date();
+  if (type === "LEAGUE")
+    await db.update(leagues).set({ hiddenAt: now }).where(eq(leagues.id, id));
+  else if (type === "TOURNAMENT")
+    await db.update(tournaments).set({ hiddenAt: now }).where(eq(tournaments.id, id));
+  else await db.update(communities).set({ hiddenAt: now }).where(eq(communities.id, id));
+  revalidatePath("/manage");
+  return { ok: true, data: null };
 }
