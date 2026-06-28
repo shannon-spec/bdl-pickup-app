@@ -26,24 +26,45 @@ const fmt = (v: number | null, pct?: boolean) => {
   return Number.isInteger(v) ? String(v) : v.toFixed(1);
 };
 
-const AWARD_KEY = [
-  { emoji: "🏀", label: "Leading scorer" },
-  { emoji: "💪", label: "Leading rebounder" },
-  { emoji: "🎯", label: "Leading assists" },
-  { emoji: "🧤", label: "Leading steals" },
-  { emoji: "🏹", label: "Leading 3PT %" },
-  { emoji: "💎💎💎", label: "Triple-double avg" },
+type AwardKeyT =
+  | "scoring"
+  | "rebound"
+  | "assist"
+  | "steals"
+  | "sharpshooter"
+  | "triple-double";
+
+const AWARDS: Record<AwardKeyT, { src: string; label: string }> = {
+  scoring: { src: "/awards/scoring.png", label: "Leading scorer" },
+  rebound: { src: "/awards/rebound.png", label: "Leading rebounder" },
+  assist: { src: "/awards/assist.png", label: "Leading assists" },
+  steals: { src: "/awards/steals.png", label: "Leading steals" },
+  sharpshooter: { src: "/awards/sharpshooter.png", label: "Leading 3PT %" },
+  "triple-double": { src: "/awards/triple-double.png", label: "Triple-double avg" },
+};
+
+const AWARD_ORDER: AwardKeyT[] = [
+  "scoring",
+  "rebound",
+  "assist",
+  "steals",
+  "sharpshooter",
+  "triple-double",
 ];
 
-function AwardCircle({ emoji, title }: { emoji: string; title?: string }) {
+function AwardBadge({ k, size = 20 }: { k: AwardKeyT; size?: number }) {
+  const a = AWARDS[k];
   return (
-    <span
-      title={title}
-      aria-label={title}
-      className="inline-flex items-center justify-center h-5 min-w-[20px] px-1 rounded-full bg-[color:var(--surface-2)] text-[11px] leading-none whitespace-nowrap shadow-[inset_0_0_0_1px_var(--hairline-2)]"
-    >
-      {emoji}
-    </span>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={a.src}
+      alt={a.label}
+      title={a.label}
+      width={size}
+      height={size}
+      className="inline-block shrink-0 select-none align-middle drop-shadow-[0_1px_1px_rgba(0,0,0,0.18)]"
+      style={{ width: size, height: size }}
+    />
   );
 }
 
@@ -53,10 +74,12 @@ export function AwardKey() {
       <span className="text-[10px] font-bold tracking-[0.12em] uppercase text-[color:var(--text-3)]">
         Key
       </span>
-      {AWARD_KEY.map((a) => (
-        <span key={a.label} className="inline-flex items-center gap-1.5">
-          <AwardCircle emoji={a.emoji} />
-          <span className="text-[12px] text-[color:var(--text-2)]">{a.label}</span>
+      {AWARD_ORDER.map((k) => (
+        <span key={k} className="inline-flex items-center gap-1.5">
+          <AwardBadge k={k} size={22} />
+          <span className="text-[12px] text-[color:var(--text-2)]">
+            {AWARDS[k].label}
+          </span>
         </span>
       ))}
     </div>
@@ -90,16 +113,15 @@ export function StatsTable({
     tp: maxOf((r) => r.tpPct),
   };
   const eq = (a: number, b: number) => Math.abs(a - b) < 1e-9;
-  const awardsFor = (p: StatLine): { emoji: string; title: string }[] => {
-    const a: { emoji: string; title: string }[] = [];
-    if (p.ppg > 0 && eq(p.ppg, leaders.ppg)) a.push({ emoji: "🏀", title: "Leading scorer" });
-    if (p.rpg > 0 && eq(p.rpg, leaders.rpg)) a.push({ emoji: "💪", title: "Leading rebounder" });
-    if (p.apg > 0 && eq(p.apg, leaders.apg)) a.push({ emoji: "🎯", title: "Leading assists" });
-    if (p.spg > 0 && eq(p.spg, leaders.spg)) a.push({ emoji: "🧤", title: "Leading steals" });
+  const awardsFor = (p: StatLine): AwardKeyT[] => {
+    const a: AwardKeyT[] = [];
+    if (p.ppg > 0 && eq(p.ppg, leaders.ppg)) a.push("scoring");
+    if (p.rpg > 0 && eq(p.rpg, leaders.rpg)) a.push("rebound");
+    if (p.apg > 0 && eq(p.apg, leaders.apg)) a.push("assist");
+    if (p.spg > 0 && eq(p.spg, leaders.spg)) a.push("steals");
     if (p.tpPct !== null && leaders.tp > -Infinity && eq(p.tpPct, leaders.tp))
-      a.push({ emoji: "🏹", title: "Leading 3PT %" });
-    if (p.ppg >= 10 && p.rpg >= 10 && p.apg >= 10)
-      a.push({ emoji: "💎💎💎", title: "Triple-double average" });
+      a.push("sharpshooter");
+    if (p.ppg >= 10 && p.rpg >= 10 && p.apg >= 10) a.push("triple-double");
     return a;
   };
 
@@ -195,7 +217,7 @@ export function StatsTable({
                           {p.firstName} {p.lastName}
                         </span>
                         {awardsFor(p).map((aw) => (
-                          <AwardCircle key={aw.title} emoji={aw.emoji} title={aw.title} />
+                          <AwardBadge key={aw} k={aw} />
                         ))}
                       </span>
                       {p.team && (
