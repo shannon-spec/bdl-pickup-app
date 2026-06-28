@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { readSession } from "@/lib/auth/session";
 import { db, players } from "@/lib/db";
-import { Brand } from "@/components/bdl/brand";
+import { OnboardingHeader } from "@/components/bdl/onboarding-header";
 import { ProfileWizard, type ProfileValues } from "./profile-wizard";
 
 export const dynamic = "force-dynamic";
@@ -50,14 +50,16 @@ export default async function OnboardingProfilePage() {
   };
 
   return (
-    <main className="min-h-[100dvh] flex justify-center bg-[color:var(--bg)] px-4 py-8">
+    <main className="min-h-[100dvh] flex justify-center bg-[color:var(--bg)] px-4 py-6">
       <div className="w-full max-w-[560px] flex flex-col gap-5">
-        <div className="flex items-center justify-between">
-          <Brand height={34} />
-          <span className="text-[12px] font-semibold text-[color:var(--text-3)]">
-            Phase 1 · Step 2 · Joining BDL
-          </span>
-        </div>
+        <OnboardingHeader
+          phase="Phase 1 · Joining BDL"
+          avatarUrl={me?.avatarUrl ?? null}
+          initials={
+            `${(me?.firstName ?? "")[0] ?? ""}${(me?.lastName ?? "")[0] ?? ""}`.toUpperCase() ||
+            "•"
+          }
+        />
         <div>
           <h1 className="text-[24px] font-extrabold tracking-[-0.03em]">
             Build your community profile
