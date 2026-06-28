@@ -9,6 +9,7 @@ import {
   addRegistration,
   removeRegistration,
   generateBracket,
+  generatePlayoffs,
   enterMatchScore,
 } from "@/lib/actions/bracket";
 import type {
@@ -24,6 +25,73 @@ function initials(name: string) {
   return (
     name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() ||
     "•"
+  );
+}
+
+type Standing = { id: string; label: string; w: number; l: number; pf: number; pa: number };
+
+/** W-L / point-diff standings over a set of matches. */
+function standingsFor(
+  ms: MatchRow[],
+  labelOf: (id: string | null) => string | null,
+): Standing[] {
+  const tbl = new Map<string, Standing>();
+  const ensure = (id: string) => {
+    if (!tbl.has(id))
+      tbl.set(id, { id, label: labelOf(id) ?? "—", w: 0, l: 0, pf: 0, pa: 0 });
+    return tbl.get(id)!;
+  };
+  for (const m of ms) {
+    if (!m.homeRegistrationId || !m.awayRegistrationId) continue;
+    const h = ensure(m.homeRegistrationId);
+    const a = ensure(m.awayRegistrationId);
+    if (m.homeScore != null && m.awayScore != null) {
+      h.pf += m.homeScore;
+      h.pa += m.awayScore;
+      a.pf += m.awayScore;
+      a.pa += m.homeScore;
+      if (m.homeScore > m.awayScore) {
+        h.w++;
+        a.l++;
+      } else {
+        a.w++;
+        h.l++;
+      }
+    }
+  }
+  return [...tbl.values()].sort(
+    (x, y) => y.w - x.w || y.pf - y.pa - (x.pf - x.pa),
+  );
+}
+
+function StandingsTable({ rows }: { rows: Standing[] }) {
+  return (
+    <div className="rounded-[12px] border border-[color:var(--hairline-2)] overflow-hidden text-[13px]">
+      <div className="grid grid-cols-[28px_1fr_50px_50px] gap-2 px-3 py-2 bg-[color:var(--surface-2)] text-[11px] font-bold uppercase tracking-[0.06em] text-[color:var(--text-3)]">
+        <span>#</span>
+        <span>Team</span>
+        <span className="text-center">W-L</span>
+        <span className="text-center">Diff</span>
+      </div>
+      {rows.map((s, i) => {
+        const diff = s.pf - s.pa;
+        return (
+          <div
+            key={s.id}
+            className="grid grid-cols-[28px_1fr_50px_50px] gap-2 px-3 py-2 border-t border-[color:var(--hairline)] items-center"
+          >
+            <span className="text-[color:var(--text-3)]">{i + 1}</span>
+            <span className="font-semibold truncate">{s.label}</span>
+            <span className="text-center tabular-nums">
+              {s.w}-{s.l}
+            </span>
+            <span className="text-center tabular-nums text-[color:var(--text-2)]">
+              {diff > 0 ? `+${diff}` : diff}
+            </span>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -285,43 +353,41 @@ function Bracket({
       id ? (m.get(id)?.label ?? "TBD") : null;
   }, [div.registrations]);
 
-  const standings = useMemo(() => {
-    type S = { id: string; label: string; w: number; l: number; pf: number; pa: number };
-    const tbl = new Map<string, S>();
-    for (const r of div.registrations)
-      tbl.set(r.id, { id: r.id, label: r.label, w: 0, l: 0, pf: 0, pa: 0 });
-    for (const m of div.matches) {
-      if (
-        m.homeScore != null &&
-        m.awayScore != null &&
-        m.homeRegistrationId &&
-        m.awayRegistrationId
-      ) {
-        const h = tbl.get(m.homeRegistrationId);
-        const a = tbl.get(m.awayRegistrationId);
-        if (h && a) {
-          h.pf += m.homeScore;
-          h.pa += m.awayScore;
-          a.pf += m.awayScore;
-          a.pa += m.homeScore;
-          if (m.homeScore > m.awayScore) {
-            h.w++;
-            a.l++;
-          } else {
-            a.w++;
-            h.l++;
-          }
-        }
-      }
-    }
-    return [...tbl.values()].sort(
-      (x, y) => y.w - x.w || y.pf - y.pa - (x.pf - x.pa),
-    );
-  }, [div.registrations, div.matches]);
+  const isPool = format === "POOL_TO_BRACKET";
+  const standings = useMemo(
+    () => standingsFor(div.matches, labelOf),
+    [div.matches, labelOf],
+  );
 
   const allScored =
     div.matches.length > 0 &&
     div.matches.every((m) => m.homeScore != null && m.awayScore != null);
+
+  const poolKeys = useMemo(
+    () =>
+      [
+        ...new Set(
+          div.matches
+            .map((m) => m.bracketGroup ?? "")
+            .filter((g) => g.startsWith("P")),
+        ),
+      ].sort(),
+    [div.matches],
+  );
+  const hasPlayoffs = div.matches.some((m) => m.bracketGroup === "B");
+  const poolsAllScored =
+    poolKeys.length > 0 &&
+    div.matches
+      .filter((m) => (m.bracketGroup ?? "").startsWith("P"))
+      .every((m) => m.homeScore != null && m.awayScore != null);
+
+  const genPlayoffs = () =>
+    start(async () => {
+      setError(null);
+      const res = await generatePlayoffs(tournamentId, div.id);
+      if (!res.ok) return setError(res.error);
+      router.refresh();
+    });
 
   const seedOf = useMemo(() => {
     const m = new Map(div.registrations.map((r) => [r.id, r.seed]));
@@ -341,11 +407,15 @@ function Bracket({
 
   const champion = useMemo(() => {
     if (isRR) return allScored ? (standings[0]?.label ?? null) : null;
-    const final = div.matches.find((m) => m.nextMatchId === null);
+    const pool = format === "POOL_TO_BRACKET";
+    const finals = pool
+      ? div.matches.filter((m) => m.bracketGroup === "B")
+      : div.matches;
+    const final = finals.find((m) => m.nextMatchId === null);
     return final?.winnerRegistrationId
       ? labelOf(final.winnerRegistrationId)
       : null;
-  }, [isRR, allScored, standings, div.matches, labelOf]);
+  }, [isRR, format, allScored, standings, div.matches, labelOf]);
 
   const generate = () =>
     start(async () => {
@@ -404,7 +474,13 @@ function Bracket({
           disabled={pending}
           className="h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] text-white text-[12px] font-bold uppercase tracking-[0.04em] disabled:opacity-60"
         >
-          {pending ? "Generating…" : "Generate bracket"}
+          {pending
+            ? "Generating…"
+            : isRR
+              ? "Generate schedule"
+              : isPool
+                ? "Generate pools"
+                : "Generate bracket"}
         </button>
       </div>
     );
@@ -414,7 +490,14 @@ function Bracket({
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-2">
         <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-[color:var(--text-3)]">
-          {div.name} — {isRR ? "round robin" : "generated bracket"}
+          {div.name} —{" "}
+          {isRR
+            ? "round robin"
+            : isDE
+              ? "double elimination"
+              : isPool
+                ? "pools → bracket"
+                : "generated bracket"}
         </p>
         <button
           type="button"
@@ -443,33 +526,7 @@ function Bracket({
 
       {isRR ? (
         <>
-          {/* standings */}
-          <div className="rounded-[12px] border border-[color:var(--hairline-2)] overflow-hidden text-[13px]">
-            <div className="grid grid-cols-[28px_1fr_50px_50px] gap-2 px-3 py-2 bg-[color:var(--surface-2)] text-[11px] font-bold uppercase tracking-[0.06em] text-[color:var(--text-3)]">
-              <span>#</span>
-              <span>Team</span>
-              <span className="text-center">W-L</span>
-              <span className="text-center">Diff</span>
-            </div>
-            {standings.map((s, i) => {
-              const diff = s.pf - s.pa;
-              return (
-                <div
-                  key={s.id}
-                  className="grid grid-cols-[28px_1fr_50px_50px] gap-2 px-3 py-2 border-t border-[color:var(--hairline)] items-center"
-                >
-                  <span className="text-[color:var(--text-3)]">{i + 1}</span>
-                  <span className="font-semibold truncate">{s.label}</span>
-                  <span className="text-center tabular-nums">
-                    {s.w}-{s.l}
-                  </span>
-                  <span className="text-center tabular-nums text-[color:var(--text-2)]">
-                    {diff > 0 ? `+${diff}` : diff}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+          <StandingsTable rows={standings} />
 
           {/* fixtures by round */}
           <div className="flex flex-col gap-4">
@@ -513,6 +570,53 @@ function Bracket({
             </p>
             <div className="max-w-[210px]">{renderColumns(colsOf("GF"))}</div>
           </div>
+        </div>
+      ) : isPool ? (
+        <div className="flex flex-col gap-5">
+          {poolKeys.map((pk, pi) => {
+            const pms = div.matches
+              .filter((m) => m.bracketGroup === pk)
+              .sort((a, b) => a.round - b.round || a.slot - b.slot);
+            return (
+              <div key={pk} className="flex flex-col gap-2">
+                <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[color:var(--text-3)]">
+                  Pool {String.fromCharCode(65 + pi)}
+                </p>
+                <StandingsTable rows={standingsFor(pms, labelOf)} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {pms.map((m) => (
+                    <MatchBox
+                      key={m.id}
+                      tournamentId={tournamentId}
+                      m={m}
+                      labelOf={labelOf}
+                      seedOf={seedOf}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
+          {hasPlayoffs ? (
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[color:var(--text-3)] mb-1.5">
+                Playoff bracket
+              </p>
+              {renderColumns(colsOf("B"))}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={genPlayoffs}
+              disabled={pending || !poolsAllScored}
+              className="h-11 rounded-[var(--r-lg)] bg-[color:var(--brand)] text-white text-[12px] font-bold uppercase tracking-[0.04em] disabled:opacity-50"
+            >
+              {poolsAllScored
+                ? "Generate playoff bracket"
+                : "Finish all pool games to unlock playoffs"}
+            </button>
+          )}
         </div>
       ) : (
         renderColumns(rounds)

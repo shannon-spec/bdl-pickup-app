@@ -230,24 +230,69 @@ export async function generateBracket(
     return generateDoubleElim(tournamentId, divisionId, ordered);
   }
 
-  // ---- Single elim / pools → single-elim bracket ----
-  // seedNo (1..n) -> registration id
-  const seedToReg = new Map<number, string>();
-  ordered.forEach((r, i) => seedToReg.set(i + 1, r.id));
+  // ---- Pools → bracket: build round-robin pools now; playoffs come later ----
+  if ((tour?.fmt ?? "SINGLE_ELIM") === "POOL_TO_BRACKET") {
+    if (n < 4) return { ok: false, error: "Pools need at least 4 teams." };
+    const poolCount = n % 4 === 0 && n >= 8 ? n / 4 : 2;
+    await db.delete(matches).where(eq(matches.divisionId, divisionId));
+    // snake-distribute by seed so pools are balanced
+    const pools: string[][] = Array.from({ length: poolCount }, () => []);
+    ordered.forEach((r, i) => {
+      const row = Math.floor(i / poolCount);
+      const pos = i % poolCount;
+      const p = row % 2 === 0 ? pos : poolCount - 1 - pos;
+      pools[p].push(r.id);
+    });
+    let total = 0;
+    for (let p = 0; p < poolCount; p++) {
+      const pairs = roundRobinPairs(pools[p]);
+      const slotByRound: Record<number, number> = {};
+      const rows = pairs.map((pr) => {
+        const slot = slotByRound[pr.round] ?? 0;
+        slotByRound[pr.round] = slot + 1;
+        return {
+          divisionId,
+          round: pr.round,
+          slot,
+          bracketGroup: `P${p}`,
+          homeRegistrationId: pr.home,
+          awayRegistrationId: pr.away,
+        };
+      });
+      if (rows.length) {
+        await db.insert(matches).values(rows);
+        total += rows.length;
+      }
+    }
+    revalidate(tournamentId);
+    return { ok: true, data: { matches: total } };
+  }
 
+  // ---- Single elimination (default) ----
+  await db.delete(matches).where(eq(matches.divisionId, divisionId));
+  const count = await buildSingleElim(divisionId, ordered.map((r) => r.id), null);
+  revalidate(tournamentId);
+  return { ok: true, data: { matches: count } };
+}
+
+/** Build a single-elim bracket over an ordered (1..n seeded) list of reg ids,
+ *  tagging every match with `group`. Caller deletes the prior matches first. */
+async function buildSingleElim(
+  divisionId: string,
+  orderedIds: string[],
+  group: string | null,
+): Promise<number> {
+  const n = orderedIds.length;
+  const seedToReg = new Map<number, string>();
+  orderedIds.forEach((id, i) => seedToReg.set(i + 1, id));
   const size = nextPow2(n);
   const rounds = Math.log2(size);
   const order = seedOrder(size);
-
-  // wipe any existing bracket for this division, then rebuild
-  await db.delete(matches).where(eq(matches.divisionId, divisionId));
-
   const insertedByRound: Record<number, { id: string; slot: number; winnerRegistrationId: string | null; nextMatchId: string | null; nextSlotIsHome: boolean | null }[]> = {};
-
   for (let r = rounds; r >= 1; r--) {
-    const count = size / 2 ** r;
+    const cnt = size / 2 ** r;
     const rows = [];
-    for (let slot = 0; slot < count; slot++) {
+    for (let slot = 0; slot < cnt; slot++) {
       let nextMatchId: string | null = null;
       let nextSlotIsHome: boolean | null = null;
       if (r < rounds) {
@@ -262,14 +307,15 @@ export async function generateBracket(
         homeRegistrationId = seedToReg.get(order[slot * 2]) ?? null;
         awayRegistrationId = seedToReg.get(order[slot * 2 + 1]) ?? null;
         if (homeRegistrationId && !awayRegistrationId)
-          winnerRegistrationId = homeRegistrationId; // bye
+          winnerRegistrationId = homeRegistrationId;
         else if (awayRegistrationId && !homeRegistrationId)
-          winnerRegistrationId = awayRegistrationId; // bye
+          winnerRegistrationId = awayRegistrationId;
       }
       rows.push({
         divisionId,
         round: r,
         slot,
+        bracketGroup: group,
         homeRegistrationId,
         awayRegistrationId,
         winnerRegistrationId,
@@ -290,8 +336,6 @@ export async function generateBracket(
     inserted.sort((a, b) => a.slot - b.slot);
     insertedByRound[r] = inserted;
   }
-
-  // advance round-1 byes into round 2
   if (rounds > 1) {
     for (const m of insertedByRound[1]) {
       if (m.winnerRegistrationId && m.nextMatchId) {
@@ -306,9 +350,86 @@ export async function generateBracket(
       }
     }
   }
+  return size - 1;
+}
 
+/** Pools → bracket, step 2: seed pool finishers into a single-elim playoff. */
+export async function generatePlayoffs(
+  tournamentId: string,
+  divisionId: string,
+): Promise<ActionResult<{ matches: number }>> {
+  if (!(await canManage(tournamentId)))
+    return { ok: false, error: "Not allowed." };
+  if (!(await divisionInTournament(divisionId, tournamentId)))
+    return { ok: false, error: "Bad division." };
+
+  const all = await db
+    .select()
+    .from(matches)
+    .where(eq(matches.divisionId, divisionId));
+  const pool = all.filter((m) => (m.bracketGroup ?? "").startsWith("P"));
+  if (!pool.length) return { ok: false, error: "Generate pools first." };
+  if (
+    pool.some(
+      (m) =>
+        m.homeRegistrationId &&
+        m.awayRegistrationId &&
+        (m.homeScore == null || m.awayScore == null),
+    )
+  )
+    return { ok: false, error: "Finish all pool games first." };
+
+  const byPool = new Map<string, typeof pool>();
+  for (const m of pool) {
+    const k = m.bracketGroup as string;
+    if (!byPool.has(k)) byPool.set(k, []);
+    byPool.get(k)!.push(m);
+  }
+  const poolKeys = [...byPool.keys()].sort();
+  const ADVANCE = 2;
+  const standingsByPool: Record<string, string[]> = {};
+  for (const k of poolKeys) {
+    const tbl = new Map<string, { id: string; w: number; diff: number }>();
+    const ensure = (id: string) => {
+      if (!tbl.has(id)) tbl.set(id, { id, w: 0, diff: 0 });
+      return tbl.get(id)!;
+    };
+    for (const m of byPool.get(k)!) {
+      if (
+        m.homeRegistrationId &&
+        m.awayRegistrationId &&
+        m.homeScore != null &&
+        m.awayScore != null
+      ) {
+        const h = ensure(m.homeRegistrationId);
+        const a = ensure(m.awayRegistrationId);
+        h.diff += m.homeScore - m.awayScore;
+        a.diff += m.awayScore - m.homeScore;
+        if (m.homeScore > m.awayScore) h.w++;
+        else a.w++;
+      }
+    }
+    standingsByPool[k] = [...tbl.values()]
+      .sort((x, y) => y.w - x.w || y.diff - x.diff)
+      .map((s) => s.id);
+  }
+
+  // cross-pool seeding: all pool winners first, then all runners-up, ...
+  const seeds: string[] = [];
+  for (let rank = 0; rank < ADVANCE; rank++)
+    for (const k of poolKeys) {
+      const id = standingsByPool[k][rank];
+      if (id) seeds.push(id);
+    }
+  if (seeds.length < 2)
+    return { ok: false, error: "Not enough teams advanced." };
+
+  await db
+    .delete(matches)
+    .where(and(eq(matches.divisionId, divisionId), eq(matches.bracketGroup, "B")));
+  const count = await buildSingleElim(divisionId, seeds, "B");
   revalidate(tournamentId);
-  return { ok: true, data: { matches: size - 1 } };
+  return { ok: true, data: { matches: count } };
 }
 
 /** Build a full double-elimination bracket for a power-of-two field. */
