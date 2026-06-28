@@ -29,7 +29,7 @@ export function RoleToggle({
 
   if (options.length === 1) {
     return (
-      <span className="inline-flex items-center h-6 px-2.5 rounded-full bg-[color:var(--brand)] text-white text-[10px] font-bold tracking-[0.06em] uppercase flex-shrink-0">
+      <span className="self-start w-fit inline-flex items-center h-6 px-2.5 rounded-full bg-[color:var(--brand)] text-white text-[10px] font-bold tracking-[0.06em] uppercase flex-shrink-0">
         {LABELS[options[0]]}
       </span>
     );
@@ -48,7 +48,7 @@ export function RoleToggle({
       role="tablist"
       aria-label="View as"
       aria-busy={pending}
-      className="inline-flex items-center gap-2 flex-wrap"
+      className="self-start w-fit inline-flex items-center gap-2 flex-wrap"
     >
       {options.map((o) => {
         const selected = o === view;
