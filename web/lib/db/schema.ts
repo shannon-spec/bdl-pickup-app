@@ -122,6 +122,12 @@ export const organizeInvitationStatusEnum = pgEnum(
   "organize_invitation_status",
   ["pending", "accepted", "revoked", "expired"],
 );
+export const joinRequestStatusEnum = pgEnum("join_request_status", [
+  "pending",
+  "accepted",
+  "denied",
+  "hold",
+]);
 
 export const inviteStatusEnum = pgEnum("invite_status", [
   "pending",
@@ -722,6 +728,35 @@ export type Match = typeof matches.$inferSelect;
 export type ScheduleSlot = typeof scheduleSlots.$inferSelect;
 export type OrganizeInvitation = typeof organizeInvitations.$inferSelect;
 export type EventDraft = typeof eventDrafts.$inferSelect;
+
+/* Player → league/team join request (Phase 2 onboarding queue). */
+export const joinRequests = pgTable(
+  "join_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    contextType: contextTypeEnum("context_type").notNull(),
+    contextId: uuid("context_id").notNull(),
+    message: text("message"),
+    status: joinRequestStatusEnum("status").notNull().default("pending"),
+    decidedBy: uuid("decided_by").references(() => players.id, {
+      onDelete: "set null",
+    }),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index("join_requests_ctx_idx").on(t.contextType, t.contextId, t.status),
+    index("join_requests_player_idx").on(t.playerId),
+  ],
+);
+export type JoinRequest = typeof joinRequests.$inferSelect;
 
 /* Short-lived phone OTP codes for passwordless sign-in. */
 export const authOtp = pgTable(

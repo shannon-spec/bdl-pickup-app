@@ -5,6 +5,7 @@ import { readSession } from "@/lib/auth/session";
 import { isAdminLike } from "@/lib/auth/perms";
 import { getMyContexts } from "@/lib/queries/contexts";
 import { getCreateCaps, type CreateCaps } from "@/lib/queries/organize";
+import { getPendingRequestsForManager } from "@/lib/queries/join";
 import { CreateMenu } from "@/components/bdl/create-menu";
 import { DeleteEventButton } from "@/components/bdl/delete-event-button";
 import { TopBar } from "@/components/bdl/top-bar";
@@ -49,6 +50,7 @@ export default async function ManagePage() {
   const mine = all.filter((c) => c.manage && c.type !== "TEAM");
   const caps = await getCreateCaps(session);
   const isAdmin = isAdminLike(session);
+  const pendingRequests = (await getPendingRequestsForManager(session)).length;
 
   return (
     <>
@@ -60,6 +62,21 @@ export default async function ManagePage() {
           title="Manage"
           right={caps.any ? <CreateMenu caps={caps} /> : undefined}
         />
+
+        {pendingRequests > 0 && (
+          <Link
+            href="/manage/requests"
+            className="flex items-center gap-3 rounded-[14px] border border-[color:var(--brand)] bg-[color:var(--brand-soft)] px-4 py-3 hover:brightness-[0.98] transition"
+          >
+            <span className="inline-flex items-center justify-center min-w-7 h-7 px-2 rounded-full bg-[color:var(--brand)] text-white text-[12px] font-extrabold">
+              {pendingRequests}
+            </span>
+            <span className="flex-1 text-[14px] font-bold text-[color:var(--brand-ink)]">
+              Join request{pendingRequests === 1 ? "" : "s"} to review
+            </span>
+            <ChevronRight size={18} className="text-[color:var(--brand-ink)]" />
+          </Link>
+        )}
 
         {mine.length === 0 ? (
           caps.any ? (

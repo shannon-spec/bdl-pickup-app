@@ -30,7 +30,8 @@
     "db:migrate:game-stats-reb": "node --env-file=.env.local scripts/migrate-game-stats-reb.mjs",
     "db:migrate:contexts": "node --env-file=.env.local scripts/migrate-contexts.mjs",
     "db:migrate:organize": "node --env-file=.env.local scripts/migrate-organize.mjs",
-    "db:seed:owner": "node --env-file=.env.local scripts/seed-owner.mjs"
+    "db:seed:owner": "node --env-file=.env.local scripts/seed-owner.mjs",
+    "db:migrate:join-requests": "node --env-file=.env.local scripts/migrate-join-requests.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.106.0",

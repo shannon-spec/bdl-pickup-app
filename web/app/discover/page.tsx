@@ -7,12 +7,14 @@ import { getLeaguesWithStats } from "@/lib/queries/leagues";
 import { getTeamCards } from "@/lib/queries/teams";
 import {
   db,
+  players,
   leaguePlayers,
   leagueCommissioners,
   teamPlayers,
   teamCommissioners,
 } from "@/lib/db";
 import { eq } from "drizzle-orm";
+import { getMyJoinStatuses } from "@/lib/queries/join";
 import {
   DiscoverRow,
   DiscoverSearch,
@@ -99,9 +101,50 @@ export default async function DiscoverPage() {
     .filter((t) => mineTeamIds.has(t.id))
     .map((t) => teamItem(t, coachTeam.has(t.id) ? "Coach" : "Player"));
 
+  // Join-request status + the profile chips shared with commissioners.
+  let statuses = new Map<string, "pending" | "accepted" | "denied" | "hold">();
+  const profileChips: string[] = [];
+  if (session?.playerId) {
+    statuses = await getMyJoinStatuses(session.playerId);
+    const [me] = await db
+      .select({
+        first: players.firstName,
+        last: players.lastName,
+        city: players.city,
+        state: players.state,
+        heightFt: players.heightFt,
+        heightIn: players.heightIn,
+        position: players.position,
+        college: players.college,
+        level: players.level,
+      })
+      .from(players)
+      .where(eq(players.id, session.playerId))
+      .limit(1);
+    if (me) {
+      const nm = `${me.first} ${me.last ?? ""}`.trim();
+      const ht = me.heightFt != null ? `${me.heightFt}'${me.heightIn ?? 0}"` : "";
+      const loc = [me.city, me.state].filter(Boolean).join(", ");
+      [
+        nm,
+        [ht, me.position].filter(Boolean).join(" · "),
+        loc,
+        me.college ? `College · ${me.college}` : "",
+        me.level && me.level !== "Not Rated" ? `Self-grade · ${me.level}` : "",
+      ]
+        .filter(Boolean)
+        .forEach((c) => profileChips.push(c));
+    }
+  }
+
+  const withStatus = (i: DiscoverItem): DiscoverItem => ({
+    ...i,
+    status: statuses.get(`${i.type === "league" ? "LEAGUE" : "TEAM"}:${i.id}`) ?? null,
+  });
+
   const others: DiscoverItem[] = [
-    ...allLeagues.filter((l) => !mineLeagueIds.has(l.id)).map((l) => leagueItem(l)),
-    ...allTeams.filter((t) => !mineTeamIds.has(t.id)).map((t) => teamItem(t)),
+    ...allLeagues.filter((l) => !mineLeagueIds.has(l.id)).map((l) => withStatus(leagueItem(l))),
+    ...allTeams.filter((t) => !mineTeamIds.has(t.id)).map((t) => withStatus(teamItem(t))),
   ];
 
   const hasYours = yourLeagues.length > 0 || yourTeams.length > 0;
@@ -136,7 +179,11 @@ export default async function DiscoverPage() {
           <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[color:var(--text-3)] mb-2">
             {hasYours ? "Find more leagues & teams" : "Browse leagues & teams"}
           </p>
-          <DiscoverSearch items={others} />
+          <DiscoverSearch
+            items={others}
+            profileChips={profileChips}
+            signedIn={!!session?.playerId}
+          />
         </div>
       </PageFrame>
       <MobileBottomBar active="discover" />
