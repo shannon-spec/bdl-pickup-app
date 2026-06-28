@@ -1,10 +1,10 @@
 "use server";
 
 import { randomInt } from "node:crypto";
-import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, or, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { headers } from "next/headers";
-import { db, players, authOtp } from "@/lib/db";
+import { db, players, authOtp, superAdmins } from "@/lib/db";
 import { emailHash, encryptOptional } from "@/lib/crypto/secrets";
 import { createSession, writeSessionCookie } from "./session";
 import { setRememberedLogin } from "@/lib/cookies/last-login";
@@ -157,7 +157,24 @@ export async function verifyEmailOtp(
     player = created;
   }
 
-  const token = await createSession({ adminId: "", username: e, role: "player", playerId: player.id });
+  // Elevate to admin if this account is a super_admin (by email or linked player).
+  const [admin] = await db
+    .select({ id: superAdmins.id, role: superAdmins.role })
+    .from(superAdmins)
+    .where(
+      or(
+        sql`lower(${superAdmins.email}) = ${e}`,
+        eq(superAdmins.playerId, player.id),
+      ),
+    )
+    .limit(1);
+
+  const token = await createSession({
+    adminId: admin?.id ?? "",
+    username: e,
+    role: admin?.role ?? "player",
+    playerId: player.id,
+  });
   await writeSessionCookie(token);
   await setRememberedLogin("email", e); // recognize this device next time
   return { ok: true, redirect: redirectFor(isNew, !!player.firstName?.trim(), opts) };
@@ -243,7 +260,18 @@ export async function verifyOtp(
       .returning({ id: players.id, firstName: players.firstName });
     player = created;
   }
-  const token = await createSession({ adminId: "", username: `+${normalized}`, role: "player", playerId: player.id });
+  const [admin] = await db
+    .select({ id: superAdmins.id, role: superAdmins.role })
+    .from(superAdmins)
+    .where(eq(superAdmins.playerId, player.id))
+    .limit(1);
+
+  const token = await createSession({
+    adminId: admin?.id ?? "",
+    username: `+${normalized}`,
+    role: admin?.role ?? "player",
+    playerId: player.id,
+  });
   await writeSessionCookie(token);
   await setRememberedLogin("phone", `+${normalized}`); // recognize this device next time
   return { ok: true, redirect: redirectFor(isNew, !!player.firstName?.trim(), opts) };
