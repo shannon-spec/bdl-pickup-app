@@ -63,6 +63,19 @@ export type ManageTournament = {
   divisions: ManageDivision[];
 };
 
+/** Public read of a published tournament by slug (canManage=false). */
+export async function getPublicTournament(
+  slug: string,
+): Promise<ManageTournament | null> {
+  const [t] = await db
+    .select({ id: tournaments.id, published: tournaments.published })
+    .from(tournaments)
+    .where(eq(tournaments.slug, slug))
+    .limit(1);
+  if (!t || !t.published) return null;
+  return getManageTournament(null, t.id);
+}
+
 async function canManageTournament(
   session: Session | null,
   tournamentId: string,

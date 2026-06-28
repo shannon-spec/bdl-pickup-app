@@ -739,10 +739,10 @@ function Settings({ t }: { t: ManageTournament }) {
         </div>
         {t.slug && (
           <Link
-            href={`/t/${t.slug}`}
+            href={`/tournaments/${t.slug}`}
             className="inline-block mt-2 text-[13px] font-semibold text-[color:var(--brand)] hover:underline"
           >
-            /t/{t.slug}
+            /tournaments/{t.slug}
           </Link>
         )}
       </div>

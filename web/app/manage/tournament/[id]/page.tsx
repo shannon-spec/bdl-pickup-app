@@ -50,7 +50,7 @@ export default async function ManageTournamentPage({
             </div>
             {t.slug && (
               <Link
-                href={`/t/${t.slug}`}
+                href={`/tournaments/${t.slug}`}
                 className="inline-flex items-center h-10 px-4 rounded-[var(--r-lg)] bg-[color:var(--brand)] text-white text-[12px] font-bold uppercase tracking-[0.04em] hover:bg-[color:var(--brand-hover)]"
               >
                 View public page
