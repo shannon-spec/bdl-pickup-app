@@ -27,6 +27,7 @@ const fmt = (v: number | null, pct?: boolean) => {
 };
 
 type AwardKeyT =
+  | "power"
   | "scoring"
   | "rebound"
   | "assist"
@@ -35,6 +36,7 @@ type AwardKeyT =
   | "triple-double";
 
 const AWARDS: Record<AwardKeyT, { src: string; label: string }> = {
+  power: { src: "/awards/power.png", label: "Overall BDL Power Rating" },
   scoring: { src: "/awards/scoring.png", label: "Leading scorer" },
   rebound: { src: "/awards/rebound.png", label: "Leading rebounder" },
   assist: { src: "/awards/assist.png", label: "Leading assists" },
@@ -44,6 +46,7 @@ const AWARDS: Record<AwardKeyT, { src: string; label: string }> = {
 };
 
 const AWARD_ORDER: AwardKeyT[] = [
+  "power",
   "scoring",
   "rebound",
   "assist",
@@ -216,6 +219,9 @@ export function StatsTable({
                         <span className="font-semibold text-[13.5px]">
                           {p.firstName} {p.lastName}
                         </span>
+                        {p.power !== null && p.power !== undefined && (
+                          <AwardBadge k="power" />
+                        )}
                         {awardsFor(p).map((aw) => (
                           <AwardBadge key={aw} k={aw} />
                         ))}
