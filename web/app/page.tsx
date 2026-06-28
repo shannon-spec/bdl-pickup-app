@@ -97,7 +97,7 @@ export default async function FrontDoor() {
   const known = await resolveKnown();
 
   return (
-    <main className="min-h-[100dvh] flex justify-center bg-[color:var(--bg)] px-0 sm:px-6 py-0 sm:py-6">
+    <main className="min-h-[100dvh] flex items-start justify-center bg-[color:var(--bg)] px-0 sm:px-6 py-0 sm:py-6">
       <div className="w-full max-w-[750px] flex flex-col pb-3 overflow-hidden border-0 sm:border border-[#C4C2BA] rounded-none sm:rounded-[20px] shadow-none sm:shadow-[0_8px_34px_rgba(0,0,0,.10)] bg-[color:var(--bg)]">
         {/* ---------- Header: logo left, Sign in right ---------- */}
         <header className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-[color:var(--hairline)]">
@@ -155,7 +155,7 @@ export default async function FrontDoor() {
 
         {/* ---------- New-to-BDL group ---------- */}
         <div className="px-4 sm:px-5 pt-6">
-          <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-[color:var(--text-3)] mb-3">
+          <p className="text-[12.5px] font-extrabold uppercase tracking-[0.1em] text-[color:var(--text-2)] mb-3">
             New to BDL? Start here
           </p>
           <div className="flex flex-col gap-3">
