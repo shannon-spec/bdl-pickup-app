@@ -1,381 +1,160 @@
-import Link from "next/link";
-import { ChevronRight } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
 import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
-import { Pill } from "@/components/bdl/pill";
-import { LeagueAvatar } from "@/components/bdl/league-avatar";
 import { getLeaguesWithStats } from "@/lib/queries/leagues";
+import { getTeamCards } from "@/lib/queries/teams";
 import {
-  getTeamCards,
-  getMyLeagueTeams,
-  type TeamCard,
-  type LeagueTeamRef,
-} from "@/lib/queries/teams";
-import { formatLabel } from "@/lib/format";
-import { db, leaguePlayers, teamPlayers } from "@/lib/db";
+  db,
+  leaguePlayers,
+  leagueCommissioners,
+  teamPlayers,
+  teamCommissioners,
+} from "@/lib/db";
 import { eq } from "drizzle-orm";
+import {
+  DiscoverRow,
+  DiscoverSearch,
+  type DiscoverItem,
+} from "./discover-search";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Discover · BDL" };
 
+function leagueLocation(l: {
+  venueName: string | null;
+  location: string | null;
+  season: string | null;
+}) {
+  return (l.venueName || l.location || l.season || "").trim();
+}
+
 export default async function DiscoverPage() {
-  // Discover is the public landing page — visitors without a session
-  // see the same league directory; "Your leagues" simply collapses.
   const session = await readSession();
 
-  const allLeagues = await getLeaguesWithStats();
-  const allTeams = await getTeamCards({ all: true });
-  const leagueTeams = await getMyLeagueTeams(session);
+  const [allLeagues, allTeams] = await Promise.all([
+    getLeaguesWithStats(),
+    getTeamCards({ all: true }),
+  ]);
 
-  // Which leagues / teams is the signed-in player in?
-  const memberSet = new Set<string>();
-  const teamMemberSet = new Set<string>();
+  // Actual per-player membership (not admin-all): leagues you play/commission,
+  // teams you're on/coach.
+  const myLeague = new Set<string>();
+  const commLeague = new Set<string>();
+  const myTeam = new Set<string>();
+  const coachTeam = new Set<string>();
   if (session?.playerId) {
-    const memberships = await db
-      .select({ leagueId: leaguePlayers.leagueId })
-      .from(leaguePlayers)
-      .where(eq(leaguePlayers.playerId, session.playerId));
-    for (const m of memberships) memberSet.add(m.leagueId);
-
-    const teamMemberships = await db
-      .select({ teamId: teamPlayers.teamId })
-      .from(teamPlayers)
-      .where(eq(teamPlayers.playerId, session.playerId));
-    for (const m of teamMemberships) teamMemberSet.add(m.teamId);
+    const pid = session.playerId;
+    const [lp, lc, tp, tc] = await Promise.all([
+      db.select({ id: leaguePlayers.leagueId }).from(leaguePlayers).where(eq(leaguePlayers.playerId, pid)),
+      db.select({ id: leagueCommissioners.leagueId }).from(leagueCommissioners).where(eq(leagueCommissioners.playerId, pid)),
+      db.select({ id: teamPlayers.teamId }).from(teamPlayers).where(eq(teamPlayers.playerId, pid)),
+      db.select({ id: teamCommissioners.teamId }).from(teamCommissioners).where(eq(teamCommissioners.playerId, pid)),
+    ]);
+    lp.forEach((r) => myLeague.add(r.id));
+    lc.forEach((r) => commLeague.add(r.id));
+    tp.forEach((r) => myTeam.add(r.id));
+    tc.forEach((r) => coachTeam.add(r.id));
   }
 
-  const yours = allLeagues.filter((l) => memberSet.has(l.id));
-  const others = allLeagues.filter((l) => !memberSet.has(l.id));
-  const yourTeams = allTeams.filter((t) => teamMemberSet.has(t.id));
-  const otherTeams = allTeams.filter((t) => !teamMemberSet.has(t.id));
+  const leagueItem = (
+    l: (typeof allLeagues)[number],
+    role?: string,
+  ): DiscoverItem => ({
+    type: "league",
+    id: l.id,
+    name: l.name,
+    location: leagueLocation(l),
+    avatarKind: l.avatarKind,
+    avatarColor: l.avatarColor,
+    avatarEmoji: l.avatarEmoji,
+    href: `/leagues/${l.id}`,
+    role,
+  });
+  const teamItem = (
+    t: (typeof allTeams)[number],
+    role?: string,
+  ): DiscoverItem => ({
+    type: "team",
+    id: t.id,
+    name: t.name,
+    location: [t.city, t.state].filter(Boolean).join(", "),
+    avatarKind: t.avatarKind,
+    avatarColor: t.avatarColor,
+    avatarEmoji: t.avatarEmoji,
+    href: `/teams/${t.id}`,
+    role,
+  });
+
+  const mineLeagueIds = new Set([...myLeague, ...commLeague]);
+  const mineTeamIds = new Set([...myTeam, ...coachTeam]);
+
+  const yourLeagues = allLeagues
+    .filter((l) => mineLeagueIds.has(l.id))
+    .map((l) => leagueItem(l, commLeague.has(l.id) ? "Commissioner" : "Player"));
+  const yourTeams = allTeams
+    .filter((t) => mineTeamIds.has(t.id))
+    .map((t) => teamItem(t, coachTeam.has(t.id) ? "Coach" : "Player"));
+
+  const others: DiscoverItem[] = [
+    ...allLeagues.filter((l) => !mineLeagueIds.has(l.id)).map((l) => leagueItem(l)),
+    ...allTeams.filter((t) => !mineTeamIds.has(t.id)).map((t) => teamItem(t)),
+  ];
+
+  const hasYours = yourLeagues.length > 0 || yourTeams.length > 0;
 
   return (
     <>
-      <TopBar
-        active="/discover"
-      />
+      <TopBar active="/discover" />
       <PageFrame>
         <ContextHeader />
-        <SectionHead
-          title="Discover"
-          count={
-            <span>
-              {allLeagues.length} league{allLeagues.length === 1 ? "" : "s"}
-              {" · "}
-              {allTeams.length} team{allTeams.length === 1 ? "" : "s"}
-            </span>
-          }
-        />
+        <SectionHead title="Discover" />
 
-        <div className="text-[12px] font-bold tracking-[0.04em] uppercase text-[color:var(--text-2)] mt-1">
-          Leagues
-        </div>
-
-        {yours.length > 0 && (
-          <>
-            <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)] mt-1">
-              Your leagues
-            </div>
-            <Grid>
-              {yours.map((l) => (
-                <LeagueCard key={l.id} l={l} mine />
-              ))}
-            </Grid>
-          </>
-        )}
-
-        {others.length > 0 && (
-          <>
-            <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)] mt-2">
-              {yours.length > 0 ? "Other leagues" : "All leagues"}
-            </div>
-            <div className="flex flex-col gap-1.5">
-              {others.map((l) => (
-                <LeagueListRow key={l.id} l={l} />
-              ))}
-            </div>
-          </>
-        )}
-
-        {allLeagues.length === 0 && (
-          <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-12 text-center text-[color:var(--text-3)] text-[14px]">
-            No leagues to discover yet.
+        {hasYours && (
+          <div className="flex flex-col gap-5">
+            {yourLeagues.length > 0 && (
+              <Section title="Your leagues">
+                {yourLeagues.map((i) => (
+                  <DiscoverRow key={i.id} item={i} />
+                ))}
+              </Section>
+            )}
+            {yourTeams.length > 0 && (
+              <Section title="Your teams">
+                {yourTeams.map((i) => (
+                  <DiscoverRow key={i.id} item={i} />
+                ))}
+              </Section>
+            )}
           </div>
         )}
 
-        <div className="text-[12px] font-bold tracking-[0.04em] uppercase text-[color:var(--text-2)] mt-4">
-          Teams
+        <div className="mt-2">
+          <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[color:var(--text-3)] mb-2">
+            {hasYours ? "Find more leagues & teams" : "Browse leagues & teams"}
+          </p>
+          <DiscoverSearch items={others} />
         </div>
-
-        {(yourTeams.length > 0 || leagueTeams.length > 0) && (
-          <>
-            <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)] mt-1">
-              Your teams
-            </div>
-            <Grid>
-              {yourTeams.map((t) => (
-                <TeamCardView key={t.id} t={t} mine />
-              ))}
-              {leagueTeams.map((t) => (
-                <LeagueTeamCardView key={t.id} t={t} />
-              ))}
-            </Grid>
-          </>
-        )}
-
-        {otherTeams.length > 0 && (
-          <>
-            <div className="text-[10.5px] font-semibold tracking-[0.16em] uppercase text-[color:var(--text-3)] mt-2">
-              {yourTeams.length > 0 ? "Other teams" : "All teams"}
-            </div>
-            <div className="flex flex-col gap-1.5">
-              {otherTeams.map((t) => (
-                <TeamListRow key={t.id} t={t} />
-              ))}
-            </div>
-          </>
-        )}
-
-        {allTeams.length === 0 && leagueTeams.length === 0 && (
-          <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] p-12 text-center text-[color:var(--text-3)] text-[14px]">
-            No teams to discover yet.
-          </div>
-        )}
       </PageFrame>
       <MobileBottomBar active="discover" />
     </>
   );
 }
 
-function TeamCardView({ t, mine }: { t: TeamCard; mine?: boolean }) {
-  const place = [t.city, t.state].filter(Boolean).join(", ");
-  return (
-    <Link
-      href={`/teams/${t.id}`}
-      className={`group rounded-[14px] border p-4 flex flex-col gap-3 transition-colors ${
-        mine
-          ? "border-[color:var(--brand)]"
-          : "border-[color:var(--hairline-2)] bg-[color:var(--surface)] hover:border-[color:var(--text-4)]"
-      }`}
-      style={
-        mine
-          ? {
-              background:
-                "radial-gradient(ellipse at top right, var(--brand-soft), transparent 60%), var(--surface)",
-            }
-          : undefined
-      }
-    >
-      <LeagueAvatar
-        kind={t.avatarKind}
-        color={t.avatarColor}
-        emoji={t.avatarEmoji}
-        abbr={(t.name[0] ?? "?").toUpperCase()}
-        size={36}
-      />
-      <div>
-        <div className="font-bold text-[16px]">{t.name}</div>
-        <div className="text-[12px] text-[color:var(--text-3)] mt-0.5">
-          {place || "Travel team"}
-        </div>
-      </div>
-      <div className="flex items-center justify-between mt-auto pt-1 gap-2 flex-wrap">
-        <div className="flex gap-1.5 flex-wrap">
-          {mine && (
-            <Pill tone="win" dot>
-              You&apos;re on
-            </Pill>
-          )}
-          <Pill tone="neutral">{t.rosterCount} players</Pill>
-          <Pill tone="brand">{formatLabel(t.defaultFormat)}</Pill>
-        </div>
-        <ChevronRight
-          size={16}
-          className="text-[color:var(--text-3)] group-hover:text-[color:var(--text)]"
-        />
-      </div>
-    </Link>
-  );
-}
-
-function LeagueListRow({
-  l,
+function Section({
+  title,
+  children,
 }: {
-  l: Awaited<ReturnType<typeof getLeaguesWithStats>>[number];
+  title: string;
+  children: React.ReactNode;
 }) {
-  const cap = l.maxPlayers ?? null;
-  const spots =
-    cap !== null && cap !== undefined ? Math.max(0, cap - l.playerCount) : null;
   return (
-    <Link
-      href={`/leagues/${l.id}`}
-      className="group flex items-center gap-3 rounded-[12px] bg-[color:var(--surface)] px-4 py-2.5 shadow-[inset_0_0_0_1px_var(--hairline-2)] hover:shadow-[inset_0_0_0_1.5px_var(--text-4)] transition-shadow"
-    >
-      <LeagueAvatar
-        kind={l.avatarKind}
-        color={l.avatarColor}
-        emoji={l.avatarEmoji}
-        abbr={(l.name[0] ?? "?").toUpperCase()}
-        size={32}
-      />
-      <div className="flex flex-col min-w-0 flex-1">
-        <span className="font-bold text-[14px] truncate">{l.name}</span>
-        <span className="text-[11.5px] text-[color:var(--text-3)] truncate">
-          {l.season ? `${l.season} · ` : ""}
-          {l.schedule || l.location || "Open league"}
-        </span>
-      </div>
-      <div className="flex items-center gap-1.5 flex-shrink-0 max-sm:hidden">
-        <Pill tone="neutral">{l.playerCount} players</Pill>
-        {spots !== null && (
-          <Pill tone="neutral">
-            {spots} spot{spots === 1 ? "" : "s"}
-          </Pill>
-        )}
-      </div>
-      <ChevronRight
-        size={16}
-        className="text-[color:var(--text-3)] group-hover:text-[color:var(--text)] flex-shrink-0"
-      />
-    </Link>
-  );
-}
-
-function LeagueTeamCardView({ t }: { t: LeagueTeamRef }) {
-  return (
-    <Link
-      href={t.href}
-      className="group rounded-[14px] border border-[color:var(--brand)] p-4 flex flex-col gap-3 transition-colors"
-      style={{
-        background:
-          "radial-gradient(ellipse at top right, var(--brand-soft), transparent 60%), var(--surface)",
-      }}
-    >
-      <LeagueAvatar
-        kind={t.avatarKind}
-        color={t.avatarColor}
-        emoji={t.avatarEmoji}
-        abbr={(t.name[0] ?? "?").toUpperCase()}
-        size={36}
-      />
-      <div>
-        <div className="font-bold text-[16px]">{t.name}</div>
-        <div className="text-[12px] text-[color:var(--text-3)] mt-0.5">
-          {t.leagueName}
-        </div>
-      </div>
-      <div className="flex items-center justify-between mt-auto pt-1 gap-2 flex-wrap">
-        <Pill tone="neutral">League team</Pill>
-        <ChevronRight
-          size={16}
-          className="text-[color:var(--text-3)] group-hover:text-[color:var(--text)]"
-        />
-      </div>
-    </Link>
-  );
-}
-
-function TeamListRow({ t }: { t: TeamCard }) {
-  const place = [t.city, t.state].filter(Boolean).join(", ");
-  return (
-    <Link
-      href={`/teams/${t.id}`}
-      className="group flex items-center gap-3 rounded-[12px] bg-[color:var(--surface)] px-4 py-2.5 shadow-[inset_0_0_0_1px_var(--hairline-2)] hover:shadow-[inset_0_0_0_1.5px_var(--text-4)] transition-shadow"
-    >
-      <LeagueAvatar
-        kind={t.avatarKind}
-        color={t.avatarColor}
-        emoji={t.avatarEmoji}
-        abbr={(t.name[0] ?? "?").toUpperCase()}
-        size={32}
-      />
-      <div className="flex flex-col min-w-0 flex-1">
-        <span className="font-bold text-[14px] truncate">{t.name}</span>
-        <span className="text-[11.5px] text-[color:var(--text-3)] truncate">
-          {place || "Travel team"}
-        </span>
-      </div>
-      <div className="flex items-center gap-1.5 flex-shrink-0 max-sm:hidden">
-        <Pill tone="neutral">{t.rosterCount} players</Pill>
-        <Pill tone="brand">{formatLabel(t.defaultFormat)}</Pill>
-      </div>
-      <ChevronRight
-        size={16}
-        className="text-[color:var(--text-3)] group-hover:text-[color:var(--text)] flex-shrink-0"
-      />
-    </Link>
-  );
-}
-
-function Grid({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="grid grid-cols-3 gap-3 max-[1100px]:grid-cols-2 max-sm:grid-cols-1">
-      {children}
+    <div>
+      <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[color:var(--text-3)] mb-2">
+        {title}
+      </p>
+      <div className="flex flex-col gap-2">{children}</div>
     </div>
-  );
-}
-
-function LeagueCard({
-  l,
-  mine,
-}: {
-  l: Awaited<ReturnType<typeof getLeaguesWithStats>>[number];
-  mine?: boolean;
-}) {
-  const cap = l.maxPlayers ?? null;
-  const spots =
-    cap !== null && cap !== undefined ? Math.max(0, cap - l.playerCount) : null;
-
-  return (
-    <Link
-      href={`/leagues/${l.id}`}
-      className={`group rounded-[14px] border p-4 flex flex-col gap-3 transition-colors ${
-        mine
-          ? "border-[color:var(--brand)]"
-          : "border-[color:var(--hairline-2)] bg-[color:var(--surface)] hover:border-[color:var(--text-4)]"
-      }`}
-      style={
-        mine
-          ? {
-              background:
-                "radial-gradient(ellipse at top right, var(--brand-soft), transparent 60%), var(--surface)",
-            }
-          : undefined
-      }
-    >
-      <LeagueAvatar
-        kind={l.avatarKind}
-        color={l.avatarColor}
-        emoji={l.avatarEmoji}
-        abbr={(l.name[0] ?? "?").toUpperCase()}
-        size={36}
-      />
-      <div>
-        <div className="font-bold text-[16px]">{l.name}</div>
-        <div className="text-[12px] text-[color:var(--text-3)] mt-0.5">
-          {l.season ? `${l.season} · ` : ""}
-          {l.schedule || l.location || "Open league"}
-        </div>
-        {l.description && (
-          <div className="text-[12.5px] leading-[1.5] text-[color:var(--text-2)] mt-2 line-clamp-3">
-            {l.description}
-          </div>
-        )}
-      </div>
-      <div className="flex items-center justify-between mt-auto pt-1 gap-2 flex-wrap">
-        <div className="flex gap-1.5 flex-wrap">
-          {mine && <Pill tone="win" dot>You&apos;re in</Pill>}
-          <Pill tone="neutral">{l.playerCount} players</Pill>
-          {spots !== null && <Pill tone="neutral">{spots} spot{spots === 1 ? "" : "s"}</Pill>}
-        </div>
-        <ChevronRight
-          size={16}
-          className="text-[color:var(--text-3)] group-hover:text-[color:var(--text)]"
-        />
-      </div>
-    </Link>
   );
 }
