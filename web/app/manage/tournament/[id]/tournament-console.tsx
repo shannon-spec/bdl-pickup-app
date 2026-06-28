@@ -111,7 +111,9 @@ export function TournamentConsole({ t }: { t: ManageTournament }) {
       {tab === "Registration" && div && (
         <Registration tournamentId={t.id} div={div} />
       )}
-      {tab === "Bracket" && div && <Bracket tournamentId={t.id} div={div} />}
+      {tab === "Bracket" && div && (
+        <Bracket tournamentId={t.id} div={div} format={t.bracketFormat} />
+      )}
       {tab === "Settings" && <Settings t={t} />}
     </div>
   );
@@ -265,19 +267,60 @@ function Registration({
 function Bracket({
   tournamentId,
   div,
+  format,
 }: {
   tournamentId: string;
   div: ManageDivision;
+  format: string | null;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const isRR = format === "ROUND_ROBIN";
 
   const labelOf = useMemo(() => {
     const m = new Map(div.registrations.map((r) => [r.id, r]));
     return (id: string | null) =>
       id ? (m.get(id)?.label ?? "TBD") : null;
   }, [div.registrations]);
+
+  const standings = useMemo(() => {
+    type S = { id: string; label: string; w: number; l: number; pf: number; pa: number };
+    const tbl = new Map<string, S>();
+    for (const r of div.registrations)
+      tbl.set(r.id, { id: r.id, label: r.label, w: 0, l: 0, pf: 0, pa: 0 });
+    for (const m of div.matches) {
+      if (
+        m.homeScore != null &&
+        m.awayScore != null &&
+        m.homeRegistrationId &&
+        m.awayRegistrationId
+      ) {
+        const h = tbl.get(m.homeRegistrationId);
+        const a = tbl.get(m.awayRegistrationId);
+        if (h && a) {
+          h.pf += m.homeScore;
+          h.pa += m.awayScore;
+          a.pf += m.awayScore;
+          a.pa += m.homeScore;
+          if (m.homeScore > m.awayScore) {
+            h.w++;
+            a.l++;
+          } else {
+            a.w++;
+            h.l++;
+          }
+        }
+      }
+    }
+    return [...tbl.values()].sort(
+      (x, y) => y.w - x.w || y.pf - y.pa - (x.pf - x.pa),
+    );
+  }, [div.registrations, div.matches]);
+
+  const allScored =
+    div.matches.length > 0 &&
+    div.matches.every((m) => m.homeScore != null && m.awayScore != null);
 
   const seedOf = useMemo(() => {
     const m = new Map(div.registrations.map((r) => [r.id, r.seed]));
@@ -296,11 +339,12 @@ function Bracket({
   }, [div.matches]);
 
   const champion = useMemo(() => {
+    if (isRR) return allScored ? (standings[0]?.label ?? null) : null;
     const final = div.matches.find((m) => m.nextMatchId === null);
     return final?.winnerRegistrationId
       ? labelOf(final.winnerRegistrationId)
       : null;
-  }, [div.matches, labelOf]);
+  }, [isRR, allScored, standings, div.matches, labelOf]);
 
   const generate = () =>
     start(async () => {
@@ -339,7 +383,7 @@ function Bracket({
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-2">
         <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-[color:var(--text-3)]">
-          {div.name} — generated bracket
+          {div.name} — {isRR ? "round robin" : "generated bracket"}
         </p>
         <button
           type="button"
@@ -366,24 +410,78 @@ function Bracket({
         </div>
       )}
 
-      <div className="flex gap-4 overflow-x-auto pb-2">
-        {rounds.map((col, ri) => (
-          <div
-            key={ri}
-            className="flex flex-col justify-around gap-3 min-w-[200px]"
-          >
-            {col.map((m) => (
-              <MatchBox
-                key={m.id}
-                tournamentId={tournamentId}
-                m={m}
-                labelOf={labelOf}
-                seedOf={seedOf}
-              />
+      {isRR ? (
+        <>
+          {/* standings */}
+          <div className="rounded-[12px] border border-[color:var(--hairline-2)] overflow-hidden text-[13px]">
+            <div className="grid grid-cols-[28px_1fr_50px_50px] gap-2 px-3 py-2 bg-[color:var(--surface-2)] text-[11px] font-bold uppercase tracking-[0.06em] text-[color:var(--text-3)]">
+              <span>#</span>
+              <span>Team</span>
+              <span className="text-center">W-L</span>
+              <span className="text-center">Diff</span>
+            </div>
+            {standings.map((s, i) => {
+              const diff = s.pf - s.pa;
+              return (
+                <div
+                  key={s.id}
+                  className="grid grid-cols-[28px_1fr_50px_50px] gap-2 px-3 py-2 border-t border-[color:var(--hairline)] items-center"
+                >
+                  <span className="text-[color:var(--text-3)]">{i + 1}</span>
+                  <span className="font-semibold truncate">{s.label}</span>
+                  <span className="text-center tabular-nums">
+                    {s.w}-{s.l}
+                  </span>
+                  <span className="text-center tabular-nums text-[color:var(--text-2)]">
+                    {diff > 0 ? `+${diff}` : diff}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* fixtures by round */}
+          <div className="flex flex-col gap-4">
+            {rounds.map((col, ri) => (
+              <div key={ri}>
+                <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[color:var(--text-3)] mb-1.5">
+                  Round {ri + 1}
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {col.map((m) => (
+                    <MatchBox
+                      key={m.id}
+                      tournamentId={tournamentId}
+                      m={m}
+                      labelOf={labelOf}
+                      seedOf={seedOf}
+                    />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
-        ))}
-      </div>
+        </>
+      ) : (
+        <div className="flex gap-4 overflow-x-auto pb-2">
+          {rounds.map((col, ri) => (
+            <div
+              key={ri}
+              className="flex flex-col justify-around gap-3 min-w-[200px]"
+            >
+              {col.map((m) => (
+                <MatchBox
+                  key={m.id}
+                  tournamentId={tournamentId}
+                  m={m}
+                  labelOf={labelOf}
+                  seedOf={seedOf}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

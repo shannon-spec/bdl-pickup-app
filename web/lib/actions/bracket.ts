@@ -4,6 +4,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import {
   db,
+  tournaments,
   tournamentMembers,
   divisions,
   registrations,
@@ -124,6 +125,34 @@ function nextPow2(n: number) {
   return p;
 }
 
+/** Round-robin pairings via the circle method (handles odd counts w/ a bye). */
+function roundRobinPairs(
+  ids: string[],
+): { round: number; home: string; away: string }[] {
+  const arr: (string | null)[] = ids.slice();
+  if (arr.length % 2 === 1) arr.push(null); // bye
+  const n = arr.length;
+  const half = n / 2;
+  const out: { round: number; home: string; away: string }[] = [];
+  let order = arr.slice();
+  for (let r = 0; r < n - 1; r++) {
+    for (let i = 0; i < half; i++) {
+      const home = order[i];
+      const away = order[n - 1 - i];
+      // alternate home/away each round for fairness
+      if (home !== null && away !== null) {
+        if (r % 2 === 0) out.push({ round: r + 1, home, away });
+        else out.push({ round: r + 1, home: away, away: home });
+      }
+    }
+    const fixed = order[0];
+    const rest = order.slice(1);
+    rest.unshift(rest.pop() as string | null);
+    order = [fixed, ...rest];
+  }
+  return out;
+}
+
 /** Standard bracket seed order for a given size (power of 2). */
 function seedOrder(size: number): number[] {
   let seeds = [1];
@@ -162,6 +191,34 @@ export async function generateBracket(
   if (n < 2)
     return { ok: false, error: "Add at least 2 confirmed teams first." };
 
+  const [tour] = await db
+    .select({ fmt: tournaments.bracketFormat })
+    .from(tournaments)
+    .where(eq(tournaments.id, tournamentId))
+    .limit(1);
+
+  // ---- Round robin: everyone plays everyone, standings decide it ----
+  if ((tour?.fmt ?? "SINGLE_ELIM") === "ROUND_ROBIN") {
+    await db.delete(matches).where(eq(matches.divisionId, divisionId));
+    const pairs = roundRobinPairs(ordered.map((r) => r.id));
+    const slotByRound: Record<number, number> = {};
+    const rows = pairs.map((p) => {
+      const slot = slotByRound[p.round] ?? 0;
+      slotByRound[p.round] = slot + 1;
+      return {
+        divisionId,
+        round: p.round,
+        slot,
+        homeRegistrationId: p.home,
+        awayRegistrationId: p.away,
+      };
+    });
+    await db.insert(matches).values(rows);
+    revalidate(tournamentId);
+    return { ok: true, data: { matches: rows.length } };
+  }
+
+  // ---- Single / double elim / pools → single-elim bracket ----
   // seedNo (1..n) -> registration id
   const seedToReg = new Map<number, string>();
   ordered.forEach((r, i) => seedToReg.set(i + 1, r.id));
