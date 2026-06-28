@@ -41,6 +41,9 @@ export function LoginForm({
   const [code, setCode] = useState("");
   const [devCode, setDevCode] = useState<string | null>(null);
   const [delivered, setDelivered] = useState(true);
+  const [acctExists, setAcctExists] = useState<boolean | null>(null);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -54,6 +57,9 @@ export function LoginForm({
     ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier.trim())
     : identifier.replace(/\D/g, "").length >= 10;
 
+  // New email (not in DB) + email mode → this is a sign-up; collect a name.
+  const signingUp = isEmail && acctExists === false;
+
   const switchMode = (m: Mode) => {
     setMode(m);
     setStep("id");
@@ -61,6 +67,7 @@ export function LoginForm({
     setCode("");
     setDevCode(null);
     setDelivered(true);
+    setAcctExists(null);
     setError(null);
     setGreet(false);
   };
@@ -85,6 +92,7 @@ export function LoginForm({
       }
       setDelivered(res.delivered);
       setDevCode(res.devCode ?? null);
+      setAcctExists(res.exists ?? true);
       setStep("code");
     });
 
@@ -94,6 +102,8 @@ export function LoginForm({
       const res = await ver(identifier.trim(), code, {
         intent: intent ?? undefined,
         next: next ?? undefined,
+        firstName: signingUp ? firstName.trim() : undefined,
+        lastName: signingUp ? lastName.trim() : undefined,
       });
       if (!res.ok) {
         setError(res.error);
@@ -182,10 +192,42 @@ export function LoginForm({
         </>
       ) : (
         <>
-          <p className="text-[13px] text-[color:var(--text-2)] text-center">
-            Enter the 6-digit code sent to{" "}
-            <strong className="text-[color:var(--text)]">{identifier.trim()}</strong>.
-          </p>
+          {signingUp ? (
+            <>
+              <p className="text-[15px] font-extrabold text-center text-[color:var(--text)]">
+                Create your BDL account
+              </p>
+              <p className="text-[12.5px] text-[color:var(--text-3)] text-center -mt-1">
+                New here — add your name, then enter the code we sent to{" "}
+                <strong className="text-[color:var(--text-2)]">
+                  {identifier.trim()}
+                </strong>
+                .
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  autoFocus
+                  placeholder="First name"
+                  autoComplete="given-name"
+                  className={input}
+                />
+                <input
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Last name"
+                  autoComplete="family-name"
+                  className={input}
+                />
+              </div>
+            </>
+          ) : (
+            <p className="text-[13px] text-[color:var(--text-2)] text-center">
+              Enter the 6-digit code sent to{" "}
+              <strong className="text-[color:var(--text)]">{identifier.trim()}</strong>.
+            </p>
+          )}
           {!delivered && (
             <div className="text-[12px] text-[color:var(--text-2)] bg-[color:var(--surface-2)] border border-[color:var(--hairline)] rounded-[var(--r-md)] px-3 py-2">
               {devCode ? (
@@ -211,18 +253,34 @@ export function LoginForm({
               type="text"
               inputMode="numeric"
               autoComplete="one-time-code"
-              autoFocus
+              autoFocus={!signingUp}
               maxLength={6}
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
               placeholder="123456"
               className={`${input} tracking-[0.4em] text-center font-[family-name:var(--mono)]`}
-              onKeyDown={(e) => e.key === "Enter" && code.length === 6 && verify()}
+              onKeyDown={(e) =>
+                e.key === "Enter" &&
+                code.length === 6 &&
+                (!signingUp || firstName.trim()) &&
+                verify()
+              }
             />
           </label>
           {error && <ErrorBox>{error}</ErrorBox>}
-          <button type="button" onClick={verify} disabled={pending || code.length < 6} className={primaryBtn}>
-            {pending ? "Verifying…" : "Verify & continue"}
+          <button
+            type="button"
+            onClick={verify}
+            disabled={pending || code.length < 6 || (signingUp && !firstName.trim())}
+            className={primaryBtn}
+          >
+            {pending
+              ? signingUp
+                ? "Creating…"
+                : "Verifying…"
+              : signingUp
+                ? "Create account"
+                : "Verify & continue"}
           </button>
           <div className="flex items-center justify-between text-[12px] mt-1">
             <button
@@ -230,6 +288,7 @@ export function LoginForm({
               onClick={() => {
                 setStep("id");
                 setCode("");
+                setAcctExists(null);
                 setError(null);
               }}
               className="text-[color:var(--text-3)] hover:text-[color:var(--text)]"

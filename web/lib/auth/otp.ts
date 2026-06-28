@@ -15,7 +15,7 @@ const SEND_WINDOW_MIN = 15;
 const MAX_VERIFY_ATTEMPTS = 5;
 
 export type OtpRequestResult =
-  | { ok: true; delivered: boolean; devCode?: string }
+  | { ok: true; delivered: boolean; exists?: boolean; devCode?: string }
   | { ok: false; error: string };
 
 export type OtpVerifyResult =
@@ -122,18 +122,34 @@ async function sendEmailCode(to: string, code: string): Promise<boolean> {
 export async function requestEmailOtp(email: string): Promise<OtpRequestResult> {
   const e = (email ?? "").trim().toLowerCase();
   if (!emailValid(e)) return { ok: false, error: "Enter a valid email address." };
+  // Does this email already have an account? (drives sign-in vs sign-up UI)
+  const [existing] = await db
+    .select({ id: players.id })
+    .from(players)
+    .where(eq(players.emailHash, emailHash(e)))
+    .limit(1);
   const idHash = emailHash(`email:${e}`);
   const issued = await issueCode(idHash);
   if (!issued.ok) return issued;
   const delivered = await sendEmailCode(e, issued.code);
-  return { ok: true, delivered: delivered && emailConfigured(), devCode: devMode() ? issued.code : undefined };
+  return {
+    ok: true,
+    delivered: delivered && emailConfigured(),
+    exists: !!existing,
+    devCode: devMode() ? issued.code : undefined,
+  };
 }
 
 /** Verify the email code; find-or-create the player; start a session. */
 export async function verifyEmailOtp(
   email: string,
   code: string,
-  opts: { intent?: string; next?: string } = {},
+  opts: {
+    intent?: string;
+    next?: string;
+    firstName?: string;
+    lastName?: string;
+  } = {},
 ): Promise<OtpVerifyResult> {
   const e = (email ?? "").trim().toLowerCase();
   if (!emailValid(e)) return { ok: false, error: "Enter a valid email address." };
@@ -150,11 +166,20 @@ export async function verifyEmailOtp(
   let isNew = false;
   if (!player) {
     isNew = true;
+    const first = opts.firstName?.trim() || "";
+    const last = opts.lastName?.trim() || "";
     const [created] = await db
       .insert(players)
-      .values({ firstName: "", lastName: "", email: encryptOptional(e), emailHash: eHash })
+      .values({ firstName: first, lastName: last, email: encryptOptional(e), emailHash: eHash })
       .returning({ id: players.id, firstName: players.firstName });
     player = created;
+  } else if (opts.firstName?.trim() && !player.firstName?.trim()) {
+    // existing nameless account completing signup — backfill the name
+    await db
+      .update(players)
+      .set({ firstName: opts.firstName.trim(), lastName: opts.lastName?.trim() || "" })
+      .where(eq(players.id, player.id));
+    player = { ...player, firstName: opts.firstName.trim() };
   }
 
   // Elevate to admin if this account is a super_admin (by email or linked player).
@@ -237,7 +262,12 @@ export async function requestOtp(phone: string): Promise<OtpRequestResult> {
 export async function verifyOtp(
   phone: string,
   code: string,
-  opts: { intent?: string; next?: string } = {},
+  opts: {
+    intent?: string;
+    next?: string;
+    firstName?: string;
+    lastName?: string;
+  } = {},
 ): Promise<OtpVerifyResult> {
   const normalized = normalizePhone(phone);
   if (!normalized) return { ok: false, error: "Enter a valid phone number." };
