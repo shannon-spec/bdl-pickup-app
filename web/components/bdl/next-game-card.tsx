@@ -104,7 +104,7 @@ export function NextGameCard({
         <div className="flex items-center gap-3 flex-wrap">
           <Pill tone="brand">{label}</Pill>
           {meta && (
-            <span className="text-[13px] font-medium text-[color:var(--text-2)]">
+            <span className="text-[16px] max-sm:text-[15px] font-bold tracking-[-0.01em] text-[color:var(--text)]">
               {meta}
             </span>
           )}
