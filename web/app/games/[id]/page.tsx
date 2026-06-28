@@ -13,6 +13,7 @@ import { Pill } from "@/components/bdl/pill";
 import { HeroTag, isHeroGame } from "@/components/bdl/hero-tag";
 import { ProbabilityBar } from "@/components/bdl/probability-bar";
 import { PctPill } from "@/components/bdl/pct-pill";
+import { NextGameCard } from "@/components/bdl/next-game-card";
 import { formatLabel } from "@/lib/format";
 import {
   getGameDetail,
@@ -91,6 +92,16 @@ export default async function GameDetailPage({
   const completed =
     (game.scoreA !== null && game.scoreB !== null) || game.winTeam !== null;
 
+  // Which side is the current viewer on (for the "You're in" hero card)?
+  const myId = session?.playerId ?? null;
+  const mySide: "A" | "B" | null = myId
+    ? detail.rosterA.some((p) => p.id === myId)
+      ? "A"
+      : detail.rosterB.some((p) => p.id === myId)
+        ? "B"
+        : null
+    : null;
+
   // Per-player career win % within this league + blended matchup odds
   // for the upcoming-game probability bar. Only fetched when the game
   // has a league and (for odds) is still upcoming — saves a roundtrip
@@ -140,6 +151,7 @@ export default async function GameDetailPage({
           <ArrowLeft size={13} /> Games
         </Link>
 
+        {completed ? (
         <div className="rounded-[16px] border border-[color:var(--hairline-2)] bg-[color:var(--surface)] px-6 py-5">
           <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
             <div>
@@ -262,6 +274,30 @@ export default async function GameDetailPage({
 
           {canEdit && <GameScore detail={detail} />}
         </div>
+        ) : (
+          <>
+            <NextGameCard
+              href={`/games/${game.id}`}
+              label="Next up"
+              date={game.gameDate}
+              time={game.gameTime}
+              venue={game.venue}
+              leagueName={game.leagueName ?? game.tournamentName ?? null}
+              teamAName={game.teamAName ?? "White"}
+              teamBName={game.teamBName ?? "Dark"}
+              mySide={mySide}
+              showStatus={mySide !== null}
+              probA={matchupOdds?.probA ?? null}
+              probB={matchupOdds?.probB ?? null}
+              predictedScore={matchupOdds?.predictedScore ?? null}
+              rosterA={detail.rosterA}
+              rosterB={detail.rosterB}
+              winPcts={Object.fromEntries(winPcts)}
+              meId={myId}
+            />
+            {canEdit && <GameScore detail={detail} />}
+          </>
+        )}
 
         {detail.subgames.length > 0 && (
           <SeriesBreakdown
@@ -295,7 +331,7 @@ export default async function GameDetailPage({
             winPcts={Object.fromEntries(winPcts)}
             previousGame={previousGame}
           />
-        ) : (
+        ) : completed ? (
           <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
             <div className="flex flex-col gap-3">
               <TeamSectionHead
@@ -314,7 +350,7 @@ export default async function GameDetailPage({
               <RosterPanel detail={detail} side="B" canEdit={canEdit} winPcts={winPcts} />
             </div>
           </div>
-        )}
+        ) : null}
 
         {canEdit && (
           <section className="rounded-[16px] bg-[color:var(--surface-2)] p-4">
