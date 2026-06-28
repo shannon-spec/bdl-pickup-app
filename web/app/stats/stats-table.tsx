@@ -27,6 +27,7 @@ const fmt = (v: number | null, pct?: boolean) => {
 };
 
 type AwardKeyT =
+  | "crown"
   | "power"
   | "scoring"
   | "rebound"
@@ -36,7 +37,8 @@ type AwardKeyT =
   | "triple-double";
 
 const AWARDS: Record<AwardKeyT, { src: string; label: string }> = {
-  power: { src: "/awards/power.png", label: "BDL Power" },
+  crown: { src: "/awards/crown.png", label: "BDL No. 1" },
+  power: { src: "/awards/power.png", label: "BDL Power (70+)" },
   scoring: { src: "/awards/scoring.png", label: "Scoring" },
   rebound: { src: "/awards/rebound.png", label: "Rebounding" },
   assist: { src: "/awards/assist.png", label: "Assists" },
@@ -53,6 +55,7 @@ const AWARD_ORDER: AwardKeyT[] = [
   "sharpshooter",
   "triple-double",
   "power",
+  "crown",
 ];
 
 function AwardBadge({ k, size = 20 }: { k: AwardKeyT; size?: number }) {
@@ -119,9 +122,11 @@ export function StatsTable({
   const eq = (a: number, b: number) => Math.abs(a - b) < 1e-9;
   const awardsFor = (p: StatLine): AwardKeyT[] => {
     const a: AwardKeyT[] = [];
-    // BDL Power crown → only the single highest power rating.
-    if (p.power !== null && leaders.power > -Infinity && eq(p.power, leaders.power))
-      a.push("power");
+    // BDL Power tiers: crown → the single #1 rating; otherwise any 70+ score.
+    if (p.power !== null) {
+      if (leaders.power > -Infinity && eq(p.power, leaders.power)) a.push("crown");
+      else if (p.power >= 70) a.push("power");
+    }
     if (p.ppg > 0 && eq(p.ppg, leaders.ppg)) a.push("scoring");
     if (p.rpg > 0 && eq(p.rpg, leaders.rpg)) a.push("rebound");
     if (p.apg > 0 && eq(p.apg, leaders.apg)) a.push("assist");
