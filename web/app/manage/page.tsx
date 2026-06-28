@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ChevronRight, Plus, Trophy, CalendarDays, Users2 } from "lucide-react";
+import { ChevronRight, Trophy, CalendarDays, Users2 } from "lucide-react";
 import { readSession } from "@/lib/auth/session";
 import { getMyContexts } from "@/lib/queries/contexts";
 import { getCreateCaps, type CreateCaps } from "@/lib/queries/organize";
+import { CreateMenu } from "@/components/bdl/create-menu";
 import { TopBar } from "@/components/bdl/top-bar";
 import { ContextHeader } from "@/components/bdl/context-header/context-header";
 import { PageFrame, SectionHead } from "@/components/bdl/page-frame";
@@ -54,16 +55,7 @@ export default async function ManagePage() {
 
         <SectionHead
           title="Manage"
-          right={
-            caps.any ? (
-              <Link
-                href="/manage/new"
-                className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[var(--r-lg)] bg-[color:var(--brand)] text-white text-[12px] font-bold tracking-[0.03em] uppercase hover:bg-[color:var(--brand-hover)]"
-              >
-                <Plus size={15} /> Create
-              </Link>
-            ) : undefined
-          }
+          right={caps.any ? <CreateMenu caps={caps} /> : undefined}
         />
 
         {mine.length === 0 ? (
