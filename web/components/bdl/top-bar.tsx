@@ -110,16 +110,19 @@ export async function TopBar({
   return (
     <header
       className={cn(
-        "sticky top-0 z-[var(--z-sticky)] w-full overflow-hidden",
+        "sticky top-0 z-[var(--z-sticky)] w-full",
         "border-b border-white/10 text-white",
       )}
       style={HERO_SCENE}
     >
-      {/* faint basketball scene element, mirrored from the Front Door */}
-      <BasketballIcon
-        size={150}
-        className="pointer-events-none absolute -right-6 -top-10 opacity-[0.10] text-white"
-      />
+      {/* faint basketball scene element — clipped to the bar so it doesn't
+          overflow, while leaving the header free to show dropdowns. */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <BasketballIcon
+          size={150}
+          className="absolute -right-6 -top-10 opacity-[0.10] text-white"
+        />
+      </div>
       <div
         className={cn(
           "relative z-10 mx-auto max-w-[1240px]",
