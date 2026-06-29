@@ -446,6 +446,68 @@ function BuilderRow({
   );
 }
 
+function TbdRow({
+  gameId,
+  player,
+  rec,
+  teamAName,
+  teamBName,
+}: {
+  gameId: string;
+  player: { id: string; firstName: string; lastName: string };
+  rec?: WinRec;
+  teamAName: string;
+  teamBName: string;
+}) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const act = (next: "A" | "B" | null) =>
+    start(async () => {
+      try {
+        const res = await setGameRosterPlayer(gameId, player.id, next);
+        if (res.ok) router.refresh();
+      } catch {
+        /* next render reflects the truth */
+      }
+    });
+  return (
+    <div className="flex items-center gap-2.5 py-1">
+      <Link
+        href={`/players/${player.id}`}
+        className="flex-1 min-w-0 font-medium text-[14px] truncate hover:text-[color:var(--brand)]"
+      >
+        {player.firstName} {player.lastName}
+      </Link>
+      {rec?.pct != null && <WinPill pct={rec.pct} />}
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => act("A")}
+        className="shrink-0 h-7 px-2.5 inline-flex items-center rounded-[var(--r-md)] text-[11px] font-bold text-[color:var(--brand-ink)] hover:bg-[color:var(--brand-soft)] disabled:opacity-60 transition-colors shadow-[inset_0_0_0_1px_var(--hairline-2)]"
+      >
+        → {teamAName}
+      </button>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => act("B")}
+        className="shrink-0 h-7 px-2.5 inline-flex items-center rounded-[var(--r-md)] text-[11px] font-bold text-[color:var(--text-2)] hover:bg-[color:var(--surface-2)] disabled:opacity-60 transition-colors shadow-[inset_0_0_0_1px_var(--hairline-2)]"
+      >
+        → {teamBName}
+      </button>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => act(null)}
+        aria-label={`Remove ${player.firstName} ${player.lastName}`}
+        className="w-7 h-7 inline-flex items-center justify-center rounded-[var(--r-md)] text-[color:var(--text-4)] hover:text-[color:var(--down)] hover:bg-[color:var(--down-soft)] disabled:opacity-60 transition-colors"
+      >
+        <Trash2 size={14} />
+      </button>
+    </div>
+  );
+}
+
 function TeamColumn({
   gameId,
   team,
@@ -535,6 +597,7 @@ export function RosterBuilder({
   isTeamGame = false,
   rosterA,
   rosterB,
+  rosterTBD = [],
   winPcts,
   previousGame,
 }: {
@@ -548,12 +611,13 @@ export function RosterBuilder({
   isTeamGame?: boolean;
   rosterA: { id: string; firstName: string; lastName: string }[];
   rosterB: { id: string; firstName: string; lastName: string }[];
+  rosterTBD?: { id: string; firstName: string; lastName: string }[];
   winPcts: Record<string, WinRec>;
   previousGame?: { id: string; date: string | null; rosterCount: number } | null;
 }) {
   const router = useRouter();
   const [playerId, setPlayerId] = useState("");
-  const [side, setSide] = useState<"A" | "B">("A");
+  const [side, setSide] = useState<"A" | "B" | "TBD">("A");
   const [adding, startAdd] = useTransition();
   const [addingAll, startAddAll] = useTransition();
   const [loadingPrev, startLoad] = useTransition();
@@ -584,7 +648,7 @@ export function RosterBuilder({
     });
 
   // Team games only: drop the whole selected team's roster onto that side.
-  const sideEligible = side === "A" ? eligibleA : eligibleB;
+  const sideEligible = side === "A" ? eligibleA : side === "B" ? eligibleB : [];
   const addAll = () =>
     startAddAll(async () => {
       if (sideEligible.length === 0) return;
@@ -710,6 +774,18 @@ export function RosterBuilder({
           >
             {teamBName}
           </button>
+          <button
+            type="button"
+            onClick={() => setSide("TBD")}
+            title="Add to TBD — slot to a team later"
+            className={`h-8 px-3.5 rounded-[8px] text-[12px] font-bold transition-colors ${
+              side === "TBD"
+                ? "bg-[color:var(--warn-soft)] text-[color:var(--warn)] shadow-[inset_0_0_0_1px_var(--warn)]"
+                : "text-[color:var(--text-3)] hover:text-[color:var(--text)]"
+            }`}
+          >
+            TBD
+          </button>
         </div>
         <button
           type="button"
@@ -777,6 +853,32 @@ export function RosterBuilder({
           divider={false}
         />
       </div>
+
+      {/* TBD bench — added but not yet slotted to a team */}
+      {rosterTBD.length > 0 && (
+        <div className="px-5 py-4 shadow-[inset_0_1px_0_0_var(--hairline)] bg-[color:var(--surface-2)]">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="inline-flex items-center justify-center h-5 px-2 rounded-full bg-[color:var(--warn-soft)] text-[color:var(--warn)] text-[10px] font-bold tracking-[0.06em] uppercase">
+              TBD · {rosterTBD.length}
+            </span>
+            <span className="text-[11.5px] text-[color:var(--text-3)]">
+              Slot each player to {teamAName} or {teamBName} when you know.
+            </span>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            {rosterTBD.map((p) => (
+              <TbdRow
+                key={p.id}
+                gameId={gameId}
+                player={p}
+                rec={winPcts[p.id]}
+                teamAName={teamAName}
+                teamBName={teamBName}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="mx-5 mb-4 text-[12px] text-[color:var(--down)] bg-[color:var(--down-soft)] rounded-[var(--r-md)] px-3 py-2">

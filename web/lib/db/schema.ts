@@ -1072,6 +1072,7 @@ export const gameSubgames = pgTable(
 export const gameRosterSideEnum = pgEnum("game_roster_side", [
   "A",
   "B",
+  "TBD",
   "invited",
 ]);
 

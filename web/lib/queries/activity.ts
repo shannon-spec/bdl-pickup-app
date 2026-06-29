@@ -72,7 +72,7 @@ export async function getActivityEvents(): Promise<ActivityEvent[]> {
     string,
     Array<{
       playerId: string;
-      side: "A" | "B" | "invited";
+      side: "A" | "B" | "TBD" | "invited";
       firstName: string;
       lastName: string;
     }>

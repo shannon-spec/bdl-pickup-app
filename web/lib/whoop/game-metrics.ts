@@ -40,7 +40,7 @@ export type WhoopGameMetric = {
   date: string; // ISO of game's scheduled start (UTC)
   leagueId: string | null;
   leagueName: string | null;
-  side: "A" | "B" | "invited";
+  side: "A" | "B" | "TBD" | "invited";
   scoreA: number | null;
   scoreB: number | null;
   winTeam: "A" | "B" | "Tie" | null;

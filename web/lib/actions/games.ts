@@ -645,7 +645,7 @@ export async function clearGameRoster(
 export async function setGameRosterPlayer(
   gameId: string,
   playerId: string,
-  side: "A" | "B" | "invited" | null,
+  side: "A" | "B" | "TBD" | "invited" | null,
 ): Promise<ActionResult> {
   const gate = await gateGameManager(gameId);
   if (!gate.ok) return gate;

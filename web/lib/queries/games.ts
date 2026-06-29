@@ -121,6 +121,8 @@ export type GameDetail = {
   } | null;
   rosterA: Pick<Player, "id" | "firstName" | "lastName">[];
   rosterB: Pick<Player, "id" | "firstName" | "lastName">[];
+  /** Added to the game but not yet slotted to a team. */
+  tbd: Pick<Player, "id" | "firstName" | "lastName">[];
   invited: Pick<Player, "id" | "firstName" | "lastName">[];
   eligible: Pick<Player, "id" | "firstName" | "lastName">[];
   /** Team-game only: eligible pool for side A (team A roster). */
@@ -175,6 +177,9 @@ export async function getGameDetail(id: string): Promise<GameDetail | null> {
   const rosterB = allRoster
     .filter((r) => r.side === "B")
     .map((r) => ({ id: r.playerId, firstName: r.firstName, lastName: r.lastName }));
+  const tbd = allRoster
+    .filter((r) => r.side === "TBD")
+    .map((r) => ({ id: r.playerId, firstName: r.firstName, lastName: r.lastName }));
   const invited = allRoster
     .filter((r) => r.side === "invited")
     .map((r) => ({ id: r.playerId, firstName: r.firstName, lastName: r.lastName }));
@@ -190,6 +195,7 @@ export async function getGameDetail(id: string): Promise<GameDetail | null> {
   const onRoster = new Set([
     ...rosterA.map((p) => p.id),
     ...rosterB.map((p) => p.id),
+    ...tbd.map((p) => p.id),
     ...invited.map((p) => p.id),
   ]);
   if (g.leagueId) {
@@ -252,6 +258,7 @@ export async function getGameDetail(id: string): Promise<GameDetail | null> {
     league: league ?? null,
     rosterA,
     rosterB,
+    tbd,
     invited,
     eligible,
     eligibleA,

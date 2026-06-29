@@ -328,6 +328,7 @@ export default async function GameDetailPage({
             isTeamGame={!game.leagueId && !!(game.teamAId || game.teamBId)}
             rosterA={detail.rosterA}
             rosterB={detail.rosterB}
+            rosterTBD={detail.tbd}
             winPcts={Object.fromEntries(winPcts)}
             previousGame={previousGame}
           />
