@@ -137,6 +137,16 @@ export function StatsTable({
     return a;
   };
 
+  // Hide any stat column the league doesn't track — a column is shown only
+  // if at least one player has a non-null value for it (e.g. CPA League has
+  // no FT% data, so the FT% column drops out entirely).
+  const visibleCols = COLS.filter((c) =>
+    rows.some((r) => {
+      const v = r[c.key];
+      return v !== null && v !== undefined;
+    }),
+  );
+
   const onSort = (key: SortKey) => {
     if (key === sortKey) {
       setDir((d) => (d === "desc" ? "asc" : "desc"));
@@ -188,7 +198,7 @@ export function StatsTable({
             >
               Player {arrow(sortKey === "name")}
             </th>
-            {COLS.map((c) => (
+            {visibleCols.map((c) => (
               <th
                 key={c.key}
                 onClick={() => onSort(c.key)}
@@ -240,7 +250,7 @@ export function StatsTable({
                     </span>
                   </Link>
                 </td>
-                {COLS.map((c) => {
+                {visibleCols.map((c) => {
                   const v = p[c.key] as number | null;
                   const headline = c.key === sortKey;
                   return (
