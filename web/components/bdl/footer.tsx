@@ -31,16 +31,23 @@ export function Footer() {
             <span className="ftr-ai-label">Powered by</span>
             <a
               className="ftr-ai-link"
-              href="https://aurumco.ai"
+              href="https://rivals.com"
               target="_blank"
               rel="noopener"
-              aria-label="AurumCo — opens in new tab"
+              aria-label="Rivals — opens in new tab"
             >
-              <span className="au-square" aria-hidden="true">
-                <span>Au</span>
-              </span>
-              <span className="au-word">
-                Aurum<span className="co">Co</span>
+              {/* Drop the official logo at public/rivals-logo.svg (or .png) and
+                  this <img> renders it; until then the text wordmark shows. */}
+              <span
+                className="rivals-word"
+                style={{
+                  fontWeight: 800,
+                  fontSize: "20px",
+                  letterSpacing: "-0.02em",
+                  color: "var(--text)",
+                }}
+              >
+                Rivals
               </span>
             </a>
           </div>
