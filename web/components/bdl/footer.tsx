@@ -36,19 +36,14 @@ export function Footer() {
               rel="noopener"
               aria-label="Rivals — opens in new tab"
             >
-              {/* Drop the official logo at public/rivals-logo.svg (or .png) and
-                  this <img> renders it; until then the text wordmark shows. */}
-              <span
-                className="rivals-word"
-                style={{
-                  fontWeight: 800,
-                  fontSize: "20px",
-                  letterSpacing: "-0.02em",
-                  color: "var(--text)",
-                }}
-              >
-                Rivals
-              </span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/rivals-logo.png"
+                alt="Rivals"
+                width={101}
+                height={22}
+                style={{ height: 22, width: "auto", display: "block" }}
+              />
             </a>
           </div>
         </div>
