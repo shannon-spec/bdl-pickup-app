@@ -7,8 +7,8 @@ import type { StatLine } from "@/lib/queries/player-stats";
 
 type ColKey = keyof StatLine;
 type SortKey = ColKey | "name";
-const COLS: { key: ColKey; label: string; pct?: boolean }[] = [
-  { key: "gp", label: "GP" },
+const COLS: { key: ColKey; label: string; pct?: boolean; int?: boolean }[] = [
+  { key: "gp", label: "GP", int: true },
   { key: "ppg", label: "PPG" },
   { key: "rpg", label: "RPG" },
   { key: "apg", label: "APG" },
@@ -20,10 +20,11 @@ const COLS: { key: ColKey; label: string; pct?: boolean }[] = [
   { key: "power", label: "BDL" },
 ];
 
-const fmt = (v: number | null, pct?: boolean) => {
+const fmt = (v: number | null, pct?: boolean, int?: boolean) => {
   if (v === null || v === undefined) return "—";
   if (pct) return `${Math.round(v)}%`;
-  return Number.isInteger(v) ? String(v) : v.toFixed(1);
+  if (int) return String(Math.round(v));
+  return v.toFixed(1);
 };
 
 const ordinal = (n: number): string => {
@@ -287,7 +288,7 @@ export function StatsTable({
                     >
                       {c.key === "power" ? (
                         <span className="inline-flex flex-col items-center leading-none gap-1">
-                          <span>{fmt(v, c.pct)}</span>
+                          <span>{fmt(v, c.pct, c.int)}</span>
                           {pctl !== null && (
                             <span className="text-[9.5px] font-semibold tracking-[0.02em] text-[color:var(--text-4)] num">
                               {ordinal(pctl)} pct
@@ -295,7 +296,7 @@ export function StatsTable({
                           )}
                         </span>
                       ) : (
-                        fmt(v, c.pct)
+                        fmt(v, c.pct, c.int)
                       )}
                     </td>
                   );
