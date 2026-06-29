@@ -48,14 +48,14 @@ const AWARDS: Record<AwardKeyT, { src: string; label: string }> = {
 };
 
 const AWARD_ORDER: AwardKeyT[] = [
+  "crown",
+  "power",
+  "triple-double",
   "scoring",
   "rebound",
   "assist",
   "steals",
   "sharpshooter",
-  "triple-double",
-  "power",
-  "crown",
 ];
 
 function AwardBadge({ k, size = 20 }: { k: AwardKeyT; size?: number }) {
