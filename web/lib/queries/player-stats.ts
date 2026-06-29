@@ -260,7 +260,9 @@ export async function getLeaguePlayerStats(opts: {
     const winPct = decided > 0 ? s._w / decided : null;
     const win = winPct !== null ? 0.8 + 0.4 * winPct : 1.0;
     const conf = gp > 0 ? gp / (gp + 2) : 0;
-    const power = Math.round(base * eff * win * conf * 2 * 10) / 10;
+    // Raw (unscaled) power. Anchored to a 50-point league average in a second
+    // pass below, so the score reads like a rating without min/max volatility.
+    const raw = base * eff * win * conf;
 
     out.push({
       ...s,
@@ -274,9 +276,25 @@ export async function getLeaguePlayerStats(opts: {
       fgPct: pctOf(s.fgm, s.fga),
       tpPct: pctOf(s.tpm, s.tpa),
       ftPct: pctOf(s.ftm, s.fta),
-      power,
+      power: raw, // placeholder — rescaled to the 50-point anchor below
     });
   }
+
+  // Anchor the (filtered) league average to 50: a typical player ≈ 50, strong
+  // ≈ 75, elite ≈ 90–100+. Linear, so it never caps and a standout season can
+  // exceed 100; floored at 0 so weak lines never go negative. Centering on the
+  // mean (not min/max) keeps a player's number driven by their own production.
+  const raws = out.filter((p) => p.gp > 0).map((p) => p.power);
+  const meanRaw = raws.length
+    ? raws.reduce((a, b) => a + b, 0) / raws.length
+    : 0;
+  for (const p of out) {
+    p.power =
+      meanRaw > 0
+        ? Math.max(0, Math.round((50 * p.power) / meanRaw * 10) / 10)
+        : 0;
+  }
+
   out.sort((a, b) => b.power - a.power || b.ppg - a.ppg);
 
   return {

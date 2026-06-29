@@ -26,6 +26,12 @@ const fmt = (v: number | null, pct?: boolean) => {
   return Number.isInteger(v) ? String(v) : v.toFixed(1);
 };
 
+const ordinal = (n: number): string => {
+  const v = n % 100;
+  if (v >= 11 && v <= 13) return `${n}th`;
+  return `${n}${["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
+};
+
 type AwardKeyT =
   | "crown"
   | "power"
@@ -135,6 +141,22 @@ export function StatsTable({
       a.push("sharpshooter");
     if (p.ppg >= 10 && p.rpg >= 10 && p.apg >= 10) a.push("triple-double");
     return a;
+  };
+
+  // BDL percentile: where a player's power sits within this league/filter,
+  // using a midrank formula so the top of N lands in the high 90s (not 100)
+  // and the bottom isn't a flat 0. Gives the intuitive "/100" read alongside
+  // the absolute rating.
+  const powered = rows.filter((r) => r.power !== null && r.power !== undefined);
+  const pctlOf = (power: number | null): number | null => {
+    if (power === null || power === undefined || powered.length <= 1) return null;
+    let below = 0;
+    let equal = 0;
+    for (const r of powered) {
+      if (r.power < power) below++;
+      else if (r.power === power) equal++;
+    }
+    return Math.round(((below + equal / 2) / powered.length) * 100);
   };
 
   // Hide any stat column the league doesn't track — a column is shown only
@@ -253,6 +275,7 @@ export function StatsTable({
                 {visibleCols.map((c) => {
                   const v = p[c.key] as number | null;
                   const headline = c.key === sortKey;
+                  const pctl = c.key === "power" ? pctlOf(p.power) : null;
                   return (
                     <td
                       key={c.key}
@@ -262,7 +285,18 @@ export function StatsTable({
                           : "text-[color:var(--text-2)]"
                       }`}
                     >
-                      {fmt(v, c.pct)}
+                      {c.key === "power" ? (
+                        <span className="inline-flex flex-col items-center leading-none gap-1">
+                          <span>{fmt(v, c.pct)}</span>
+                          {pctl !== null && (
+                            <span className="text-[9.5px] font-semibold tracking-[0.02em] text-[color:var(--text-4)] num">
+                              {ordinal(pctl)} pct
+                            </span>
+                          )}
+                        </span>
+                      ) : (
+                        fmt(v, c.pct)
+                      )}
                     </td>
                   );
                 })}
