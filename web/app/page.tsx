@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ChevronRight, Shield, Users, Smartphone } from "lucide-react";
 import { eq } from "drizzle-orm";
 import { readSession } from "@/lib/auth/session";
@@ -7,7 +8,6 @@ import { getRememberedLogin } from "@/lib/cookies/last-login";
 import { db, players } from "@/lib/db";
 import { emailHash } from "@/lib/crypto/secrets";
 import { getMyContexts } from "@/lib/queries/contexts";
-import { Brand } from "@/components/bdl/brand";
 import {
   BasketballIcon,
   TrophyIcon,
@@ -99,16 +99,32 @@ export default async function FrontDoor() {
   return (
     <main className="flex items-start justify-center bg-[color:var(--bg)] px-0 sm:px-6 py-0 sm:py-6">
       <div className="w-full max-w-[750px] flex flex-col pb-8 overflow-hidden border-0 sm:border border-[#C4C2BA] rounded-none sm:rounded-[20px] shadow-none sm:shadow-[0_8px_34px_rgba(0,0,0,.10)] bg-[color:var(--bg)]">
-        {/* ---------- Header: logo left, Sign in right ---------- */}
-        <header className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-[color:var(--hairline)]">
+        {/* ---------- Header: dark hero nav — matches the main app top bar ---------- */}
+        <header
+          className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-white/10 text-white"
+          style={{
+            backgroundColor: "#0A0E14",
+            backgroundImage:
+              "linear-gradient(180deg, rgba(8,11,16,.86) 0%, rgba(8,11,16,.92) 100%), url(/hero-court.jpg)",
+            backgroundSize: "cover, cover",
+            backgroundPosition: "center, center 22%",
+          }}
+        >
           <Link href="/" aria-label="BDL home" className="min-w-0">
-            <Brand height={43} />
+            <Image
+              src="/bdl-lockup-dark.png"
+              alt="BDL · rivals"
+              width={Math.round((43 * 947) / 296)}
+              height={43}
+              priority
+              style={{ height: 43, width: "auto" }}
+            />
           </Link>
           {known?.hasSession ? (
             <form action={signOut}>
               <button
                 type="submit"
-                className="inline-flex items-center justify-center h-9 px-4 rounded-full border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[14px] font-bold text-[color:var(--text)] hover:bg-[color:var(--surface-2)] transition-colors"
+                className="inline-flex items-center justify-center h-9 px-4 rounded-full border border-white/15 bg-white/10 text-[14px] font-bold text-white/90 hover:text-white hover:bg-[rgba(120,185,255,0.38)] hover:border-[rgba(120,185,255,0.55)] transition-colors"
               >
                 Sign out
               </button>
@@ -116,7 +132,7 @@ export default async function FrontDoor() {
           ) : (
             <Link
               href="https://www.bdlpickup.com/login"
-              className="inline-flex items-center justify-center h-9 px-4 rounded-full border border-[color:var(--hairline-2)] bg-[color:var(--surface)] text-[14px] font-bold text-[color:var(--text)] hover:bg-[color:var(--surface-2)] transition-colors"
+              className="inline-flex items-center justify-center h-9 px-4 rounded-full border border-white/15 bg-white/10 text-[14px] font-bold text-white/90 hover:text-white hover:bg-[rgba(120,185,255,0.38)] hover:border-[rgba(120,185,255,0.55)] transition-colors"
             >
               Sign in
             </Link>
