@@ -358,7 +358,9 @@ export async function getLeaderboard(opts: {
     (g) => (g.scoreA !== null && g.scoreB !== null) || g.winTeam !== null,
   );
   const totalCompleted = completed.length;
-  const minGames = Math.max(1, Math.ceil(totalCompleted * 0.1));
+  // Win% and low-win% leaders require a real sample: a player must have
+  // appeared in at least 40% of the (year-filtered) completed games.
+  const minGames = Math.max(1, Math.ceil(totalCompleted * 0.4));
 
   // Roster for completed games only
   const completedIds = completed.map((g) => g.id);
