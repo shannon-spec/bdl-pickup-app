@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-const LOCKUP_RATIO = 1000 / 340;
+const LOCKUP_RATIO = 947 / 296; // aspect ratio of bdl-lockup-*.png (BDL x rivals)
 
 /** Dark "phase" top bar used across the onboarding screens. */
 export function OnboardingHeader({
