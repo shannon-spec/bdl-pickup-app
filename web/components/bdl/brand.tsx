@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-const LOCKUP_RATIO = 947 / 296; // aspect ratio of bdl-lockup-*.png (BDL x rivals)
+const LOCKUP_RATIO = 947 / 321; // aspect ratio of bdl-lockup-*.png (BDL x rivals)
 
 /**
  * Full BDL lockup (basketball mark + "BDL · BALL DON'T LIE" wordmark).

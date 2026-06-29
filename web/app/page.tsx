@@ -114,7 +114,7 @@ export default async function FrontDoor() {
             <Image
               src="/bdl-lockup-dark.png"
               alt="BDL · rivals"
-              width={Math.round((43 * 947) / 296)}
+              width={Math.round((43 * 947) / 321)}
               height={43}
               priority
               style={{ height: 43, width: "auto" }}

@@ -23,7 +23,7 @@ type NavItem = {
   badge?: string;
 };
 
-const LOCKUP_RATIO = 947 / 296; // aspect ratio of bdl-lockup-*.png (BDL x rivals)
+const LOCKUP_RATIO = 947 / 321; // aspect ratio of bdl-lockup-*.png (BDL x rivals)
 
 /** Dark hero scene shared with the Front Door, scoped to the header. */
 const HERO_SCENE: React.CSSProperties = {
