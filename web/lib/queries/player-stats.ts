@@ -248,7 +248,7 @@ export async function getLeaguePlayerStats(opts: {
     const tovpg = per(s.tov);
     const base =
       per(s.pts) +
-      1.2 * per(s.reb) +
+      1.5 * per(s.reb) +
       1.5 * per(s.ast) +
       2.5 * per(s.stl) +
       2.5 * per(s.blk) -
