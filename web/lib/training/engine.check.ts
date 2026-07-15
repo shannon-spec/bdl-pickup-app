@@ -120,7 +120,21 @@ const base = (over: Partial<ExerciseState>): ExerciseState => ({
   assert.equal(r.newRepGoal, 60);
 }
 
-// Bench: 3 logged days completes the week → weight goal steps up, reps unchanged
+// weekly-weight-step progression steps the weight goal on a completed week
+{
+  const weightProg: Exercise = { ...bench, progression: "weekly-weight-step" };
+  const s = base({
+    weekStart: prevMon,
+    daysLoggedThisWeek: [1, 1, 1, 0, 0, 0, 0],
+    currentStreakWeeks: 0,
+  });
+  const r = rollWeeks(s, weightProg, BENCH, now);
+  assert.equal(r.state.currentStreakWeeks, 1);
+  assert.equal(r.newRepGoal, 5); // reps unchanged
+  assert.equal(r.newWeightGoal, 190); // 185 + 5 weekly weight step
+}
+
+// Bench (plan-based): logged week completes streak, no automatic weight step
 {
   const s = base({
     weekStart: prevMon,
@@ -129,8 +143,7 @@ const base = (over: Partial<ExerciseState>): ExerciseState => ({
   });
   const r = rollWeeks(s, bench, BENCH, now);
   assert.equal(r.state.currentStreakWeeks, 1);
-  assert.equal(r.newRepGoal, 5); // reps unchanged
-  assert.equal(r.newWeightGoal, 190); // 185 + 5 weekly weight step
+  assert.equal(r.newWeightGoal, 185); // progression "none" → unchanged
 }
 
 /* --------------------------------- applyLog ------------------------------- */
@@ -216,12 +229,17 @@ const today = dayKey(now);
   assert.equal(r.xp, 20 + 30 + 100);
 }
 
-// Bench PR
+// Per-log weighted exercise (not plan-based): rep goal + PR fire
 {
+  const weightedEx: Exercise = {
+    ...bench,
+    usesPlan: false,
+    hasRepGoal: true,
+  };
   const start = base({ weekStart: today });
   const pr = applyLog({
     state: start,
-    exercise: bench,
+    exercise: weightedEx,
     targets: BENCH,
     day: today,
     reps: 5,

@@ -347,6 +347,96 @@ export async function removeExercise(
   return { ok: true, data: null };
 }
 
+/**
+ * Set (or re-confirm) a plan-based exercise's per-set plan. Used for the
+ * initial cart setup, the Edit panel, and the weekly confirm/adjust step —
+ * all just write the sets and stamp the current week as confirmed. Streak
+ * and lifetime state are preserved on an existing row.
+ */
+export async function setBenchPlan(input: {
+  slug: string;
+  sets: { weight: number; reps: number }[];
+  weeklyWeightIncrement?: number;
+  weeklyDayTarget?: number;
+}): Promise<ActionResult<null>> {
+  const session = await readSession();
+  if (!session?.playerId) return { ok: false, error: SIGN_IN };
+  const pid = session.playerId;
+  const ex = exerciseBySlug(input.slug);
+  if (!ex || !ex.usesPlan) return { ok: false, error: "Unknown exercise." };
+
+  const raw = Array.isArray(input.sets) ? input.sets : [];
+  if (raw.length === 0) return { ok: false, error: "Add at least one set." };
+  if (raw.length > 10) return { ok: false, error: "Up to 10 sets." };
+  const sets = raw.map((s) => ({
+    weight: clampInt(s.weight, 0, 0, 2000),
+    reps: clampInt(s.reps, 1, 1, 100),
+  }));
+  const weeklyDayTarget = clampInt(
+    input.weeklyDayTarget,
+    ex.defaultWeeklyDayTarget,
+    1,
+    7,
+  );
+  const weeklyWeightIncrement = clampInt(
+    input.weeklyWeightIncrement,
+    ex.defaultWeeklyWeightIncrement,
+    0,
+    500,
+  );
+  const weightGoal = Math.max(0, ...sets.map((s) => s.weight));
+  const week = mondayOf(new Date());
+
+  await ensureProfile(pid);
+  const [existing] = await db
+    .select({ playerId: trainingUserExercise.playerId })
+    .from(trainingUserExercise)
+    .where(
+      and(
+        eq(trainingUserExercise.playerId, pid),
+        eq(trainingUserExercise.exerciseSlug, ex.slug),
+      ),
+    );
+
+  if (existing) {
+    await db
+      .update(trainingUserExercise)
+      .set({
+        plan: sets,
+        planConfirmedWeek: week,
+        weeklyWeightIncrement,
+        weeklyDayTarget,
+        weightGoal,
+      })
+      .where(
+        and(
+          eq(trainingUserExercise.playerId, pid),
+          eq(trainingUserExercise.exerciseSlug, ex.slug),
+        ),
+      );
+  } else {
+    await db.insert(trainingUserExercise).values({
+      playerId: pid,
+      exerciseSlug: ex.slug,
+      repGoal: ex.defaultBaseRepGoal,
+      baseRepGoal: ex.defaultBaseRepGoal,
+      weightGoal,
+      baseWeightGoal: weightGoal,
+      weeklyWeightIncrement,
+      weeklyDayTarget,
+      plan: sets,
+      planConfirmedWeek: week,
+      weekStart: week,
+      daysLoggedThisWeek: [0, 0, 0, 0, 0, 0, 0],
+    });
+  }
+
+  revalidatePath("/training");
+  revalidatePath("/training/cart");
+  revalidatePath("/training/log");
+  return { ok: true, data: null };
+}
+
 export type LogResult = {
   awardedXp: number;
   events: LogEvents;
@@ -361,7 +451,7 @@ export type LogResult = {
 
 export async function logSet(input: {
   slug: string;
-  reps: number;
+  reps?: number;
   weight?: number | null;
   made?: number | null;
   day?: string;
@@ -372,27 +462,6 @@ export async function logSet(input: {
 
   const ex = exerciseBySlug(input.slug);
   if (!ex) return { ok: false, error: "Unknown exercise." };
-
-  const reps = Math.floor(Number(input.reps));
-  if (!Number.isFinite(reps) || reps <= 0)
-    return { ok: false, error: "Enter a rep count above zero." };
-
-  let weight: number | null = null;
-  if (ex.type === "weighted") {
-    const w = Math.floor(Number(input.weight));
-    if (!Number.isFinite(w) || w < 0)
-      return { ok: false, error: "Enter a valid weight." };
-    weight = w;
-  }
-
-  // Optional secondary "made" count (shots) — clamped to at most the total.
-  let made: number | null = null;
-  if (ex.secondary?.key === "made" && input.made != null) {
-    const m = Math.floor(Number(input.made));
-    if (!Number.isFinite(m) || m < 0)
-      return { ok: false, error: "Enter a valid makes count." };
-    made = Math.min(m, reps);
-  }
 
   const now = new Date();
   const today = dayKey(now);
@@ -417,6 +486,37 @@ export async function logSet(input: {
     );
   if (!row)
     return { ok: false, error: "Add this exercise to your program first." };
+
+  // Derive the logged values. Plan-based exercises (bench) are "mark done":
+  // reps/weight come from the confirmed plan, not user input.
+  let reps: number;
+  let weight: number | null = null;
+  let made: number | null = null;
+  if (ex.usesPlan) {
+    const plan = row.plan ?? [];
+    if (plan.length === 0)
+      return { ok: false, error: "Set up your plan first." };
+    if (row.planConfirmedWeek !== mondayOf(now))
+      return { ok: false, error: "Confirm this week's weights first." };
+    reps = plan.reduce((n, s) => n + s.reps, 0);
+    weight = Math.max(0, ...plan.map((s) => s.weight)) || null;
+  } else {
+    reps = Math.floor(Number(input.reps));
+    if (!Number.isFinite(reps) || reps <= 0)
+      return { ok: false, error: "Enter a rep count above zero." };
+    if (ex.type === "weighted") {
+      const w = Math.floor(Number(input.weight));
+      if (!Number.isFinite(w) || w < 0)
+        return { ok: false, error: "Enter a valid weight." };
+      weight = w;
+    }
+    if (ex.secondary?.key === "made" && input.made != null) {
+      const m = Math.floor(Number(input.made));
+      if (!Number.isFinite(m) || m < 0)
+        return { ok: false, error: "Enter a valid makes count." };
+      made = Math.min(m, reps);
+    }
+  }
 
   // Roll elapsed weeks — streak, milestone XP, and any daily-goal step-up
   // (time-based; independent of the logged day).

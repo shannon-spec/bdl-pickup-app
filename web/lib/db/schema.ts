@@ -1471,6 +1471,10 @@ export const trainingUserExercise = pgTable(
     weeklyWeightIncrement: integer("weekly_weight_increment").notNull().default(0),
     /** Player-set days per Mon–Sun week required to complete it. */
     weeklyDayTarget: integer("weekly_day_target").notNull().default(5),
+    /** Plan-based exercises (bench): the current week's prescribed sets. */
+    plan: jsonb("plan").$type<{ weight: number; reps: number }[]>(),
+    /** Monday (YYYY-MM-DD) of the week the plan was last confirmed. */
+    planConfirmedWeek: date("plan_confirmed_week"),
     /** Monday (YYYY-MM-DD) of the week `daysLoggedThisWeek` describes. */
     weekStart: date("week_start"),
     /** 7 flags, index 0 = Monday .. 6 = Sunday; 1 = logged that day. */

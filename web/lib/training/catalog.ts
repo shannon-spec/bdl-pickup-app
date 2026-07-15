@@ -34,6 +34,9 @@ export type SecondaryMetric = {
   suffix?: string;
 };
 
+/** One prescribed set in a plan-based exercise (e.g. bench). */
+export type PlanSet = { weight: number; reps: number };
+
 export type Exercise = {
   slug: string;
   name: string;
@@ -57,6 +60,9 @@ export type Exercise = {
   defaultWeightGoal: number | null;
   /** Fields shown in this exercise's setup form (empty = no setup form). */
   setupFields: SetupField[];
+  /** Plan-based: setup is a per-set plan (weight+reps) with a weekly
+   *  confirm/adjust step, and logging is a single "mark done". */
+  usesPlan?: boolean;
 };
 
 export const EXERCISES: Exercise[] = [
@@ -82,18 +88,18 @@ export const EXERCISES: Exercise[] = [
     name: "Bench Press",
     type: "weighted",
     repCounting: "single-set",
-    progression: "weekly-weight-step",
+    progression: "none",
     weekQualifier: "logged",
-    hasRepGoal: true,
+    hasRepGoal: false,
     repLabel: "Reps",
-    secondary: { key: "weight", label: "Weight", required: true, suffix: "lb" },
     defaultBaseRepGoal: 5,
     defaultWeeklyIncrement: 0,
     defaultBaseWeightGoal: 185,
     defaultWeeklyWeightIncrement: 5,
     defaultWeeklyDayTarget: 3,
     defaultWeightGoal: 185,
-    setupFields: ["baseWeightGoal", "weeklyWeightIncrement", "weeklyDayTarget"],
+    setupFields: [],
+    usesPlan: true,
   },
   {
     slug: "shots",

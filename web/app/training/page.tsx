@@ -11,6 +11,12 @@ import { getTrainingHome, type HomeExercise } from "@/lib/queries/training";
 import { TrainingNav } from "./_components/training-nav";
 import { XpBar } from "./_components/xp-bar";
 import { ExerciseIcon } from "./_components/exercise-icon";
+import { BenchWeek } from "./_components/bench-week";
+
+const planSummary = (plan: HomeExercise["plan"]) =>
+  plan && plan.length
+    ? plan.map((s) => `${s.weight}×${s.reps}`).join(" · ")
+    : "No plan set";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Training · BDL" };
@@ -77,6 +83,10 @@ function ExerciseCard({ ex }: { ex: HomeExercise }) {
                   : ""}{" "}
                 · {ex.weeklyDayTarget} of 7 days
               </>
+            ) : ex.usesPlan ? (
+              <>
+                {planSummary(ex.plan)} · {ex.weeklyDayTarget} of 7 days
+              </>
             ) : (
               <>Log daily · {ex.weeklyDayTarget} of 7 days</>
             )}
@@ -120,12 +130,21 @@ function ExerciseCard({ ex }: { ex: HomeExercise }) {
         </span>
       </div>
 
-      <Link
-        href={`/training/log?ex=${ex.slug}`}
-        className="inline-flex h-10 items-center justify-center gap-2 rounded-[var(--r-lg)] bg-[color:var(--brand)] text-[12px] font-bold uppercase tracking-[0.06em] text-white shadow-[var(--cta-shadow)] hover:bg-[color:var(--brand-hover)]"
-      >
-        <Dumbbell size={14} strokeWidth={2.5} /> Log {ex.name}
-      </Link>
+      {ex.usesPlan ? (
+        <BenchWeek
+          slug={ex.slug}
+          plan={ex.plan}
+          needsWeekConfirm={ex.needsWeekConfirm}
+          suggestedSets={ex.suggestedSets}
+        />
+      ) : (
+        <Link
+          href={`/training/log?ex=${ex.slug}`}
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-[var(--r-lg)] bg-[color:var(--brand)] text-[12px] font-bold uppercase tracking-[0.06em] text-white shadow-[var(--cta-shadow)] hover:bg-[color:var(--brand-hover)]"
+        >
+          <Dumbbell size={14} strokeWidth={2.5} /> Log {ex.name}
+        </Link>
+      )}
     </div>
   );
 }

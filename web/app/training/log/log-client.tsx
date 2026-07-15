@@ -7,6 +7,7 @@ import { logSet, type LogResult } from "@/lib/actions/training";
 import type { CartExercise } from "@/lib/queries/training";
 import { mondayOfKey, TROPHIES } from "@/lib/training/engine";
 import { ExerciseIcon } from "../_components/exercise-icon";
+import { BenchWeek } from "../_components/bench-week";
 
 const trophyLabel = (id: string) =>
   TROPHIES.find((t) => t.id === id)?.label ?? id;
@@ -108,7 +109,14 @@ export function LogClient({
             <div className="text-[15px] font-bold">{exercise.name}</div>
           </div>
           <div className="text-[11.5px] text-[color:var(--text-3)]">
-            {exercise.hasRepGoal ? (
+            {exercise.usesPlan ? (
+              <>
+                {exercise.plan?.length
+                  ? exercise.plan.map((s) => `${s.weight}×${s.reps}`).join(" · ")
+                  : "No plan set"}{" "}
+                · {exercise.weeklyDayTarget} of 7 days
+              </>
+            ) : exercise.hasRepGoal ? (
               <>
                 Daily goal: {exercise.currentGoal}{" "}
                 {exercise.repLabel.toLowerCase()}
@@ -122,6 +130,15 @@ export function LogClient({
           </div>
         </div>
 
+        {exercise.usesPlan ? (
+          <BenchWeek
+            slug={exercise.slug}
+            plan={exercise.plan}
+            needsWeekConfirm={exercise.needsWeekConfirm}
+            suggestedSets={exercise.suggestedSets}
+          />
+        ) : (
+          <>
         <div className="flex flex-wrap items-end gap-4">
           <label className="flex flex-col gap-1">
             <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[color:var(--text-3)]">
@@ -192,9 +209,13 @@ export function LogClient({
             {error}
           </div>
         )}
+          </>
+        )}
       </div>
 
-      {result && <Celebration key={result.tick} r={result.r} />}
+      {!exercise.usesPlan && result && (
+        <Celebration key={result.tick} r={result.r} />
+      )}
     </div>
   );
 }

@@ -412,8 +412,8 @@ export function applyLog(args: {
     state.repGoalDay = day;
   }
 
-  // +50 rep + weight PR (weighted only).
-  if (exercise.type === "weighted" && targets.weightGoal != null) {
+  // +50 rep + weight PR (weighted, per-log exercises only — not plan-based).
+  if (exercise.type === "weighted" && !exercise.usesPlan && targets.weightGoal != null) {
     const prNow = reps >= targets.repGoal && (weight ?? 0) >= targets.weightGoal;
     if (prNow && !priorPr) {
       events.pr = true;

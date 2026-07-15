@@ -18,6 +18,7 @@ import {
   EXERCISES,
   exerciseBySlug,
   type Exercise,
+  type PlanSet,
   type SetupField,
 } from "@/lib/training/catalog";
 import {
@@ -87,6 +88,10 @@ export type HomeExercise = {
   nextWeightGoal: number | null; // weekly-weight-step only
   weeklyIncrement: number;
   weeklyDayTarget: number;
+  usesPlan: boolean;
+  plan: PlanSet[] | null;
+  needsWeekConfirm: boolean;
+  suggestedSets: PlanSet[];
   streak: number;
   days: number[]; // 7 levels (0/1/2), Mon…Sun
 };
@@ -140,6 +145,14 @@ export async function getTrainingHome(playerId: string): Promise<TrainingHome> {
             : null,
         weeklyIncrement: r.weeklyIncrement,
         weeklyDayTarget: r.weeklyDayTarget,
+        usesPlan: !!ex.usesPlan,
+        plan: r.plan ?? null,
+        needsWeekConfirm:
+          !!ex.usesPlan && r.plan != null && r.planConfirmedWeek !== mondayOf(now),
+        suggestedSets: (r.plan ?? []).map((s) => ({
+          weight: s.weight + r.weeklyWeightIncrement,
+          reps: s.reps,
+        })),
         streak: displayStreak(rowToState(r), ex, rowToTargets(r), now),
         days: currentWeekDays(r, now),
       };
@@ -174,6 +187,10 @@ export type CartExercise = {
   weeklyWeightIncrement: number;
   weeklyDayTarget: number;
   setupFields: SetupField[];
+  usesPlan: boolean;
+  plan: PlanSet[] | null;
+  needsWeekConfirm: boolean;
+  suggestedSets: PlanSet[];
 };
 
 export type AddableExercise = {
@@ -188,11 +205,13 @@ export type AddableExercise = {
   defaultWeeklyDayTarget: number;
   defaultWeightGoal: number | null;
   setupFields: SetupField[];
+  usesPlan: boolean;
 };
 
 export type CartView = { cart: CartExercise[]; addable: AddableExercise[] };
 
 export async function getCart(playerId: string): Promise<CartView> {
+  const now = new Date();
   const rows = await db
     .select()
     .from(trainingUserExercise)
@@ -220,6 +239,14 @@ export async function getCart(playerId: string): Promise<CartView> {
         weeklyWeightIncrement: r.weeklyWeightIncrement,
         weeklyDayTarget: r.weeklyDayTarget,
         setupFields: ex.setupFields,
+        usesPlan: !!ex.usesPlan,
+        plan: r.plan ?? null,
+        needsWeekConfirm:
+          !!ex.usesPlan && r.plan != null && r.planConfirmedWeek !== mondayOf(now),
+        suggestedSets: (r.plan ?? []).map((s) => ({
+          weight: s.weight + r.weeklyWeightIncrement,
+          reps: s.reps,
+        })),
       };
     })
     .filter((x): x is CartExercise => x !== null);
@@ -238,6 +265,7 @@ export async function getCart(playerId: string): Promise<CartView> {
     defaultWeeklyDayTarget: e.defaultWeeklyDayTarget,
     defaultWeightGoal: e.defaultWeightGoal,
     setupFields: e.setupFields,
+    usesPlan: !!e.usesPlan,
   }));
 
   return { cart, addable };
