@@ -57,6 +57,7 @@ function rowToTargets(row: TrainingUserExercise): Targets {
     weightGoal: row.weightGoal,
     weeklyDayTarget: row.weeklyDayTarget,
     weeklyIncrement: row.weeklyIncrement,
+    weeklyWeightIncrement: row.weeklyWeightIncrement,
   };
 }
 
@@ -115,6 +116,8 @@ export type SetupInput = {
   slug: string;
   baseRepGoal?: number;
   weeklyIncrement?: number;
+  baseWeightGoal?: number;
+  weeklyWeightIncrement?: number;
   weeklyDayTarget?: number;
 };
 
@@ -139,6 +142,15 @@ export async function addExercise(
       ? clampInt(input.weeklyIncrement, ex.defaultWeeklyIncrement, 0, 500)
       : 0;
 
+  // Weight-progression config (bench): starting weight + weekly weight step.
+  const isWeightProg = ex.progression === "weekly-weight-step";
+  const baseWeightGoal = isWeightProg
+    ? clampInt(input.baseWeightGoal, ex.defaultBaseWeightGoal ?? 0, 0, 2000)
+    : ex.defaultBaseWeightGoal;
+  const weeklyWeightIncrement = isWeightProg
+    ? clampInt(input.weeklyWeightIncrement, ex.defaultWeeklyWeightIncrement, 0, 500)
+    : 0;
+
   await ensureProfile(session.playerId);
   await db
     .insert(trainingUserExercise)
@@ -148,8 +160,11 @@ export async function addExercise(
       repGoal: baseRepGoal, // current daily goal starts at the baseline
       baseRepGoal,
       weeklyIncrement,
+      baseWeightGoal,
+      weeklyWeightIncrement,
       weeklyDayTarget,
-      weightGoal: ex.defaultWeightGoal,
+      // current weight goal starts at the baseline for weight progression
+      weightGoal: isWeightProg ? baseWeightGoal : ex.defaultWeightGoal,
       weekStart: mondayOf(new Date()),
       daysLoggedThisWeek: [0, 0, 0, 0, 0, 0, 0],
     })
@@ -167,6 +182,8 @@ export async function updateExerciseSetup(input: {
   slug: string;
   baseRepGoal?: number;
   weeklyIncrement?: number;
+  baseWeightGoal?: number;
+  weeklyWeightIncrement?: number;
   weeklyDayTarget?: number;
 }): Promise<ActionResult<null>> {
   const session = await readSession();
@@ -197,6 +214,25 @@ export async function updateExerciseSetup(input: {
     // If the daily goal hasn't progressed past the baseline yet, move it too.
     if (row.repGoal === row.baseRepGoal) set.repGoal = b;
   }
+  if (
+    ex.progression === "weekly-weight-step" &&
+    input.weeklyWeightIncrement !== undefined
+  )
+    set.weeklyWeightIncrement = clampInt(
+      input.weeklyWeightIncrement,
+      row.weeklyWeightIncrement,
+      0,
+      500,
+    );
+  if (
+    ex.progression === "weekly-weight-step" &&
+    input.baseWeightGoal !== undefined
+  ) {
+    const bw = clampInt(input.baseWeightGoal, row.baseWeightGoal ?? 0, 0, 2000);
+    set.baseWeightGoal = bw;
+    // If the weight goal hasn't progressed past the baseline yet, move it too.
+    if (row.weightGoal === row.baseWeightGoal) set.weightGoal = bw;
+  }
 
   if (Object.keys(set).length) {
     await db
@@ -224,6 +260,8 @@ export async function startNewStreak(input: {
   slug: string;
   baseRepGoal?: number;
   weeklyIncrement?: number;
+  baseWeightGoal?: number;
+  weeklyWeightIncrement?: number;
   weeklyDayTarget?: number;
 }): Promise<ActionResult<null>> {
   const session = await readSession();
@@ -249,6 +287,13 @@ export async function startNewStreak(input: {
     ex.progression === "weekly-step"
       ? clampInt(input.weeklyIncrement, row.weeklyIncrement, 0, 500)
       : 0;
+  const isWeightProg = ex.progression === "weekly-weight-step";
+  const baseWeightGoal = isWeightProg
+    ? clampInt(input.baseWeightGoal, row.baseWeightGoal ?? 0, 0, 2000)
+    : row.baseWeightGoal;
+  const weeklyWeightIncrement = isWeightProg
+    ? clampInt(input.weeklyWeightIncrement, row.weeklyWeightIncrement, 0, 500)
+    : row.weeklyWeightIncrement;
 
   await db
     .update(trainingUserExercise)
@@ -256,6 +301,9 @@ export async function startNewStreak(input: {
       baseRepGoal,
       repGoal: baseRepGoal, // re-baseline the current daily goal
       weeklyIncrement,
+      baseWeightGoal,
+      weeklyWeightIncrement,
+      weightGoal: isWeightProg ? baseWeightGoal : row.weightGoal,
       weeklyDayTarget,
       currentStreakWeeks: 0,
       weekStart: mondayOf(new Date()),
@@ -306,8 +354,8 @@ export type LogResult = {
   newTrophies: string[];
   leveledTo: number | null;
   newTier: string | null;
-  /** Daily goal after this log stepped it up (week rollover), else null. */
-  goalRaisedTo: number | null;
+  /** Goal after a completed week stepped it up (rep or weight), else null. */
+  goalRaised: { to: number; unit: string } | null;
   totalXp: number;
 };
 
@@ -374,9 +422,18 @@ export async function logSet(input: {
   // (time-based; independent of the logged day).
   const rolled = rollWeeks(rowToState(row), ex, rowToTargets(row), now);
   const milestoneXp = rolled.milestonesHit.length * XP.streakMilestone;
-  const goalRaisedTo =
-    rolled.newRepGoal > row.repGoal ? rolled.newRepGoal : null;
-  const targets: Targets = { ...rowToTargets(row), repGoal: rolled.newRepGoal };
+  const repRaised = rolled.newRepGoal > row.repGoal;
+  const weightRaised = (rolled.newWeightGoal ?? 0) > (row.weightGoal ?? 0);
+  const goalRaised = repRaised
+    ? { to: rolled.newRepGoal, unit: ex.repLabel.toLowerCase() }
+    : weightRaised && rolled.newWeightGoal != null
+      ? { to: rolled.newWeightGoal, unit: "lb" }
+      : null;
+  const targets: Targets = {
+    ...rowToTargets(row),
+    repGoal: rolled.newRepGoal,
+    weightGoal: rolled.newWeightGoal,
+  };
 
   // On rollover, freeze the just-finished week's completion result.
   if (row.weekStart && rolled.state.weekStart !== row.weekStart) {
@@ -467,6 +524,7 @@ export async function logSet(input: {
     .update(trainingUserExercise)
     .set({
       repGoal: rolled.newRepGoal,
+      weightGoal: rolled.newWeightGoal,
       weekStart: s.weekStart,
       daysLoggedThisWeek: s.daysLoggedThisWeek,
       currentStreakWeeks: s.currentStreakWeeks,
@@ -572,7 +630,7 @@ export async function logSet(input: {
       newTrophies,
       leveledTo,
       newTier,
-      goalRaisedTo,
+      goalRaised,
       totalXp,
     },
   };

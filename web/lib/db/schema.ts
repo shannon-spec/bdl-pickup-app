@@ -1465,6 +1465,10 @@ export const trainingUserExercise = pgTable(
     baseRepGoal: integer("base_rep_goal").notNull().default(50),
     /** Player-set weekly step applied to repGoal after a completed week. */
     weeklyIncrement: integer("weekly_increment").notNull().default(0),
+    /** Player-set starting weight goal (weight-progression exercises). */
+    baseWeightGoal: integer("base_weight_goal"),
+    /** Player-set weekly step applied to weightGoal after a completed week. */
+    weeklyWeightIncrement: integer("weekly_weight_increment").notNull().default(0),
     /** Player-set days per Mon–Sun week required to complete it. */
     weeklyDayTarget: integer("weekly_day_target").notNull().default(5),
     /** Monday (YYYY-MM-DD) of the week `daysLoggedThisWeek` describes. */

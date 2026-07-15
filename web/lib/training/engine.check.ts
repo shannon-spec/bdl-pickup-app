@@ -32,12 +32,14 @@ const PUSH: Targets = {
   weightGoal: null,
   weeklyDayTarget: 5,
   weeklyIncrement: 10,
+  weeklyWeightIncrement: 0,
 };
 const BENCH: Targets = {
   repGoal: 5,
   weightGoal: 185,
   weeklyDayTarget: 3,
   weeklyIncrement: 0,
+  weeklyWeightIncrement: 5,
 };
 
 /* ------------------------------- levels/tiers ----------------------------- */
@@ -118,7 +120,7 @@ const base = (over: Partial<ExerciseState>): ExerciseState => ({
   assert.equal(r.newRepGoal, 60);
 }
 
-// Bench: 3 logged days completes the week; progression "none" → goal unchanged
+// Bench: 3 logged days completes the week → weight goal steps up, reps unchanged
 {
   const s = base({
     weekStart: prevMon,
@@ -127,7 +129,8 @@ const base = (over: Partial<ExerciseState>): ExerciseState => ({
   });
   const r = rollWeeks(s, bench, BENCH, now);
   assert.equal(r.state.currentStreakWeeks, 1);
-  assert.equal(r.newRepGoal, 5);
+  assert.equal(r.newRepGoal, 5); // reps unchanged
+  assert.equal(r.newWeightGoal, 190); // 185 + 5 weekly weight step
 }
 
 /* --------------------------------- applyLog ------------------------------- */
@@ -240,6 +243,7 @@ const today = dayKey(now);
     weightGoal: null,
     weeklyDayTarget: 3,
     weeklyIncrement: 0,
+    weeklyWeightIncrement: 0,
   };
   // Under the target → +20 only, day logged (level 1)
   const a = applyLog({

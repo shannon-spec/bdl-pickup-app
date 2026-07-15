@@ -12,14 +12,19 @@ export type ExerciseType = "bodyweight" | "weighted" | "skill";
 /** How the daily rep goal is measured. */
 export type RepCounting = "cumulative" | "single-set";
 
-/** How the daily goal changes over time. */
-export type Progression = "weekly-step" | "none";
+/** How the goal changes over time: step reps weekly, step weight weekly, or none. */
+export type Progression = "weekly-step" | "weekly-weight-step" | "none";
 
 /** What makes a day "count" toward the weekly day-target. */
 export type WeekQualifier = "logged" | "goal-met";
 
 /** Which values the player configures in the exercise's setup form. */
-export type SetupField = "baseRepGoal" | "weeklyIncrement" | "weeklyDayTarget";
+export type SetupField =
+  | "baseRepGoal"
+  | "weeklyIncrement"
+  | "baseWeightGoal"
+  | "weeklyWeightIncrement"
+  | "weeklyDayTarget";
 
 /** An optional second value captured on the log form (weight or makes). */
 export type SecondaryMetric = {
@@ -45,6 +50,9 @@ export type Exercise = {
   secondary?: SecondaryMetric;
   defaultBaseRepGoal: number;
   defaultWeeklyIncrement: number;
+  /** Starting weight goal (weight-progression exercises); null otherwise. */
+  defaultBaseWeightGoal: number | null;
+  defaultWeeklyWeightIncrement: number;
   defaultWeeklyDayTarget: number;
   defaultWeightGoal: number | null;
   /** Fields shown in this exercise's setup form (empty = no setup form). */
@@ -63,6 +71,8 @@ export const EXERCISES: Exercise[] = [
     repLabel: "Reps",
     defaultBaseRepGoal: 50,
     defaultWeeklyIncrement: 10,
+    defaultBaseWeightGoal: null,
+    defaultWeeklyWeightIncrement: 0,
     defaultWeeklyDayTarget: 5,
     defaultWeightGoal: null,
     setupFields: ["baseRepGoal", "weeklyIncrement", "weeklyDayTarget"],
@@ -72,16 +82,18 @@ export const EXERCISES: Exercise[] = [
     name: "Bench Press",
     type: "weighted",
     repCounting: "single-set",
-    progression: "none",
+    progression: "weekly-weight-step",
     weekQualifier: "logged",
     hasRepGoal: true,
     repLabel: "Reps",
     secondary: { key: "weight", label: "Weight", required: true, suffix: "lb" },
     defaultBaseRepGoal: 5,
     defaultWeeklyIncrement: 0,
+    defaultBaseWeightGoal: 185,
+    defaultWeeklyWeightIncrement: 5,
     defaultWeeklyDayTarget: 3,
     defaultWeightGoal: 185,
-    setupFields: [],
+    setupFields: ["baseWeightGoal", "weeklyWeightIncrement", "weeklyDayTarget"],
   },
   {
     slug: "shots",
@@ -95,6 +107,8 @@ export const EXERCISES: Exercise[] = [
     secondary: { key: "made", label: "Made", required: false },
     defaultBaseRepGoal: 100,
     defaultWeeklyIncrement: 0,
+    defaultBaseWeightGoal: null,
+    defaultWeeklyWeightIncrement: 0,
     defaultWeeklyDayTarget: 3,
     defaultWeightGoal: null,
     setupFields: ["baseRepGoal", "weeklyDayTarget"],

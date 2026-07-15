@@ -174,9 +174,11 @@ export function tierForXp(xp: number): Tier {
 export type Targets = {
   /** Current daily rep goal (evolves via weekly-step progression). */
   repGoal: number;
+  /** Current weight goal (evolves via weekly-weight-step progression). */
   weightGoal: number | null;
   weeklyDayTarget: number;
   weeklyIncrement: number;
+  weeklyWeightIncrement: number;
 };
 
 /** In-memory mirror of the mutable game-state columns. */
@@ -253,7 +255,12 @@ export function rollWeeks(
   exercise: Exercise,
   targets: Targets,
   now: Date,
-): { state: ExerciseState; milestonesHit: number[]; newRepGoal: number } {
+): {
+  state: ExerciseState;
+  milestonesHit: number[];
+  newRepGoal: number;
+  newWeightGoal: number | null;
+} {
   const current = mondayOf(now);
 
   if (!state.weekStart) {
@@ -261,6 +268,7 @@ export function rollWeeks(
       state: { ...state, weekStart: current, daysLoggedThisWeek: emptyWeek() },
       milestonesHit: [],
       newRepGoal: targets.repGoal,
+      newWeightGoal: targets.weightGoal,
     };
   }
   if (state.weekStart === current) {
@@ -271,6 +279,7 @@ export function rollWeeks(
       },
       milestonesHit: [],
       newRepGoal: targets.repGoal,
+      newWeightGoal: targets.weightGoal,
     };
   }
 
@@ -288,11 +297,15 @@ export function rollWeeks(
   const currentStreakWeeks = weeksPassed > 1 ? 0 : successStreak;
   const bestStreakWeeks = Math.max(state.bestStreakWeeks, successStreak);
 
-  // Level up the daily goal only on a completed week (never mid-week).
+  // Step the progressing goal only on a completed week (never mid-week).
   const newRepGoal =
     storedWeekSucceeded && exercise.progression === "weekly-step"
       ? targets.repGoal + targets.weeklyIncrement
       : targets.repGoal;
+  const newWeightGoal =
+    storedWeekSucceeded && exercise.progression === "weekly-weight-step"
+      ? (targets.weightGoal ?? 0) + targets.weeklyWeightIncrement
+      : targets.weightGoal;
 
   return {
     state: {
@@ -304,6 +317,7 @@ export function rollWeeks(
     },
     milestonesHit,
     newRepGoal,
+    newWeightGoal,
   };
 }
 

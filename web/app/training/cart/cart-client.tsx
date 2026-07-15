@@ -31,6 +31,8 @@ const FIELD_META: Record<
 > = {
   baseRepGoal: { label: "Daily goal", suffix: "", min: 1, max: 1000 },
   weeklyIncrement: { label: "Weekly increase", suffix: "reps/wk", min: 0, max: 500 },
+  baseWeightGoal: { label: "Starting weight", suffix: "lb", min: 0, max: 2000 },
+  weeklyWeightIncrement: { label: "Weekly increase", suffix: "lb/wk", min: 0, max: 500 },
   weeklyDayTarget: { label: "Days per week", suffix: "of 7", min: 1, max: 7 },
 };
 
@@ -40,12 +42,17 @@ type PanelMode = "edit" | "restart";
 const toPayload = (v: Vals) => ({
   baseRepGoal: v.baseRepGoal != null ? Number(v.baseRepGoal) : undefined,
   weeklyIncrement: v.weeklyIncrement != null ? Number(v.weeklyIncrement) : undefined,
+  baseWeightGoal: v.baseWeightGoal != null ? Number(v.baseWeightGoal) : undefined,
+  weeklyWeightIncrement:
+    v.weeklyWeightIncrement != null ? Number(v.weeklyWeightIncrement) : undefined,
   weeklyDayTarget: v.weeklyDayTarget != null ? Number(v.weeklyDayTarget) : undefined,
 });
 
 const valsFromCart = (c: CartExercise): Vals => ({
   baseRepGoal: String(c.baseRepGoal),
   weeklyIncrement: String(c.weeklyIncrement),
+  baseWeightGoal: String(c.baseWeightGoal ?? ""),
+  weeklyWeightIncrement: String(c.weeklyWeightIncrement),
   weeklyDayTarget: String(c.weeklyDayTarget),
 });
 
@@ -103,6 +110,8 @@ export function CartClient({ cart, addable }: CartView) {
       o[a.slug] = {
         baseRepGoal: String(a.defaultBaseRepGoal),
         weeklyIncrement: String(a.defaultWeeklyIncrement),
+        baseWeightGoal: String(a.defaultBaseWeightGoal ?? ""),
+        weeklyWeightIncrement: String(a.defaultWeeklyWeightIncrement),
         weeklyDayTarget: String(a.defaultWeeklyDayTarget),
       };
     }
@@ -171,6 +180,8 @@ export function CartClient({ cart, addable }: CartView) {
         parts.push(`+${c.weeklyIncrement}/wk`);
       if (c.type === "weighted" && c.weightGoal != null)
         parts.push(`@ ${c.weightGoal} lb`);
+      if (c.progression === "weekly-weight-step" && c.weeklyWeightIncrement > 0)
+        parts.push(`+${c.weeklyWeightIncrement} lb/wk`);
     } else {
       parts.push("Log daily");
     }

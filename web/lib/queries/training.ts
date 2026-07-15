@@ -59,6 +59,7 @@ function rowToTargets(row: TrainingUserExercise): Targets {
     weightGoal: row.weightGoal,
     weeklyDayTarget: row.weeklyDayTarget,
     weeklyIncrement: row.weeklyIncrement,
+    weeklyWeightIncrement: row.weeklyWeightIncrement,
   };
 }
 
@@ -81,8 +82,9 @@ export type HomeExercise = {
   hasRepGoal: boolean;
   repLabel: string;
   currentGoal: number;
-  nextGoal: number | null; // weekly-step only
+  nextGoal: number | null; // weekly-step (reps) only
   weightGoal: number | null;
+  nextWeightGoal: number | null; // weekly-weight-step only
   weeklyIncrement: number;
   weeklyDayTarget: number;
   streak: number;
@@ -132,6 +134,10 @@ export async function getTrainingHome(playerId: string): Promise<TrainingHome> {
         nextGoal:
           ex.progression === "weekly-step" ? r.repGoal + r.weeklyIncrement : null,
         weightGoal: r.weightGoal,
+        nextWeightGoal:
+          ex.progression === "weekly-weight-step" && r.weightGoal != null
+            ? r.weightGoal + r.weeklyWeightIncrement
+            : null,
         weeklyIncrement: r.weeklyIncrement,
         weeklyDayTarget: r.weeklyDayTarget,
         streak: displayStreak(rowToState(r), ex, rowToTargets(r), now),
@@ -163,7 +169,9 @@ export type CartExercise = {
   currentGoal: number;
   baseRepGoal: number;
   weightGoal: number | null;
+  baseWeightGoal: number | null;
   weeklyIncrement: number;
+  weeklyWeightIncrement: number;
   weeklyDayTarget: number;
   setupFields: SetupField[];
 };
@@ -175,6 +183,8 @@ export type AddableExercise = {
   progression: Exercise["progression"];
   defaultBaseRepGoal: number;
   defaultWeeklyIncrement: number;
+  defaultBaseWeightGoal: number | null;
+  defaultWeeklyWeightIncrement: number;
   defaultWeeklyDayTarget: number;
   defaultWeightGoal: number | null;
   setupFields: SetupField[];
@@ -205,7 +215,9 @@ export async function getCart(playerId: string): Promise<CartView> {
         currentGoal: r.repGoal,
         baseRepGoal: r.baseRepGoal,
         weightGoal: r.weightGoal,
+        baseWeightGoal: r.baseWeightGoal,
         weeklyIncrement: r.weeklyIncrement,
+        weeklyWeightIncrement: r.weeklyWeightIncrement,
         weeklyDayTarget: r.weeklyDayTarget,
         setupFields: ex.setupFields,
       };
@@ -221,6 +233,8 @@ export async function getCart(playerId: string): Promise<CartView> {
     progression: e.progression,
     defaultBaseRepGoal: e.defaultBaseRepGoal,
     defaultWeeklyIncrement: e.defaultWeeklyIncrement,
+    defaultBaseWeightGoal: e.defaultBaseWeightGoal,
+    defaultWeeklyWeightIncrement: e.defaultWeeklyWeightIncrement,
     defaultWeeklyDayTarget: e.defaultWeeklyDayTarget,
     defaultWeightGoal: e.defaultWeightGoal,
     setupFields: e.setupFields,

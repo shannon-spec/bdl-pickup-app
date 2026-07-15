@@ -204,7 +204,7 @@ function Celebration({ r }: { r: LogResult }) {
     r.totalXp === 0 &&
     r.newTrophies.length === 0 &&
     r.leveledTo == null &&
-    r.goalRaisedTo == null;
+    r.goalRaised == null;
   if (nothing) {
     return (
       <div className="rounded-[16px] bg-[color:var(--surface-2)] px-4 py-3 text-[12.5px] text-[color:var(--text-2)]">
@@ -241,10 +241,10 @@ function Celebration({ r }: { r: LogResult }) {
           {r.leveledTo}!
         </div>
       )}
-      {r.goalRaisedTo != null && (
+      {r.goalRaised != null && (
         <div className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-[color:var(--brand-ink)]">
-          <TrendingUp size={15} strokeWidth={2.5} /> Week complete — daily goal
-          raised to {r.goalRaisedTo}!
+          <TrendingUp size={15} strokeWidth={2.5} /> Week complete — goal raised
+          to {r.goalRaised.to} {r.goalRaised.unit}!
         </div>
       )}
       {r.newTrophies.length > 0 && (

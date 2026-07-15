@@ -86,6 +86,11 @@ function ExerciseCard({ ex }: { ex: HomeExercise }) {
               Next week: {ex.nextGoal} reps/day after a completed week
             </div>
           )}
+          {ex.nextWeightGoal != null && ex.nextWeightGoal !== ex.weightGoal && (
+            <div className="text-[10.5px] text-[color:var(--text-4)]">
+              Next week: {ex.nextWeightGoal} lb after a completed week
+            </div>
+          )}
           </div>
         </div>
         <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--brand-soft)] px-2.5 py-1 text-[12px] font-bold text-[color:var(--brand-ink)] num">
