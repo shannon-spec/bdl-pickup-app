@@ -97,7 +97,7 @@ export const EXERCISES: Exercise[] = [
   },
   {
     slug: "shots",
-    name: "Daily Shots",
+    name: "Daily 3-Pt Shots",
     type: "skill",
     repCounting: "cumulative",
     progression: "none",
