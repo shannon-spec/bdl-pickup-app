@@ -328,23 +328,44 @@ export type LogEvents = {
  * updated state, which one-time XP triggers fired, and the XP awarded.
  * `repsTodayTotal` is the day's cumulative reps *including* this set.
  */
+/**
+ * Apply a single logged set for `day` (which must fall in the current
+ * week) to already-week-rolled state. The caller supplies day-level facts
+ * derived from the stored sets — `firstLogToday`, `priorGoalMet`,
+ * `priorPr`, and `repsTodayTotal` (cumulative incl. this set) — so the
+ * once-per-day XP awards stay correct even when the player back-dates a
+ * set to an earlier day of the week. Lifetime totals / best-set are the
+ * caller's responsibility (applied for any day, including past weeks).
+ */
 export function applyLog(args: {
   state: ExerciseState;
   exercise: Exercise;
   targets: Targets;
+  day: string;
   reps: number;
   weight: number | null;
-  now: Date;
   repsTodayTotal: number;
+  firstLogToday: boolean;
+  priorGoalMet: boolean;
+  priorPr: boolean;
 }): { state: ExerciseState; events: LogEvents; xp: number } {
-  const { exercise, targets, reps, weight, now, repsTodayTotal } = args;
+  const {
+    exercise,
+    targets,
+    day,
+    reps,
+    weight,
+    repsTodayTotal,
+    firstLogToday,
+    priorGoalMet,
+    priorPr,
+  } = args;
   const state: ExerciseState = {
     ...args.state,
     daysLoggedThisWeek: [...(args.state.daysLoggedThisWeek ?? emptyWeek())],
   };
-  const today = dayKey(now);
-  const weekStart = state.weekStart ?? mondayOf(now);
-  const idx = Math.min(6, Math.max(0, daysBetween(weekStart, today)));
+  const weekStart = state.weekStart ?? mondayOfKey(day);
+  const idx = Math.min(6, Math.max(0, daysBetween(weekStart, day)));
 
   const events: LogEvents = {
     logDay: false,
@@ -354,12 +375,6 @@ export function applyLog(args: {
   };
   let xp = 0;
 
-  state.lifetimeReps += reps;
-  state.bestSetReps = Math.max(state.bestSetReps ?? 0, reps);
-  if (exercise.type === "weighted" && weight != null) {
-    state.bestSetWeight = Math.max(state.bestSetWeight ?? 0, weight);
-  }
-
   const met = goalMet(exercise, targets.repGoal, reps, repsTodayTotal);
   const quality = met ? 2 : 1;
   // Record the day at the highest level reached so far (can rise to 2 later).
@@ -367,28 +382,28 @@ export function applyLog(args: {
     state.daysLoggedThisWeek![idx] ?? 0,
     quality,
   );
+  state.lastLoggedDay = day;
 
   // +20 first log of the day.
-  if (state.lastLoggedDay !== today) {
+  if (firstLogToday) {
     events.logDay = true;
     xp += XP.logDay;
-    state.lastLoggedDay = today;
   }
 
-  // +30 daily rep goal.
-  if (met && state.repGoalDay !== today) {
+  // +30 daily rep goal (only when this set first crosses the goal today).
+  if (met && !priorGoalMet) {
     events.repGoal = true;
     xp += XP.repGoal;
-    state.repGoalDay = today;
+    state.repGoalDay = day;
   }
 
   // +50 rep + weight PR (weighted only).
   if (exercise.type === "weighted" && targets.weightGoal != null) {
-    const prHit = reps >= targets.repGoal && (weight ?? 0) >= targets.weightGoal;
-    if (prHit && state.prDay !== today) {
+    const prNow = reps >= targets.repGoal && (weight ?? 0) >= targets.weightGoal;
+    if (prNow && !priorPr) {
       events.pr = true;
       xp += XP.prGoal;
-      state.prDay = today;
+      state.prDay = day;
     }
   }
 

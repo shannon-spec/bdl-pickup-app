@@ -7,6 +7,7 @@ import { MobileBottomBar } from "@/components/bdl/mobile-bottom-bar";
 import { Pill } from "@/components/bdl/pill";
 import { readSession } from "@/lib/auth/session";
 import { getCart } from "@/lib/queries/training";
+import { dayKey } from "@/lib/training/engine";
 import { TrainingNav } from "../_components/training-nav";
 import { LogClient } from "./log-client";
 
@@ -43,7 +44,11 @@ export default async function TrainingLogPage({
             before logging.
           </div>
         ) : (
-          <LogClient cart={cart} initialSlug={initialSlug} />
+          <LogClient
+            cart={cart}
+            initialSlug={initialSlug}
+            today={dayKey(new Date())}
+          />
         )}
       </PageFrame>
       <MobileBottomBar active="home" />

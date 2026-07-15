@@ -140,10 +140,13 @@ const today = dayKey(now);
     state: start,
     exercise: pushups,
     targets: PUSH,
+    day: today,
     reps: 30,
     weight: null,
-    now,
     repsTodayTotal: 30,
+    firstLogToday: true,
+    priorGoalMet: false,
+    priorPr: false,
   });
   assert.equal(a.xp, 20);
   assert.equal(a.events.repGoal, false);
@@ -153,14 +156,37 @@ const today = dayKey(now);
     state: a.state,
     exercise: pushups,
     targets: PUSH,
+    day: today,
     reps: 25,
     weight: null,
-    now,
     repsTodayTotal: 55, // cumulative crosses 50
+    firstLogToday: false,
+    priorGoalMet: false,
+    priorPr: false,
   });
   assert.equal(b.xp, 30);
   assert.equal(b.events.repGoal, true);
   assert.equal(b.state.daysLoggedThisWeek![0], 2); // day upgraded to goal-met
+}
+
+// Back-dated set to a day already at goal → no duplicate XP
+{
+  const start = base({ weekStart: today, daysLoggedThisWeek: [2, 0, 0, 0, 0, 0, 0] });
+  const r = applyLog({
+    state: start,
+    exercise: pushups,
+    targets: PUSH,
+    day: today,
+    reps: 20,
+    weight: null,
+    repsTodayTotal: 70,
+    firstLogToday: false,
+    priorGoalMet: true,
+    priorPr: false,
+  });
+  assert.equal(r.xp, 0);
+  assert.equal(r.events.logDay, false);
+  assert.equal(r.events.repGoal, false);
 }
 
 // Push-ups weekly bonus on the 5th goal-met day
@@ -168,16 +194,18 @@ const today = dayKey(now);
   const start = base({
     weekStart: addDays(today, -4), // today = idx 4
     daysLoggedThisWeek: [2, 2, 2, 2, 0, 0, 0], // 4 goal-met days
-    lastLoggedDay: addDays(today, -1),
   });
   const r = applyLog({
     state: start,
     exercise: pushups,
     targets: PUSH,
+    day: today,
     reps: 50,
     weight: null,
-    now,
     repsTodayTotal: 50, // meets goal
+    firstLogToday: true,
+    priorGoalMet: false,
+    priorPr: false,
   });
   assert.equal(r.events.logDay, true);
   assert.equal(r.events.repGoal, true);
@@ -192,14 +220,16 @@ const today = dayKey(now);
     state: start,
     exercise: bench,
     targets: BENCH,
+    day: today,
     reps: 5,
     weight: 185,
-    now,
     repsTodayTotal: 5,
+    firstLogToday: true,
+    priorGoalMet: false,
+    priorPr: false,
   });
   assert.equal(pr.events.pr, true);
   assert.equal(pr.xp, 20 + 30 + 50);
-  assert.equal(pr.state.bestSetWeight, 185);
 }
 
 /* ------------------------------- displayStreak ---------------------------- */

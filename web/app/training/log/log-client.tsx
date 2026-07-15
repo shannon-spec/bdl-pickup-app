@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Award, BarChart3, Loader2, Sparkles, TrendingUp } from "lucide-react";
 import { logSet, type LogResult } from "@/lib/actions/training";
 import type { CartExercise } from "@/lib/queries/training";
-import { TROPHIES } from "@/lib/training/engine";
+import { mondayOfKey, TROPHIES } from "@/lib/training/engine";
 
 const trophyLabel = (id: string) =>
   TROPHIES.find((t) => t.id === id)?.label ?? id;
@@ -13,15 +13,19 @@ const trophyLabel = (id: string) =>
 export function LogClient({
   cart,
   initialSlug,
+  today,
 }: {
   cart: CartExercise[];
   initialSlug: string | null;
+  today: string;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [slug, setSlug] = useState(initialSlug ?? cart[0]?.slug ?? "");
   const [reps, setReps] = useState("");
   const [weight, setWeight] = useState("");
+  const [date, setDate] = useState(today);
+  const isPastWeek = date < mondayOfKey(today);
   const [error, setError] = useState<string | null>(null);
   // `tick` re-mounts the celebration so the animation replays each save.
   const [result, setResult] = useState<{ r: LogResult; tick: number } | null>(
@@ -50,6 +54,7 @@ export function LogClient({
         slug: exercise.slug,
         reps: Math.floor(repsN),
         weight: weighted ? Math.floor(Number(weight)) : null,
+        day: date,
       });
       if (res.ok) {
         setResult((prev) => ({ r: res.data, tick: (prev?.tick ?? 0) + 1 }));
@@ -103,6 +108,18 @@ export function LogClient({
         <div className="flex flex-wrap items-end gap-4">
           <label className="flex flex-col gap-1">
             <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[color:var(--text-3)]">
+              Date
+            </span>
+            <input
+              type="date"
+              max={today}
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="h-11 rounded-[10px] bg-[color:var(--surface-2)] px-3 text-[14px] num font-[family-name:var(--mono)] outline-none shadow-[inset_0_0_0_1px_var(--hairline-2)] focus:shadow-[inset_0_0_0_1.5px_var(--brand)]"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[color:var(--text-3)]">
               Reps
             </span>
             <input
@@ -144,6 +161,13 @@ export function LogClient({
           </button>
         </div>
 
+        {isPastWeek && (
+          <div className="rounded-[var(--r-md)] bg-[color:var(--surface-2)] px-3 py-2 text-[11.5px] text-[color:var(--text-3)]">
+            Past week — counts toward your totals and charts, but won&apos;t
+            change your current streak or XP.
+          </div>
+        )}
+
         {error && (
           <div className="rounded-[var(--r-md)] bg-[color:var(--down-soft)] px-3 py-2 text-[12px] text-[color:var(--down)]">
             {error}
@@ -157,6 +181,19 @@ export function LogClient({
 }
 
 function Celebration({ r }: { r: LogResult }) {
+  const nothing =
+    r.totalXp === 0 &&
+    r.newTrophies.length === 0 &&
+    r.leveledTo == null &&
+    r.goalRaisedTo == null;
+  if (nothing) {
+    return (
+      <div className="rounded-[16px] bg-[color:var(--surface-2)] px-4 py-3 text-[12.5px] text-[color:var(--text-2)]">
+        Set logged — it counts toward your totals and charts.
+      </div>
+    );
+  }
+
   const lines: string[] = [];
   if (r.events.logDay) lines.push(`Logged the day · +20 XP`);
   if (r.events.repGoal) lines.push(`Rep goal hit · +30 XP`);

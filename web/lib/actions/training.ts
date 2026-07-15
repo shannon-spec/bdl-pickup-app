@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import {
   db,
@@ -280,6 +280,7 @@ export async function logSet(input: {
   slug: string;
   reps: number;
   weight?: number | null;
+  day?: string;
 }): Promise<ActionResult<LogResult>> {
   const session = await readSession();
   if (!session?.playerId) return { ok: false, error: SIGN_IN };
@@ -300,6 +301,18 @@ export async function logSet(input: {
     weight = w;
   }
 
+  const now = new Date();
+  const today = dayKey(now);
+  // Date override: defaults to today; must be valid and not in the future.
+  const day = input.day ?? today;
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(day) ||
+    Number.isNaN(Date.parse(`${day}T12:00:00Z`))
+  )
+    return { ok: false, error: "Enter a valid date." };
+  if (day > today) return { ok: false, error: "Can't log a future date." };
+  const isCurrentWeek = day >= mondayOf(now); // day <= today already ensured
+
   const [row] = await db
     .select()
     .from(trainingUserExercise)
@@ -312,52 +325,86 @@ export async function logSet(input: {
   if (!row)
     return { ok: false, error: "Add this exercise to your program first." };
 
-  const now = new Date();
-  const today = dayKey(now);
-
-  // 1) Roll elapsed weeks — streak, milestone XP, and any daily-goal step-up.
+  // Roll elapsed weeks — streak, milestone XP, and any daily-goal step-up
+  // (time-based; independent of the logged day).
   const rolled = rollWeeks(rowToState(row), ex, rowToTargets(row), now);
   const milestoneXp = rolled.milestonesHit.length * XP.streakMilestone;
   const goalRaisedTo =
     rolled.newRepGoal > row.repGoal ? rolled.newRepGoal : null;
-  // This week's goal is the (possibly stepped-up) value.
   const targets: Targets = { ...rowToTargets(row), repGoal: rolled.newRepGoal };
 
-  // 2) Today's cumulative reps (for cumulative-goal exercises).
-  const [agg] = await db
-    .select({ total: sql<number>`coalesce(sum(${trainingSets.reps}), 0)` })
+  // Day-level facts from the stored sets for `day` (before inserting this
+  // one) — keeps the once-per-day awards correct even when back-dating.
+  const prior = await db
+    .select({ reps: trainingSets.reps, weight: trainingSets.weight })
     .from(trainingSets)
     .where(
       and(
         eq(trainingSets.playerId, pid),
         eq(trainingSets.exerciseSlug, ex.slug),
-        eq(trainingSets.performedDay, today),
+        eq(trainingSets.performedDay, day),
       ),
     );
-  const repsTodayTotal = Number(agg?.total ?? 0) + reps;
+  const priorReps = prior.reduce((n, r) => n + r.reps, 0);
+  const repsTodayTotal = priorReps + reps;
+  const firstLogToday = prior.length === 0;
+  const priorGoalMet =
+    ex.repCounting === "cumulative"
+      ? priorReps >= targets.repGoal
+      : prior.some((r) => r.reps >= targets.repGoal);
+  const wg = targets.weightGoal;
+  const priorPr =
+    ex.type === "weighted" && wg != null
+      ? prior.some((r) => r.reps >= targets.repGoal && (r.weight ?? 0) >= wg)
+      : false;
 
-  // 3) Apply the set.
-  const applied = applyLog({
-    state: rolled.state,
-    exercise: ex,
-    targets,
-    reps,
-    weight,
-    now,
-    repsTodayTotal,
-  });
-  const totalXp = milestoneXp + applied.xp;
-
-  // 4) Persist the set, the exercise state (+ stepped goal), and profile XP.
+  // Record the set.
   await db.insert(trainingSets).values({
     playerId: pid,
     exerciseSlug: ex.slug,
     reps,
     weight,
-    performedDay: today,
+    performedDay: day,
   });
 
-  const s = applied.state;
+  // Awards + day flags apply only for the live week; past-week logs are
+  // totals-only (recorded above, counted in lifetime below).
+  let s = rolled.state;
+  let events: LogEvents = {
+    logDay: false,
+    repGoal: false,
+    pr: false,
+    weekly: false,
+  };
+  let awardedXp = 0;
+  if (isCurrentWeek) {
+    const applied = applyLog({
+      state: s,
+      exercise: ex,
+      targets,
+      day,
+      reps,
+      weight,
+      repsTodayTotal,
+      firstLogToday,
+      priorGoalMet,
+      priorPr,
+    });
+    s = applied.state;
+    events = applied.events;
+    awardedXp = applied.xp;
+  }
+  // Lifetime totals + best set apply for any day (incl. past weeks).
+  s = {
+    ...s,
+    lifetimeReps: s.lifetimeReps + reps,
+    bestSetReps: Math.max(s.bestSetReps ?? 0, reps),
+    bestSetWeight:
+      ex.type === "weighted" && weight != null
+        ? Math.max(s.bestSetWeight ?? 0, weight)
+        : s.bestSetWeight,
+  };
+  const totalXp = milestoneXp + awardedXp;
   await db
     .update(trainingUserExercise)
     .set({
@@ -449,8 +496,8 @@ export async function logSet(input: {
   return {
     ok: true,
     data: {
-      awardedXp: applied.xp,
-      events: applied.events,
+      awardedXp,
+      events,
       milestonesHit: rolled.milestonesHit,
       newTrophies,
       leveledTo,
