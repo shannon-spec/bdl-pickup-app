@@ -84,7 +84,7 @@ function SetupInputs({
                 inputMode="numeric"
                 value={vals[f] ?? ""}
                 onChange={(e) => onChange(f, e.target.value)}
-                className="h-10 w-20 rounded-[10px] bg-[color:var(--surface-2)] px-2 text-center text-[15px] font-bold num font-[family-name:var(--mono)] outline-none shadow-[inset_0_0_0_1px_var(--hairline-2)] focus:shadow-[inset_0_0_0_1.5px_var(--brand)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                className="h-10 w-20 rounded-[10px] bg-[color:var(--surface)] px-2 text-center text-[15px] font-bold num font-[family-name:var(--mono)] outline-none shadow-[inset_0_0_0_1px_var(--hairline-2)] focus:shadow-[inset_0_0_0_1.5px_var(--brand)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
               />
               {m.suffix && (
                 <span className="text-[11px] text-[color:var(--text-4)]">
@@ -367,6 +367,7 @@ export function CartClient({ cart, addable }: CartView) {
                     initialIncrement={a.defaultWeeklyWeightIncrement}
                     initialDayTarget={a.defaultWeeklyDayTarget}
                     ctaLabel="Add to program"
+                    flush
                   />
                 </>
               ) : (

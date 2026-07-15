@@ -16,6 +16,7 @@ export function BenchPlanEditor({
   initialDayTarget,
   ctaLabel,
   onDone,
+  flush = false,
 }: {
   slug: string;
   initialSets: PlanSet[];
@@ -23,6 +24,9 @@ export function BenchPlanEditor({
   initialDayTarget: number;
   ctaLabel: string;
   onDone?: () => void;
+  /** Render flush on the card (no grey container) — used for addable cards
+   *  so they read as full-strength like the program cards. */
+  flush?: boolean;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -65,7 +69,13 @@ export function BenchPlanEditor({
     "h-10 w-24 rounded-[10px] bg-[color:var(--surface)] px-2 text-center text-[15px] font-bold num font-[family-name:var(--mono)] outline-none shadow-[inset_0_0_0_1px_var(--hairline-2)] focus:shadow-[inset_0_0_0_1.5px_var(--brand)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none";
 
   return (
-    <div className="flex flex-col gap-3 rounded-[10px] bg-[color:var(--surface-2)] p-3">
+    <div
+      className={
+        flush
+          ? "flex flex-col gap-3"
+          : "flex flex-col gap-3 rounded-[10px] bg-[color:var(--surface-2)] p-3"
+      }
+    >
       <div className="flex flex-col gap-2">
         <div className="flex gap-2 text-[10px] font-bold uppercase tracking-[0.07em] text-[color:var(--text-3)]">
           <span className="w-6" />
