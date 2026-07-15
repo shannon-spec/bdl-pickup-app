@@ -55,19 +55,26 @@ export default async function TrainingPage() {
 }
 
 function ExerciseCard({ ex }: { ex: HomeExercise }) {
-  const loggedThisWeek = ex.days.filter(Boolean).length;
+  const goalMetDays = ex.days.filter((d) => d >= 2).length;
+  const loggedDays = ex.days.filter((d) => d >= 1).length;
+  const qualifying = ex.progression === "weekly-step" ? goalMetDays : loggedDays;
   return (
     <div className="flex flex-col gap-3 rounded-[16px] bg-[color:var(--surface)] p-4 shadow-[inset_0_0_0_1px_var(--hairline)]">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-[15px] font-bold">{ex.name}</div>
           <div className="text-[11.5px] text-[color:var(--text-3)]">
-            Goal: {ex.repGoal} reps
+            Goal: {ex.currentGoal} reps/day
             {ex.type === "weighted" && ex.weightGoal != null
               ? ` @ ${ex.weightGoal} lb`
               : ""}{" "}
             · {ex.weeklyDayTarget} of 7 days
           </div>
+          {ex.nextGoal != null && ex.nextGoal !== ex.currentGoal && (
+            <div className="text-[10.5px] text-[color:var(--text-4)]">
+              Next week: {ex.nextGoal} reps/day after a completed week
+            </div>
+          )}
         </div>
         <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--brand-soft)] px-2.5 py-1 text-[12px] font-bold text-[color:var(--brand-ink)] num">
           <Flame size={13} strokeWidth={2.5} /> {ex.streak} wk
@@ -80,9 +87,11 @@ function ExerciseCard({ ex }: { ex: HomeExercise }) {
             <span
               key={i}
               className={`grid h-7 w-7 place-items-center rounded-full text-[10px] font-bold uppercase ${
-                d
+                d >= 2
                   ? "bg-[color:var(--brand)] text-white"
-                  : "bg-[color:var(--surface-2)] text-[color:var(--text-4)] shadow-[inset_0_0_0_1px_var(--hairline)]"
+                  : d === 1
+                    ? "bg-[color:var(--brand-soft)] text-[color:var(--brand-ink)]"
+                    : "bg-[color:var(--surface-2)] text-[color:var(--text-4)] shadow-[inset_0_0_0_1px_var(--hairline)]"
               }`}
             >
               {DOW[i]}
@@ -90,7 +99,7 @@ function ExerciseCard({ ex }: { ex: HomeExercise }) {
           ))}
         </div>
         <span className="text-[11px] text-[color:var(--text-4)] num">
-          {loggedThisWeek}/{ex.weeklyDayTarget}
+          {qualifying}/{ex.weeklyDayTarget}
         </span>
       </div>
 

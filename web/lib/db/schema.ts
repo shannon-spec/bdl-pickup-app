@@ -1457,10 +1457,16 @@ export const trainingUserExercise = pgTable(
      *  e.g. "pushups" | "bench". Text, not a pgEnum, so new exercises
      *  drop in without a migration. */
     exerciseSlug: text("exercise_slug").notNull(),
-    /** Goals, seeded from the catalog default when added. weightGoal is
-     *  null for bodyweight exercises. */
+    /** Current daily rep goal. Starts at baseRepGoal and steps up by
+     *  weeklyIncrement after each completed week (weekly-step exercises). */
     repGoal: integer("rep_goal").notNull(),
     weightGoal: integer("weight_goal"),
+    /** Player-set baseline (starting) daily goal. */
+    baseRepGoal: integer("base_rep_goal").notNull().default(50),
+    /** Player-set weekly step applied to repGoal after a completed week. */
+    weeklyIncrement: integer("weekly_increment").notNull().default(0),
+    /** Player-set days per Mon–Sun week required to complete it. */
+    weeklyDayTarget: integer("weekly_day_target").notNull().default(5),
     /** Monday (YYYY-MM-DD) of the week `daysLoggedThisWeek` describes. */
     weekStart: date("week_start"),
     /** 7 flags, index 0 = Monday .. 6 = Sunday; 1 = logged that day. */

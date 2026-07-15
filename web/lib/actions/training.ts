@@ -24,6 +24,7 @@ import {
   XP,
   type ExerciseState,
   type LogEvents,
+  type Targets,
 } from "@/lib/training/engine";
 
 export type ActionResult<T = unknown> =
@@ -32,7 +33,6 @@ export type ActionResult<T = unknown> =
 
 const SIGN_IN = "Sign in to train." as const;
 
-/** Map a training_user_exercise row to the engine's mutable state view. */
 function rowToState(row: TrainingUserExercise): ExerciseState {
   return {
     weekStart: row.weekStart,
@@ -49,7 +49,26 @@ function rowToState(row: TrainingUserExercise): ExerciseState {
   };
 }
 
-/** Ensure the player has a training_profile row (idempotent). */
+function rowToTargets(row: TrainingUserExercise): Targets {
+  return {
+    repGoal: row.repGoal,
+    weightGoal: row.weightGoal,
+    weeklyDayTarget: row.weeklyDayTarget,
+    weeklyIncrement: row.weeklyIncrement,
+  };
+}
+
+const clampInt = (
+  v: number | undefined,
+  def: number,
+  min: number,
+  max: number,
+): number => {
+  const n = Math.floor(Number(v));
+  if (!Number.isFinite(n)) return def;
+  return Math.min(max, Math.max(min, n));
+};
+
 async function ensureProfile(playerId: string): Promise<void> {
   await db
     .insert(trainingProfile)
@@ -57,12 +76,33 @@ async function ensureProfile(playerId: string): Promise<void> {
     .onConflictDoNothing({ target: trainingProfile.playerId });
 }
 
-/** Add an exercise to the player's cart (idempotent). */
-export async function addExercise(slug: string): Promise<ActionResult<null>> {
+export type SetupInput = {
+  slug: string;
+  baseRepGoal?: number;
+  weeklyIncrement?: number;
+  weeklyDayTarget?: number;
+};
+
+/** Add an exercise to the cart with its (per-player) setup (idempotent). */
+export async function addExercise(
+  input: SetupInput,
+): Promise<ActionResult<null>> {
   const session = await readSession();
   if (!session?.playerId) return { ok: false, error: SIGN_IN };
-  const ex = exerciseBySlug(slug);
+  const ex = exerciseBySlug(input.slug);
   if (!ex) return { ok: false, error: "Unknown exercise." };
+
+  const baseRepGoal = clampInt(input.baseRepGoal, ex.defaultBaseRepGoal, 1, 1000);
+  const weeklyDayTarget = clampInt(
+    input.weeklyDayTarget,
+    ex.defaultWeeklyDayTarget,
+    1,
+    7,
+  );
+  const weeklyIncrement =
+    ex.progression === "weekly-step"
+      ? clampInt(input.weeklyIncrement, ex.defaultWeeklyIncrement, 0, 500)
+      : 0;
 
   await ensureProfile(session.playerId);
   await db
@@ -70,7 +110,10 @@ export async function addExercise(slug: string): Promise<ActionResult<null>> {
     .values({
       playerId: session.playerId,
       exerciseSlug: ex.slug,
-      repGoal: ex.defaultRepGoal,
+      repGoal: baseRepGoal, // current daily goal starts at the baseline
+      baseRepGoal,
+      weeklyIncrement,
+      weeklyDayTarget,
       weightGoal: ex.defaultWeightGoal,
       weekStart: mondayOf(new Date()),
       daysLoggedThisWeek: [0, 0, 0, 0, 0, 0, 0],
@@ -78,6 +121,59 @@ export async function addExercise(slug: string): Promise<ActionResult<null>> {
     .onConflictDoNothing({
       target: [trainingUserExercise.playerId, trainingUserExercise.exerciseSlug],
     });
+
+  revalidatePath("/training");
+  revalidatePath("/training/cart");
+  return { ok: true, data: null };
+}
+
+/** Edit a cart exercise's setup (baseline / weekly increase / day target). */
+export async function updateExerciseSetup(input: {
+  slug: string;
+  baseRepGoal?: number;
+  weeklyIncrement?: number;
+  weeklyDayTarget?: number;
+}): Promise<ActionResult<null>> {
+  const session = await readSession();
+  if (!session?.playerId) return { ok: false, error: SIGN_IN };
+  const ex = exerciseBySlug(input.slug);
+  if (!ex) return { ok: false, error: "Unknown exercise." };
+
+  const [row] = await db
+    .select()
+    .from(trainingUserExercise)
+    .where(
+      and(
+        eq(trainingUserExercise.playerId, session.playerId),
+        eq(trainingUserExercise.exerciseSlug, ex.slug),
+      ),
+    );
+  if (!row)
+    return { ok: false, error: "Add this exercise to your program first." };
+
+  const set: Partial<TrainingUserExercise> = {};
+  if (input.weeklyDayTarget !== undefined)
+    set.weeklyDayTarget = clampInt(input.weeklyDayTarget, row.weeklyDayTarget, 1, 7);
+  if (ex.progression === "weekly-step" && input.weeklyIncrement !== undefined)
+    set.weeklyIncrement = clampInt(input.weeklyIncrement, row.weeklyIncrement, 0, 500);
+  if (input.baseRepGoal !== undefined) {
+    const b = clampInt(input.baseRepGoal, row.baseRepGoal, 1, 1000);
+    set.baseRepGoal = b;
+    // If the daily goal hasn't progressed past the baseline yet, move it too.
+    if (row.repGoal === row.baseRepGoal) set.repGoal = b;
+  }
+
+  if (Object.keys(set).length) {
+    await db
+      .update(trainingUserExercise)
+      .set(set)
+      .where(
+        and(
+          eq(trainingUserExercise.playerId, session.playerId),
+          eq(trainingUserExercise.exerciseSlug, ex.slug),
+        ),
+      );
+  }
 
   revalidatePath("/training");
   revalidatePath("/training/cart");
@@ -110,19 +206,13 @@ export type LogResult = {
   events: LogEvents;
   milestonesHit: number[];
   newTrophies: string[];
-  /** New level if this log crossed a level boundary, else null. */
   leveledTo: number | null;
-  /** New tier key if this log crossed a tier boundary, else null. */
   newTier: string | null;
+  /** Daily goal after this log stepped it up (week rollover), else null. */
+  goalRaisedTo: number | null;
   totalXp: number;
 };
 
-/**
- * Log one set. Resolves any week rollover, awards XP + trophies, and
- * returns what fired so the UI can celebrate. Writes are sequential (the
- * Neon HTTP driver has no interactive transactions); each write is
- * ordered and idempotent enough for this personal feature.
- */
 export async function logSet(input: {
   slug: string;
   reps: number;
@@ -162,9 +252,13 @@ export async function logSet(input: {
   const now = new Date();
   const today = dayKey(now);
 
-  // 1) Roll any elapsed weeks (streak increments + milestone XP).
-  const rolled = rollWeeks(rowToState(row), ex, now);
+  // 1) Roll elapsed weeks — streak, milestone XP, and any daily-goal step-up.
+  const rolled = rollWeeks(rowToState(row), ex, rowToTargets(row), now);
   const milestoneXp = rolled.milestonesHit.length * XP.streakMilestone;
+  const goalRaisedTo =
+    rolled.newRepGoal > row.repGoal ? rolled.newRepGoal : null;
+  // This week's goal is the (possibly stepped-up) value.
+  const targets: Targets = { ...rowToTargets(row), repGoal: rolled.newRepGoal };
 
   // 2) Today's cumulative reps (for cumulative-goal exercises).
   const [agg] = await db
@@ -183,8 +277,7 @@ export async function logSet(input: {
   const applied = applyLog({
     state: rolled.state,
     exercise: ex,
-    repGoal: row.repGoal,
-    weightGoal: row.weightGoal,
+    targets,
     reps,
     weight,
     now,
@@ -192,7 +285,7 @@ export async function logSet(input: {
   });
   const totalXp = milestoneXp + applied.xp;
 
-  // 4) Persist: the set row, the exercise state, the profile XP.
+  // 4) Persist the set, the exercise state (+ stepped goal), and profile XP.
   await db.insert(trainingSets).values({
     playerId: pid,
     exerciseSlug: ex.slug,
@@ -205,6 +298,7 @@ export async function logSet(input: {
   await db
     .update(trainingUserExercise)
     .set({
+      repGoal: rolled.newRepGoal,
       weekStart: s.weekStart,
       daysLoggedThisWeek: s.daysLoggedThisWeek,
       currentStreakWeeks: s.currentStreakWeeks,
@@ -298,6 +392,7 @@ export async function logSet(input: {
       newTrophies,
       leveledTo,
       newTier,
+      goalRaisedTo,
       totalXp,
     },
   };

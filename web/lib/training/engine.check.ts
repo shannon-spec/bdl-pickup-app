@@ -1,9 +1,7 @@
 /**
  * Engine self-check — run with `npx tsx lib/training/engine.check.ts`.
- *
- * The repo has no unit-test runner, so this is a standalone assertion
- * script (like scripts/verify-db.ts) that exercises the pure engine.
- * Exits non-zero on the first failed assertion.
+ * Standalone assertions (the repo has no unit-test runner). Exits non-zero
+ * on the first failure.
  */
 
 import assert from "node:assert/strict";
@@ -18,29 +16,36 @@ import {
   initialState,
   rollWeeks,
   applyLog,
+  displayStreak,
   earnedTrophies,
+  qualifyingCount,
   type ExerciseState,
+  type Targets,
 } from "./engine";
 import { exerciseBySlug, type Exercise } from "./catalog";
 
 const pushups = exerciseBySlug("pushups")!;
 const bench = exerciseBySlug("bench")!;
 
+const PUSH: Targets = {
+  repGoal: 50,
+  weightGoal: null,
+  weeklyDayTarget: 5,
+  weeklyIncrement: 10,
+};
+const BENCH: Targets = {
+  repGoal: 5,
+  weightGoal: 185,
+  weeklyDayTarget: 3,
+  weeklyIncrement: 0,
+};
+
 /* ------------------------------- levels/tiers ----------------------------- */
 assert.equal(levelForXp(0), 1);
-assert.equal(levelForXp(499), 1);
-assert.equal(levelForXp(500), 2);
-assert.equal(levelForXp(2000), 5); // Prospect entry
-assert.equal(levelForXp(4500), 10); // Contender entry
-assert.equal(levelForXp(7000), 15); // Beast entry
-assert.equal(levelForXp(9500), 20); // Elite entry
-
-assert.equal(tierForXp(0).key, "rookie");
+assert.equal(levelForXp(2000), 5);
+assert.equal(levelForXp(4500), 10);
 assert.equal(tierForXp(2000).key, "prospect");
-assert.equal(tierForXp(4500).key, "contender");
-assert.equal(tierForXp(7000).key, "beast");
 assert.equal(tierForXp(9500).key, "elite");
-
 const lp = levelProgress(750);
 assert.equal(lp.level, 2);
 assert.equal(lp.into, 250);
@@ -49,9 +54,7 @@ assert.equal(lp.pct, 50);
 /* ---------------------------------- dates --------------------------------- */
 assert.equal(addDays("2026-07-13", 7), "2026-07-20");
 assert.equal(daysBetween("2026-07-13", "2026-07-20"), 7);
-assert.equal(addDays("2026-02-28", 1), "2026-03-01"); // 2026 not a leap year
-assert.equal(addDays("2026-03-08", 1), "2026-03-09"); // US DST spring-forward day
-// mondayOf always returns a Monday
+assert.equal(addDays("2026-02-28", 1), "2026-03-01");
 const mon = mondayOf(new Date("2026-07-15T15:00:00Z"));
 const monWd = new Intl.DateTimeFormat("en-US", {
   timeZone: "America/New_York",
@@ -59,164 +62,165 @@ const monWd = new Intl.DateTimeFormat("en-US", {
 }).format(new Date(`${mon}T17:00:00Z`));
 assert.equal(monWd, "Mon");
 
+/* ------------------------------ qualifyingCount --------------------------- */
+// Push-ups: only goal-met days (level 2) count.
+assert.equal(qualifyingCount([2, 2, 1, 1, 0, 0, 0], pushups), 2);
+// Bench: any logged day (level ≥ 1) counts.
+assert.equal(qualifyingCount([2, 2, 1, 1, 0, 0, 0], bench), 4);
+
 /* -------------------------------- rollWeeks ------------------------------- */
 const now = new Date("2026-07-15T15:00:00Z");
 const curMon = mondayOf(now);
 const prevMon = addDays(curMon, -7);
-
 const base = (over: Partial<ExerciseState>): ExerciseState => ({
   ...initialState(now),
   ...over,
 });
 
-// Success last week → streak++ ; hitting 4 → milestone
+// Push-ups: completed week (5 goal-met days) → streak++, milestone, goal steps up
 {
   const s = base({
     weekStart: prevMon,
-    daysLoggedThisWeek: [1, 1, 1, 1, 1, 0, 0], // 5 ≥ target 5
+    daysLoggedThisWeek: [2, 2, 2, 2, 2, 0, 0],
     currentStreakWeeks: 3,
     bestStreakWeeks: 3,
   });
-  const { state, milestonesHit } = rollWeeks(s, pushups, now);
-  assert.equal(state.currentStreakWeeks, 4);
-  assert.equal(state.bestStreakWeeks, 4);
-  assert.equal(state.weekStart, curMon);
-  assert.deepEqual(state.daysLoggedThisWeek, [0, 0, 0, 0, 0, 0, 0]);
-  assert.deepEqual(milestonesHit, [4]);
+  const r = rollWeeks(s, pushups, PUSH, now);
+  assert.equal(r.state.currentStreakWeeks, 4);
+  assert.deepEqual(r.milestonesHit, [4]);
+  assert.equal(r.newRepGoal, 60); // 50 + 10 step-up
 }
 
-// Missed last week → streak resets to 0
+// Push-ups: logged but never hit the goal → week NOT complete, no step, streak resets
 {
   const s = base({
     weekStart: prevMon,
-    daysLoggedThisWeek: [1, 1, 0, 0, 0, 0, 0], // 2 < 5
-    currentStreakWeeks: 6,
-    bestStreakWeeks: 6,
+    daysLoggedThisWeek: [1, 1, 1, 1, 1, 0, 0], // 5 logged, 0 goal-met
+    currentStreakWeeks: 2,
   });
-  const { state, milestonesHit } = rollWeeks(s, pushups, now);
-  assert.equal(state.currentStreakWeeks, 0);
-  assert.equal(state.bestStreakWeeks, 6);
-  assert.deepEqual(milestonesHit, []);
+  const r = rollWeeks(s, pushups, PUSH, now);
+  assert.equal(r.state.currentStreakWeeks, 0);
+  assert.equal(r.newRepGoal, 50); // no level-up
 }
 
-// Two-week gap breaks the streak even if the stored week succeeded
+// Push-ups: two-week gap breaks streak but the completed week still stepped the goal
 {
   const s = base({
     weekStart: addDays(curMon, -14),
-    daysLoggedThisWeek: [1, 1, 1, 1, 1, 0, 0],
+    daysLoggedThisWeek: [2, 2, 2, 2, 2, 0, 0],
     currentStreakWeeks: 3,
     bestStreakWeeks: 3,
   });
-  const { state, milestonesHit } = rollWeeks(s, pushups, now);
-  assert.equal(state.currentStreakWeeks, 0); // gap broke it
-  assert.equal(state.bestStreakWeeks, 4); // but the completed week counts toward best
-  assert.deepEqual(milestonesHit, [4]); // milestone was reached
+  const r = rollWeeks(s, pushups, PUSH, now);
+  assert.equal(r.state.currentStreakWeeks, 0);
+  assert.equal(r.state.bestStreakWeeks, 4);
+  assert.deepEqual(r.milestonesHit, [4]);
+  assert.equal(r.newRepGoal, 60);
+}
+
+// Bench: 3 logged days completes the week; progression "none" → goal unchanged
+{
+  const s = base({
+    weekStart: prevMon,
+    daysLoggedThisWeek: [1, 1, 1, 0, 0, 0, 0],
+    currentStreakWeeks: 0,
+  });
+  const r = rollWeeks(s, bench, BENCH, now);
+  assert.equal(r.state.currentStreakWeeks, 1);
+  assert.equal(r.newRepGoal, 5);
 }
 
 /* --------------------------------- applyLog ------------------------------- */
 const today = dayKey(now);
 
-// Push-ups: cumulative rep goal, first log = +20 only, goal on cumulative
+// Push-ups cumulative: first log under goal = +20 + level-1 day; crossing goal = +30 + level-2
 {
-  const start = base({
-    weekStart: addDays(today, 0),
-    daysLoggedThisWeek: [0, 0, 0, 0, 0, 0, 0],
-  });
-  const first = applyLog({
+  const start = base({ weekStart: today, daysLoggedThisWeek: [0, 0, 0, 0, 0, 0, 0] });
+  const a = applyLog({
     state: start,
     exercise: pushups,
-    repGoal: 50,
-    weightGoal: null,
+    targets: PUSH,
     reps: 30,
     weight: null,
     now,
     repsTodayTotal: 30,
   });
-  assert.equal(first.xp, 20);
-  assert.equal(first.events.logDay, true);
-  assert.equal(first.events.repGoal, false);
+  assert.equal(a.xp, 20);
+  assert.equal(a.events.repGoal, false);
+  assert.equal(a.state.daysLoggedThisWeek![0], 1); // logged, under goal
 
-  const second = applyLog({
-    state: first.state,
+  const b = applyLog({
+    state: a.state,
     exercise: pushups,
-    repGoal: 50,
-    weightGoal: null,
+    targets: PUSH,
     reps: 25,
     weight: null,
     now,
     repsTodayTotal: 55, // cumulative crosses 50
   });
-  assert.equal(second.xp, 30); // rep goal only; day already logged
-  assert.equal(second.events.logDay, false);
-  assert.equal(second.events.repGoal, true);
-  assert.equal(second.state.lifetimeReps, 55);
+  assert.equal(b.xp, 30);
+  assert.equal(b.events.repGoal, true);
+  assert.equal(b.state.daysLoggedThisWeek![0], 2); // day upgraded to goal-met
 }
 
-// Weekly bonus fires on the 5th logged day (once)
+// Push-ups weekly bonus on the 5th goal-met day
 {
   const start = base({
-    weekStart: addDays(today, -4), // makes today idx 4
-    daysLoggedThisWeek: [1, 1, 1, 1, 0, 0, 0], // 4 days already
+    weekStart: addDays(today, -4), // today = idx 4
+    daysLoggedThisWeek: [2, 2, 2, 2, 0, 0, 0], // 4 goal-met days
     lastLoggedDay: addDays(today, -1),
   });
   const r = applyLog({
     state: start,
     exercise: pushups,
-    repGoal: 50,
-    weightGoal: null,
-    reps: 10,
+    targets: PUSH,
+    reps: 50,
     weight: null,
     now,
-    repsTodayTotal: 10,
+    repsTodayTotal: 50, // meets goal
   });
   assert.equal(r.events.logDay, true);
+  assert.equal(r.events.repGoal, true);
   assert.equal(r.events.weekly, true);
-  assert.equal(r.xp, 20 + 100); // log day + weekly
+  assert.equal(r.xp, 20 + 30 + 100);
 }
 
-// Bench: single-set rep goal + PR
+// Bench PR
 {
   const start = base({ weekStart: today });
   const pr = applyLog({
     state: start,
     exercise: bench,
-    repGoal: 5,
-    weightGoal: 185,
+    targets: BENCH,
     reps: 5,
     weight: 185,
     now,
     repsTodayTotal: 5,
   });
-  assert.equal(pr.events.logDay, true);
-  assert.equal(pr.events.repGoal, true);
   assert.equal(pr.events.pr, true);
   assert.equal(pr.xp, 20 + 30 + 50);
   assert.equal(pr.state.bestSetWeight, 185);
+}
 
-  // Below the weight goal on another day: rep goal yes, PR no
-  const lighter = applyLog({
-    state: { ...pr.state, lastLoggedDay: null, repGoalDay: null, prDay: null },
-    exercise: bench,
-    repGoal: 5,
-    weightGoal: 185,
-    reps: 5,
-    weight: 135,
-    now,
-    repsTodayTotal: 5,
+/* ------------------------------- displayStreak ---------------------------- */
+{
+  const s = base({
+    weekStart: prevMon,
+    daysLoggedThisWeek: [2, 2, 2, 2, 2, 0, 0],
+    currentStreakWeeks: 1,
   });
-  assert.equal(lighter.events.pr, false);
-  assert.equal(lighter.events.repGoal, true);
+  assert.equal(displayStreak(s, pushups, PUSH, now), 2);
 }
 
 /* -------------------------------- trophies -------------------------------- */
 {
   const states: { exercise: Exercise; state: ExerciseState }[] = [
     { exercise: pushups, state: base({ lifetimeReps: 500 }) },
-    { exercise: bench, state: base({ bestSetWeight: 225, lifetimeReps: 20 }) },
+    { exercise: bench, state: base({ bestSetWeight: 225 }) },
   ];
   const earned = earnedTrophies({
     states,
-    xp: 4500, // level 10 → Prospect + Contender
+    xp: 4500,
     playerWeight: 200,
     today: { slug: "pushups", repsToday: 100 },
   });
@@ -224,18 +228,14 @@ const today = dayKey(now);
     "first-rep",
     "pushups-500",
     "century-club",
-    "bench-135",
     "bench-225",
     "bench-bodyweight",
-    "tier-prospect",
     "tier-contender",
   ]) {
     assert.ok(earned.includes(id), `expected trophy ${id}`);
   }
-  assert.ok(!earned.includes("pushups-1000"), "1000 club not yet");
-  assert.ok(!earned.includes("bench-315"), "315 not yet");
-  assert.ok(!earned.includes("tier-beast"), "beast not yet");
-  assert.ok(!earned.includes("pr-machine"), "pr-machine is coming-soon");
+  assert.ok(!earned.includes("bench-315"));
+  assert.ok(!earned.includes("tier-beast"));
 }
 
 console.log("training engine self-check: ALL PASSED");

@@ -1,7 +1,7 @@
 /**
  * Training read models. Plain async functions scoped to a player id;
- * heavy lifting (streaks, week buckets, heatmap) is computed in TS from
- * a small set of rows, per the repo's query conventions.
+ * streaks / week buckets / heatmap are computed in TS from a small set of
+ * rows, per the repo's query conventions.
  */
 
 import { and, asc, eq, gte } from "drizzle-orm";
@@ -13,7 +13,12 @@ import {
   trainingUserExercise,
   type TrainingUserExercise,
 } from "@/lib/db";
-import { EXERCISES, exerciseBySlug, type Exercise } from "@/lib/training/catalog";
+import {
+  EXERCISES,
+  exerciseBySlug,
+  type Exercise,
+  type SetupField,
+} from "@/lib/training/catalog";
 import {
   addDays,
   daysBetween,
@@ -26,6 +31,7 @@ import {
   TROPHIES,
   tierForLevel,
   type ExerciseState,
+  type Targets,
   type Tier,
   type Trophy,
 } from "@/lib/training/engine";
@@ -46,7 +52,16 @@ function rowToState(row: TrainingUserExercise): ExerciseState {
   };
 }
 
-/** Current-week (Mon–Sun) day flags, empty if the stored week is stale. */
+function rowToTargets(row: TrainingUserExercise): Targets {
+  return {
+    repGoal: row.repGoal,
+    weightGoal: row.weightGoal,
+    weeklyDayTarget: row.weeklyDayTarget,
+    weeklyIncrement: row.weeklyIncrement,
+  };
+}
+
+/** Current-week (Mon–Sun) per-day levels (0/1/2), zeros if week is stale. */
 function currentWeekDays(row: TrainingUserExercise, now: Date): number[] {
   const cur = mondayOf(now);
   if (row.weekStart === cur && row.daysLoggedThisWeek)
@@ -60,11 +75,14 @@ export type HomeExercise = {
   slug: string;
   name: string;
   type: Exercise["type"];
-  repGoal: number;
+  progression: Exercise["progression"];
+  currentGoal: number;
+  nextGoal: number | null; // weekly-step only
   weightGoal: number | null;
+  weeklyIncrement: number;
   weeklyDayTarget: number;
   streak: number;
-  days: number[]; // 7 flags, Mon…Sun
+  days: number[]; // 7 levels (0/1/2), Mon…Sun
 };
 
 export type TrainingHome = {
@@ -102,10 +120,14 @@ export async function getTrainingHome(playerId: string): Promise<TrainingHome> {
         slug: ex.slug,
         name: ex.name,
         type: ex.type,
-        repGoal: r.repGoal,
+        progression: ex.progression,
+        currentGoal: r.repGoal,
+        nextGoal:
+          ex.progression === "weekly-step" ? r.repGoal + r.weeklyIncrement : null,
         weightGoal: r.weightGoal,
-        weeklyDayTarget: ex.weeklyDayTarget,
-        streak: displayStreak(rowToState(r), ex, now),
+        weeklyIncrement: r.weeklyIncrement,
+        weeklyDayTarget: r.weeklyDayTarget,
+        streak: displayStreak(rowToState(r), ex, rowToTargets(r), now),
         days: currentWeekDays(r, now),
       };
     })
@@ -127,22 +149,28 @@ export type CartExercise = {
   slug: string;
   name: string;
   type: Exercise["type"];
-  repGoal: number;
+  progression: Exercise["progression"];
+  currentGoal: number;
+  baseRepGoal: number;
   weightGoal: number | null;
+  weeklyIncrement: number;
   weeklyDayTarget: number;
+  setupFields: SetupField[];
 };
 
-export type CartView = {
-  cart: CartExercise[];
-  addable: {
-    slug: string;
-    name: string;
-    type: Exercise["type"];
-    defaultRepGoal: number;
-    defaultWeightGoal: number | null;
-    weeklyDayTarget: number;
-  }[];
+export type AddableExercise = {
+  slug: string;
+  name: string;
+  type: Exercise["type"];
+  progression: Exercise["progression"];
+  defaultBaseRepGoal: number;
+  defaultWeeklyIncrement: number;
+  defaultWeeklyDayTarget: number;
+  defaultWeightGoal: number | null;
+  setupFields: SetupField[];
 };
+
+export type CartView = { cart: CartExercise[]; addable: AddableExercise[] };
 
 export async function getCart(playerId: string): Promise<CartView> {
   const rows = await db
@@ -160,20 +188,29 @@ export async function getCart(playerId: string): Promise<CartView> {
         slug: ex.slug,
         name: ex.name,
         type: ex.type,
-        repGoal: r.repGoal,
+        progression: ex.progression,
+        currentGoal: r.repGoal,
+        baseRepGoal: r.baseRepGoal,
         weightGoal: r.weightGoal,
-        weeklyDayTarget: ex.weeklyDayTarget,
+        weeklyIncrement: r.weeklyIncrement,
+        weeklyDayTarget: r.weeklyDayTarget,
+        setupFields: ex.setupFields,
       };
     })
     .filter((x): x is CartExercise => x !== null);
 
-  const addable = EXERCISES.filter((e) => !inCart.has(e.slug)).map((e) => ({
+  const addable: AddableExercise[] = EXERCISES.filter(
+    (e) => !inCart.has(e.slug),
+  ).map((e) => ({
     slug: e.slug,
     name: e.name,
     type: e.type,
-    defaultRepGoal: e.defaultRepGoal,
+    progression: e.progression,
+    defaultBaseRepGoal: e.defaultBaseRepGoal,
+    defaultWeeklyIncrement: e.defaultWeeklyIncrement,
+    defaultWeeklyDayTarget: e.defaultWeeklyDayTarget,
     defaultWeightGoal: e.defaultWeightGoal,
-    weeklyDayTarget: e.weeklyDayTarget,
+    setupFields: e.setupFields,
   }));
 
   return { cart, addable };
@@ -184,21 +221,16 @@ export async function getCart(playerId: string): Promise<CartView> {
 export type HeatCell = "none" | "pushups" | "bench" | "both";
 
 export type TrainingStats = {
-  weeks: string[]; // 8 Monday keys, oldest → newest
+  weeks: string[];
   volume: {
     slug: string;
     name: string;
     type: Exercise["type"];
-    /** last 6 weeks */
     series: { week: string; reps: number }[];
     max: number;
   }[];
-  chips: {
-    slug: string;
-    name: string;
-    weekly: { week: string; hit: boolean }[]; // last 8
-  }[];
-  heatmap: { week: string; days: HeatCell[] }[]; // 8 × 7 (Mon…Sun)
+  chips: { slug: string; name: string; weekly: { week: string; hit: boolean }[] }[];
+  heatmap: { week: string; days: HeatCell[] }[];
   streaks: { slug: string; name: string; streak: number }[];
   trophies: (Trophy & { unlocked: boolean })[];
   tiers: Tier[];
@@ -209,9 +241,7 @@ export async function getTrainingStats(
 ): Promise<TrainingStats> {
   const now = new Date();
   const curMon = mondayOf(now);
-  const weeks8 = Array.from({ length: 8 }, (_, i) =>
-    addDays(curMon, -7 * (7 - i)),
-  ); // oldest → newest
+  const weeks8 = Array.from({ length: 8 }, (_, i) => addDays(curMon, -7 * (7 - i)));
   const cutoff = weeks8[0];
 
   const [rows, sets, trophyRows] = await Promise.all([
@@ -239,15 +269,17 @@ export async function getTrainingStats(
       .where(eq(trainingTrophies.playerId, playerId)),
   ]);
 
-  // The exercises to report on: whatever's in the cart (fallback: catalog).
-  const cartSlugs = rows.map((r) => r.exerciseSlug);
-  const reportSlugs = cartSlugs.length
-    ? cartSlugs
-    : EXERCISES.map((e) => e.slug);
+  // Per-user weekly day-target (falls back to the catalog default).
+  const dayTargetFor = (slug: string): number =>
+    rows.find((r) => r.exerciseSlug === slug)?.weeklyDayTarget ??
+    exerciseBySlug(slug)?.defaultWeeklyDayTarget ??
+    5;
 
-  // Bucket sets by (slug, week) for volume, and (slug, week, dayIdx) for days.
-  const repsByWeek = new Map<string, number>(); // `${slug}|${week}` → reps
-  const daysByWeek = new Map<string, Set<number>>(); // `${slug}|${week}` → dayIdx set
+  const cartSlugs = rows.map((r) => r.exerciseSlug);
+  const reportSlugs = cartSlugs.length ? cartSlugs : EXERCISES.map((e) => e.slug);
+
+  const repsByWeek = new Map<string, number>();
+  const daysByWeek = new Map<string, Set<number>>();
   for (const s of sets) {
     const wk = mondayOfKey(s.day);
     const kw = `${s.slug}|${wk}`;
@@ -279,10 +311,10 @@ export async function getTrainingStats(
     .map((slug) => {
       const ex = exerciseBySlug(slug);
       if (!ex) return null;
+      const target = dayTargetFor(slug);
       const weekly = weeks8.map((week) => ({
         week,
-        hit:
-          (daysByWeek.get(`${slug}|${week}`)?.size ?? 0) >= ex.weeklyDayTarget,
+        hit: (daysByWeek.get(`${slug}|${week}`)?.size ?? 0) >= target,
       }));
       return { slug, name: ex.name, weekly };
     })
@@ -306,7 +338,7 @@ export async function getTrainingStats(
       return {
         slug: ex.slug,
         name: ex.name,
-        streak: displayStreak(rowToState(r), ex, now),
+        streak: displayStreak(rowToState(r), ex, rowToTargets(r), now),
       };
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
@@ -314,13 +346,5 @@ export async function getTrainingStats(
   const unlocked = new Set(trophyRows.map((t) => t.trophyId));
   const trophies = TROPHIES.map((t) => ({ ...t, unlocked: unlocked.has(t.id) }));
 
-  return {
-    weeks: weeks8,
-    volume,
-    chips,
-    heatmap,
-    streaks,
-    trophies,
-    tiers: TIERS,
-  };
+  return { weeks: weeks8, volume, chips, heatmap, streaks, trophies, tiers: TIERS };
 }

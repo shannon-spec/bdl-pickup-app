@@ -93,9 +93,9 @@ export function LogClient({
         <div className="flex items-baseline justify-between">
           <div className="text-[15px] font-bold">{exercise.name}</div>
           <div className="text-[11.5px] text-[color:var(--text-3)]">
-            Rep goal: {exercise.repGoal}
+            Daily goal: {exercise.currentGoal}
             {weighted && exercise.weightGoal != null && (
-              <> · PR: {exercise.repGoal} @ {exercise.weightGoal} lb</>
+              <> · PR: {exercise.currentGoal} @ {exercise.weightGoal} lb</>
             )}
           </div>
         </div>
@@ -183,6 +183,12 @@ function Celebration({ r }: { r: LogResult }) {
         <div className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-[color:var(--up)]">
           <TrendingUp size={15} strokeWidth={2.5} /> Level up — you reached level{" "}
           {r.leveledTo}!
+        </div>
+      )}
+      {r.goalRaisedTo != null && (
+        <div className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-[color:var(--brand-ink)]">
+          <TrendingUp size={15} strokeWidth={2.5} /> Week complete — daily goal
+          raised to {r.goalRaisedTo}!
         </div>
       )}
       {r.newTrophies.length > 0 && (
