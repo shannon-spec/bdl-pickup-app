@@ -277,8 +277,6 @@ export async function getCart(playerId: string): Promise<CartView> {
 
 /* --------------------------------- Stats ---------------------------------- */
 
-export type HeatCell = "none" | "pushups" | "bench" | "both";
-
 export type TrainingStats = {
   weeks: string[];
   volume: {
@@ -289,7 +287,8 @@ export type TrainingStats = {
     max: number;
   }[];
   chips: { slug: string; name: string; weekly: { week: string; hit: boolean }[] }[];
-  heatmap: { week: string; days: HeatCell[] }[];
+  /** Each day = number of distinct exercises trained (contribution-graph). */
+  heatmap: { week: string; days: number[] }[];
   streaks: { slug: string; name: string; streak: number }[];
   trophies: (Trophy & { unlocked: boolean })[];
   tiers: Tier[];
@@ -351,6 +350,8 @@ export async function getTrainingStats(
 
   const repsByWeek = new Map<string, number>();
   const daysByWeek = new Map<string, Set<number>>();
+  // `${week}|${dayIdx}` → set of distinct exercise slugs trained that day.
+  const trainedByWeekDay = new Map<string, Set<string>>();
   for (const s of sets) {
     const wk = mondayOfKey(s.day);
     const kw = `${s.slug}|${wk}`;
@@ -358,6 +359,9 @@ export async function getTrainingStats(
     const idx = Math.min(6, Math.max(0, daysBetween(wk, s.day)));
     if (!daysByWeek.has(kw)) daysByWeek.set(kw, new Set());
     daysByWeek.get(kw)!.add(idx);
+    const wd = `${wk}|${idx}`;
+    if (!trainedByWeekDay.has(wd)) trainedByWeekDay.set(wd, new Set());
+    trainedByWeekDay.get(wd)!.add(s.slug);
   }
 
   const volume = reportSlugs
@@ -391,16 +395,13 @@ export async function getTrainingStats(
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
 
-  const heatmap = weeks8.map((week) => {
-    const pDays = daysByWeek.get(`pushups|${week}`) ?? new Set<number>();
-    const bDays = daysByWeek.get(`bench|${week}`) ?? new Set<number>();
-    const days: HeatCell[] = Array.from({ length: 7 }, (_, i) => {
-      const p = pDays.has(i);
-      const b = bDays.has(i);
-      return p && b ? "both" : p ? "pushups" : b ? "bench" : "none";
-    });
-    return { week, days };
-  });
+  const heatmap = weeks8.map((week) => ({
+    week,
+    days: Array.from(
+      { length: 7 },
+      (_, i) => trainedByWeekDay.get(`${week}|${i}`)?.size ?? 0,
+    ),
+  }));
 
   const streaks = rows
     .map((r) => {
