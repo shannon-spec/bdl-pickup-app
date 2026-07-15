@@ -87,9 +87,23 @@ function SquatIcon(p: { size?: number; className?: string }) {
   );
 }
 
+/** Hoop + net for free throws. */
+function FreeThrowIcon(p: { size?: number; className?: string }) {
+  return (
+    <Svg size={p.size} className={p.className}>
+      <ellipse cx="12" cy="7" rx="7.5" ry="2.2" />
+      <path d="M5.2 7.8 L9.5 16.5 H14.5 L18.8 7.8" />
+      <path d="M9 9 L10.8 16.5" />
+      <path d="M15 9 L13.2 16.5" />
+    </Svg>
+  );
+}
+
 export function ExerciseIcon({ slug, size, className }: Props) {
   if (slug === "pushups") return <PushupsIcon size={size} className={className} />;
   if (slug === "shots") return <ShotsIcon size={size} className={className} />;
   if (slug === "squats") return <SquatIcon size={size} className={className} />;
+  if (slug === "freethrows")
+    return <FreeThrowIcon size={size} className={className} />;
   return <BenchIcon size={size} className={className} />;
 }

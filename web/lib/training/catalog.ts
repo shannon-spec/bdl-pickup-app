@@ -150,6 +150,25 @@ export const EXERCISES: Exercise[] = [
     defaultWeightGoal: null,
     setupFields: ["baseRepGoal", "weeklyDayTarget"],
   },
+  {
+    slug: "freethrows",
+    name: "Free Throws",
+    group: "skills",
+    type: "skill",
+    repCounting: "cumulative",
+    progression: "none",
+    weekQualifier: "goal-met",
+    hasRepGoal: true,
+    repLabel: "Shots",
+    secondary: { key: "made", label: "Made", required: false },
+    defaultBaseRepGoal: 50,
+    defaultWeeklyIncrement: 0,
+    defaultBaseWeightGoal: null,
+    defaultWeeklyWeightIncrement: 0,
+    defaultWeeklyDayTarget: 3,
+    defaultWeightGoal: null,
+    setupFields: ["baseRepGoal", "weeklyDayTarget"],
+  },
 ];
 
 export function exerciseBySlug(slug: string): Exercise | undefined {
