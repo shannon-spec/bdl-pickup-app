@@ -9,16 +9,18 @@ import {
   trainingSets,
   trainingTrophies,
   trainingUserExercise,
+  trainingWeekResults,
   type TrainingUserExercise,
 } from "@/lib/db";
 import { readSession } from "@/lib/auth/session";
-import { exerciseBySlug } from "@/lib/training/catalog";
+import { exerciseBySlug, type Exercise } from "@/lib/training/catalog";
 import {
   applyLog,
   dayKey,
   earnedTrophies,
   levelForXp,
   mondayOf,
+  qualifyingCount,
   rollWeeks,
   tierForXp,
   XP,
@@ -74,6 +76,39 @@ async function ensureProfile(playerId: string): Promise<void> {
     .insert(trainingProfile)
     .values({ playerId })
     .onConflictDoNothing({ target: trainingProfile.playerId });
+}
+
+/** Record (or refresh) a week's completion result. Called on the live week
+ *  each log, and to freeze the prior week when it rolls over. */
+async function upsertWeekResult(
+  playerId: string,
+  exercise: Exercise,
+  weekStart: string,
+  flags: number[] | null,
+  dayTarget: number,
+  dailyGoal: number,
+): Promise<void> {
+  const qualifyingDays = qualifyingCount(flags, exercise);
+  const completed = qualifyingDays >= dayTarget;
+  await db
+    .insert(trainingWeekResults)
+    .values({
+      playerId,
+      exerciseSlug: exercise.slug,
+      weekStart,
+      qualifyingDays,
+      dayTarget,
+      dailyGoal,
+      completed,
+    })
+    .onConflictDoUpdate({
+      target: [
+        trainingWeekResults.playerId,
+        trainingWeekResults.exerciseSlug,
+        trainingWeekResults.weekStart,
+      ],
+      set: { qualifyingDays, dayTarget, dailyGoal, completed },
+    });
 }
 
 export type SetupInput = {
@@ -333,6 +368,18 @@ export async function logSet(input: {
     rolled.newRepGoal > row.repGoal ? rolled.newRepGoal : null;
   const targets: Targets = { ...rowToTargets(row), repGoal: rolled.newRepGoal };
 
+  // On rollover, freeze the just-finished week's completion result.
+  if (row.weekStart && rolled.state.weekStart !== row.weekStart) {
+    await upsertWeekResult(
+      pid,
+      ex,
+      row.weekStart,
+      row.daysLoggedThisWeek,
+      row.weeklyDayTarget,
+      row.repGoal,
+    );
+  }
+
   // Day-level facts from the stored sets for `day` (before inserting this
   // one) — keeps the once-per-day awards correct even when back-dating.
   const prior = await db
@@ -427,6 +474,18 @@ export async function logSet(input: {
         eq(trainingUserExercise.exerciseSlug, ex.slug),
       ),
     );
+
+  // Refresh the live week's completion result (current-week logs only).
+  if (isCurrentWeek && s.weekStart) {
+    await upsertWeekResult(
+      pid,
+      ex,
+      s.weekStart,
+      s.daysLoggedThisWeek,
+      targets.weeklyDayTarget,
+      targets.repGoal,
+    );
+  }
 
   const [prof] = await db
     .select({ xp: trainingProfile.xp })

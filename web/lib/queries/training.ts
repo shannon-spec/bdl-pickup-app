@@ -11,6 +11,7 @@ import {
   trainingSets,
   trainingTrophies,
   trainingUserExercise,
+  trainingWeekResults,
   type TrainingUserExercise,
 } from "@/lib/db";
 import {
@@ -244,7 +245,7 @@ export async function getTrainingStats(
   const weeks8 = Array.from({ length: 8 }, (_, i) => addDays(curMon, -7 * (7 - i)));
   const cutoff = weeks8[0];
 
-  const [rows, sets, trophyRows] = await Promise.all([
+  const [rows, sets, trophyRows, weekRows] = await Promise.all([
     db
       .select()
       .from(trainingUserExercise)
@@ -267,13 +268,25 @@ export async function getTrainingStats(
       .select({ trophyId: trainingTrophies.trophyId })
       .from(trainingTrophies)
       .where(eq(trainingTrophies.playerId, playerId)),
+    db
+      .select({
+        slug: trainingWeekResults.exerciseSlug,
+        week: trainingWeekResults.weekStart,
+        completed: trainingWeekResults.completed,
+      })
+      .from(trainingWeekResults)
+      .where(
+        and(
+          eq(trainingWeekResults.playerId, playerId),
+          gte(trainingWeekResults.weekStart, cutoff),
+        ),
+      ),
   ]);
 
-  // Per-user weekly day-target (falls back to the catalog default).
-  const dayTargetFor = (slug: string): number =>
-    rows.find((r) => r.exerciseSlug === slug)?.weeklyDayTarget ??
-    exerciseBySlug(slug)?.defaultWeeklyDayTarget ??
-    5;
+  // True per-week completion (goal-met), from the frozen week records.
+  const completedByWeek = new Map<string, boolean>();
+  for (const w of weekRows)
+    completedByWeek.set(`${w.slug}|${w.week}`, w.completed);
 
   const cartSlugs = rows.map((r) => r.exerciseSlug);
   const reportSlugs = cartSlugs.length ? cartSlugs : EXERCISES.map((e) => e.slug);
@@ -311,10 +324,9 @@ export async function getTrainingStats(
     .map((slug) => {
       const ex = exerciseBySlug(slug);
       if (!ex) return null;
-      const target = dayTargetFor(slug);
       const weekly = weeks8.map((week) => ({
         week,
-        hit: (daysByWeek.get(`${slug}|${week}`)?.size ?? 0) >= target,
+        hit: completedByWeek.get(`${slug}|${week}`) ?? false,
       }));
       return { slug, name: ex.name, weekly };
     })

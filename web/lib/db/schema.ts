@@ -1537,6 +1537,33 @@ export const trainingTrophies = pgTable(
   (t) => [primaryKey({ columns: [t.playerId, t.trophyId] })],
 );
 
+/** Per-week completion record — one row per (player, exercise, week).
+ *  The current week's row is upserted on each log; it's frozen once the
+ *  week rolls over. Lets the Stats "weekly goal" chips stay accurate even
+ *  as the daily goal progresses (past weeks' goals aren't otherwise kept). */
+export const trainingWeekResults = pgTable(
+  "training_week_results",
+  {
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    exerciseSlug: text("exercise_slug").notNull(),
+    weekStart: date("week_start").notNull(),
+    /** Days that met this exercise's weekly qualifier that week. */
+    qualifyingDays: integer("qualifying_days").notNull().default(0),
+    dayTarget: integer("day_target").notNull(),
+    dailyGoal: integer("daily_goal").notNull(),
+    completed: boolean("completed").notNull().default(false),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    primaryKey({ columns: [t.playerId, t.exerciseSlug, t.weekStart] }),
+  ],
+);
+
 /* ============== RELATIONS ============== */
 
 export const playersRelations = relations(players, ({ many }) => ({
@@ -1650,6 +1677,8 @@ export type TrainingSet = typeof trainingSets.$inferSelect;
 export type NewTrainingSet = typeof trainingSets.$inferInsert;
 export type TrainingTrophy = typeof trainingTrophies.$inferSelect;
 export type NewTrainingTrophy = typeof trainingTrophies.$inferInsert;
+export type TrainingWeekResult = typeof trainingWeekResults.$inferSelect;
+export type NewTrainingWeekResult = typeof trainingWeekResults.$inferInsert;
 
 // Suppress an unused-symbol warning when this file is imported as types-only.
 export const __schemaSqlMarker = sql`/* schema */`;
