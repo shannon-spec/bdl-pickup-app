@@ -180,6 +180,69 @@ export async function updateExerciseSetup(input: {
   return { ok: true, data: null };
 }
 
+/**
+ * Start a fresh streak: zero the current streak + this week and re-baseline
+ * the daily goal to the entered baseline. Keeps XP, best streak, lifetime
+ * reps, best set, and trophies (account-level history is preserved).
+ */
+export async function startNewStreak(input: {
+  slug: string;
+  baseRepGoal?: number;
+  weeklyIncrement?: number;
+  weeklyDayTarget?: number;
+}): Promise<ActionResult<null>> {
+  const session = await readSession();
+  if (!session?.playerId) return { ok: false, error: SIGN_IN };
+  const ex = exerciseBySlug(input.slug);
+  if (!ex) return { ok: false, error: "Unknown exercise." };
+
+  const [row] = await db
+    .select()
+    .from(trainingUserExercise)
+    .where(
+      and(
+        eq(trainingUserExercise.playerId, session.playerId),
+        eq(trainingUserExercise.exerciseSlug, ex.slug),
+      ),
+    );
+  if (!row)
+    return { ok: false, error: "Add this exercise to your program first." };
+
+  const baseRepGoal = clampInt(input.baseRepGoal, row.baseRepGoal, 1, 1000);
+  const weeklyDayTarget = clampInt(input.weeklyDayTarget, row.weeklyDayTarget, 1, 7);
+  const weeklyIncrement =
+    ex.progression === "weekly-step"
+      ? clampInt(input.weeklyIncrement, row.weeklyIncrement, 0, 500)
+      : 0;
+
+  await db
+    .update(trainingUserExercise)
+    .set({
+      baseRepGoal,
+      repGoal: baseRepGoal, // re-baseline the current daily goal
+      weeklyIncrement,
+      weeklyDayTarget,
+      currentStreakWeeks: 0,
+      weekStart: mondayOf(new Date()),
+      daysLoggedThisWeek: [0, 0, 0, 0, 0, 0, 0],
+      lastLoggedDay: null,
+      repGoalDay: null,
+      prDay: null,
+      weeklyGoalHitWeek: null,
+      // Preserved: bestStreakWeeks, lifetimeReps, bestSetReps, bestSetWeight.
+    })
+    .where(
+      and(
+        eq(trainingUserExercise.playerId, session.playerId),
+        eq(trainingUserExercise.exerciseSlug, ex.slug),
+      ),
+    );
+
+  revalidatePath("/training");
+  revalidatePath("/training/cart");
+  return { ok: true, data: null };
+}
+
 /** Remove an exercise from the cart. Logged sets and trophies are kept. */
 export async function removeExercise(
   slug: string,

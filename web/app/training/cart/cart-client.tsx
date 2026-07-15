@@ -2,10 +2,19 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
+import {
+  Check,
+  Loader2,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Trash2,
+  X,
+} from "lucide-react";
 import {
   addExercise,
   removeExercise,
+  startNewStreak,
   updateExerciseSetup,
 } from "@/lib/actions/training";
 import type {
@@ -25,11 +34,18 @@ const FIELD_META: Record<
 };
 
 type Vals = Partial<Record<SetupField, string>>;
+type PanelMode = "edit" | "restart";
 
 const toPayload = (v: Vals) => ({
   baseRepGoal: v.baseRepGoal != null ? Number(v.baseRepGoal) : undefined,
   weeklyIncrement: v.weeklyIncrement != null ? Number(v.weeklyIncrement) : undefined,
   weeklyDayTarget: v.weeklyDayTarget != null ? Number(v.weeklyDayTarget) : undefined,
+});
+
+const valsFromCart = (c: CartExercise): Vals => ({
+  baseRepGoal: String(c.baseRepGoal),
+  weeklyIncrement: String(c.weeklyIncrement),
+  weeklyDayTarget: String(c.weeklyDayTarget),
 });
 
 function SetupInputs({
@@ -41,6 +57,7 @@ function SetupInputs({
   vals: Vals;
   onChange: (f: SetupField, v: string) => void;
 }) {
+  if (fields.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-3">
       {fields.map((f) => {
@@ -77,7 +94,6 @@ export function CartClient({ cart, addable }: CartView) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Add-form values, seeded from each addable exercise's defaults.
   const [addVals, setAddVals] = useState<Record<string, Vals>>(() => {
     const o: Record<string, Vals> = {};
     for (const a of addable) {
@@ -90,8 +106,19 @@ export function CartClient({ cart, addable }: CartView) {
     return o;
   });
 
-  const [editing, setEditing] = useState<string | null>(null);
-  const [editVals, setEditVals] = useState<Vals>({});
+  const [panel, setPanel] = useState<{ slug: string; mode: PanelMode } | null>(
+    null,
+  );
+  const [panelVals, setPanelVals] = useState<Vals>({});
+
+  const openPanel = (c: CartExercise, mode: PanelMode) => {
+    if (panel?.slug === c.slug && panel.mode === mode) {
+      setPanel(null);
+      return;
+    }
+    setPanel({ slug: c.slug, mode });
+    setPanelVals(valsFromCart(c));
+  };
 
   const runAdd = (a: AddableExercise) => {
     setError(null);
@@ -116,23 +143,18 @@ export function CartClient({ cart, addable }: CartView) {
     });
   };
 
-  const startEdit = (c: CartExercise) => {
-    setEditing(c.slug);
-    setEditVals({
-      baseRepGoal: String(c.baseRepGoal),
-      weeklyIncrement: String(c.weeklyIncrement),
-      weeklyDayTarget: String(c.weeklyDayTarget),
-    });
-  };
-
-  const saveEdit = (slug: string) => {
+  const runPanel = (slug: string, mode: PanelMode) => {
     setError(null);
     setBusy(slug);
+    const payload = { slug, ...toPayload(panelVals) };
     start(async () => {
-      const res = await updateExerciseSetup({ slug, ...toPayload(editVals) });
+      const res =
+        mode === "edit"
+          ? await updateExerciseSetup(payload)
+          : await startNewStreak(payload);
       setBusy(null);
       if (res.ok) {
-        setEditing(null);
+        setPanel(null);
         router.refresh();
       } else setError(res.error);
     });
@@ -148,6 +170,9 @@ export function CartClient({ cart, addable }: CartView) {
     return parts.join(" · ");
   };
 
+  const btn =
+    "inline-flex h-9 items-center gap-1.5 rounded-[var(--r-lg)] px-3 text-[12px] font-semibold shadow-[inset_0_0_0_1px_var(--hairline-2)] disabled:opacity-60";
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
@@ -159,78 +184,102 @@ export function CartClient({ cart, addable }: CartView) {
             No exercises yet — set one up below to start training.
           </p>
         ) : (
-          cart.map((c) => (
-            <div
-              key={c.slug}
-              className="flex flex-col gap-3 rounded-[12px] bg-[color:var(--surface)] p-3.5 shadow-[inset_0_0_0_1px_var(--hairline)]"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-[14px] font-bold">{c.name}</div>
-                  <div className="text-[11.5px] text-[color:var(--text-3)]">
-                    {goalLine(c)}
+          cart.map((c) => {
+            const open = panel?.slug === c.slug ? panel.mode : null;
+            return (
+              <div
+                key={c.slug}
+                className="flex flex-col gap-3 rounded-[12px] bg-[color:var(--surface)] p-3.5 shadow-[inset_0_0_0_1px_var(--hairline)]"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[14px] font-bold">{c.name}</div>
+                    <div className="text-[11.5px] text-[color:var(--text-3)]">
+                      {goalLine(c)}
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {c.setupFields.length > 0 && (
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    {c.setupFields.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => openPanel(c, "edit")}
+                        disabled={pending}
+                        className={`${btn} text-[color:var(--text-2)] hover:text-[color:var(--text)]`}
+                      >
+                        {open === "edit" ? (
+                          <X size={14} strokeWidth={2.5} />
+                        ) : (
+                          <Pencil size={13} strokeWidth={2.5} />
+                        )}
+                        {open === "edit" ? "Cancel" : "Edit"}
+                      </button>
+                    )}
                     <button
                       type="button"
-                      onClick={() =>
-                        editing === c.slug ? setEditing(null) : startEdit(c)
-                      }
+                      onClick={() => openPanel(c, "restart")}
                       disabled={pending}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-[var(--r-lg)] px-3 text-[12px] font-semibold text-[color:var(--text-2)] shadow-[inset_0_0_0_1px_var(--hairline-2)] hover:text-[color:var(--text)] disabled:opacity-60"
+                      className={`${btn} text-[color:var(--text-2)] hover:text-[color:var(--brand-ink)]`}
                     >
-                      {editing === c.slug ? (
+                      {open === "restart" ? (
                         <X size={14} strokeWidth={2.5} />
                       ) : (
-                        <Pencil size={13} strokeWidth={2.5} />
+                        <RotateCcw size={13} strokeWidth={2.5} />
                       )}
-                      {editing === c.slug ? "Cancel" : "Edit"}
+                      {open === "restart" ? "Cancel" : "New streak"}
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => runRemove(c.slug)}
-                    disabled={pending}
-                    className="inline-flex h-9 items-center gap-1.5 rounded-[var(--r-lg)] px-3 text-[12px] font-semibold text-[color:var(--text-2)] shadow-[inset_0_0_0_1px_var(--hairline-2)] hover:text-[color:var(--down)] disabled:opacity-60"
-                  >
-                    {busy === c.slug && editing !== c.slug ? (
-                      <Loader2 size={14} className="animate-spin" />
-                    ) : (
-                      <Trash2 size={14} strokeWidth={2.5} />
-                    )}
-                    Remove
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => runRemove(c.slug)}
+                      disabled={pending}
+                      className={`${btn} text-[color:var(--text-2)] hover:text-[color:var(--down)]`}
+                    >
+                      {busy === c.slug && open === null ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <Trash2 size={14} strokeWidth={2.5} />
+                      )}
+                      Remove
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              {editing === c.slug && (
-                <div className="flex flex-col gap-3 rounded-[10px] bg-[color:var(--surface-2)] p-3">
-                  <SetupInputs
-                    fields={c.setupFields}
-                    vals={editVals}
-                    onChange={(f, v) =>
-                      setEditVals((prev) => ({ ...prev, [f]: v }))
-                    }
-                  />
-                  <button
-                    type="button"
-                    onClick={() => saveEdit(c.slug)}
-                    disabled={pending}
-                    className="inline-flex h-9 w-fit items-center gap-1.5 rounded-[var(--r-lg)] bg-[color:var(--brand)] px-4 text-[12px] font-bold uppercase tracking-[0.06em] text-white shadow-[var(--cta-shadow)] hover:bg-[color:var(--brand-hover)] disabled:opacity-60"
-                  >
-                    {busy === c.slug ? (
-                      <Loader2 size={14} className="animate-spin" />
-                    ) : (
-                      <Check size={14} strokeWidth={2.5} />
+                {open && (
+                  <div className="flex flex-col gap-3 rounded-[10px] bg-[color:var(--surface-2)] p-3">
+                    {open === "restart" && (
+                      <p className="text-[11.5px] text-[color:var(--text-3)]">
+                        Starts a fresh streak: resets this week and your
+                        current streak, and sets your daily goal back to the
+                        baseline below. Your XP, best streak, lifetime reps,
+                        and trophies are kept.
+                      </p>
                     )}
-                    Save setup
-                  </button>
-                </div>
-              )}
-            </div>
-          ))
+                    <SetupInputs
+                      fields={c.setupFields}
+                      vals={panelVals}
+                      onChange={(f, v) =>
+                        setPanelVals((prev) => ({ ...prev, [f]: v }))
+                      }
+                    />
+                    <button
+                      type="button"
+                      onClick={() => runPanel(c.slug, open)}
+                      disabled={pending}
+                      className="inline-flex h-9 w-fit items-center gap-1.5 rounded-[var(--r-lg)] bg-[color:var(--brand)] px-4 text-[12px] font-bold uppercase tracking-[0.06em] text-white shadow-[var(--cta-shadow)] hover:bg-[color:var(--brand-hover)] disabled:opacity-60"
+                    >
+                      {busy === c.slug ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : open === "restart" ? (
+                        <RotateCcw size={14} strokeWidth={2.5} />
+                      ) : (
+                        <Check size={14} strokeWidth={2.5} />
+                      )}
+                      {open === "restart" ? "Start new streak" : "Save setup"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
 
