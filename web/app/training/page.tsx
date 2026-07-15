@@ -58,7 +58,7 @@ export default async function TrainingPage() {
 function ExerciseCard({ ex }: { ex: HomeExercise }) {
   const goalMetDays = ex.days.filter((d) => d >= 2).length;
   const loggedDays = ex.days.filter((d) => d >= 1).length;
-  const qualifying = ex.progression === "weekly-step" ? goalMetDays : loggedDays;
+  const qualifying = ex.weekQualifier === "goal-met" ? goalMetDays : loggedDays;
   return (
     <div className="flex flex-col gap-3 rounded-[16px] bg-[color:var(--surface)] p-4 shadow-[inset_0_0_0_1px_var(--hairline)]">
       <div className="flex items-start justify-between gap-3">
@@ -71,7 +71,7 @@ function ExerciseCard({ ex }: { ex: HomeExercise }) {
           <div className="text-[11.5px] text-[color:var(--text-3)]">
             {ex.hasRepGoal ? (
               <>
-                Goal: {ex.currentGoal} reps/day
+                Goal: {ex.currentGoal} {ex.repLabel.toLowerCase()}/day
                 {ex.type === "weighted" && ex.weightGoal != null
                   ? ` @ ${ex.weightGoal} lb`
                   : ""}{" "}

@@ -232,15 +232,16 @@ const today = dayKey(now);
   assert.equal(pr.xp, 20 + 30 + 50);
 }
 
-// Daily Shots: no rep goal — logging awards +20 only; day is "logged"
+// Daily Shots: daily shot target (goal-met qualifier)
 {
   const shots = exerciseBySlug("shots")!;
   const SHOTS: Targets = {
-    repGoal: 1,
+    repGoal: 100,
     weightGoal: null,
     weeklyDayTarget: 3,
     weeklyIncrement: 0,
   };
+  // Under the target → +20 only, day logged (level 1)
   const a = applyLog({
     state: base({ weekStart: today, daysLoggedThisWeek: [0, 0, 0, 0, 0, 0, 0] }),
     exercise: shots,
@@ -255,26 +256,43 @@ const today = dayKey(now);
   });
   assert.equal(a.xp, 20);
   assert.equal(a.events.repGoal, false);
-  assert.equal(a.state.daysLoggedThisWeek![0], 1); // logged, never goal-met
+  assert.equal(a.state.daysLoggedThisWeek![0], 1);
 
-  // 3 logged days completes the week under the "logged" qualifier
+  // Crossing the target the same day → +30, day goal-met (level 2)
+  const b = applyLog({
+    state: a.state,
+    exercise: shots,
+    targets: SHOTS,
+    day: today,
+    reps: 70,
+    weight: null,
+    repsTodayTotal: 110,
+    firstLogToday: false,
+    priorGoalMet: false,
+    priorPr: false,
+  });
+  assert.equal(b.xp, 30);
+  assert.equal(b.events.repGoal, true);
+  assert.equal(b.state.daysLoggedThisWeek![0], 2);
+
+  // Weekly completes on the 3rd goal-met day (goal-met qualifier)
   const r = applyLog({
     state: base({
       weekStart: addDays(today, -2),
-      daysLoggedThisWeek: [1, 1, 0, 0, 0, 0, 0],
+      daysLoggedThisWeek: [2, 2, 0, 0, 0, 0, 0],
     }),
     exercise: shots,
     targets: SHOTS,
     day: today,
-    reps: 25,
+    reps: 100,
     weight: null,
-    repsTodayTotal: 25,
+    repsTodayTotal: 100,
     firstLogToday: true,
     priorGoalMet: false,
     priorPr: false,
   });
   assert.equal(r.events.weekly, true);
-  assert.equal(r.xp, 20 + 100);
+  assert.equal(r.xp, 20 + 30 + 100);
 }
 
 /* ------------------------------- displayStreak ---------------------------- */

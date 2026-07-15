@@ -77,7 +77,9 @@ export type HomeExercise = {
   name: string;
   type: Exercise["type"];
   progression: Exercise["progression"];
+  weekQualifier: Exercise["weekQualifier"];
   hasRepGoal: boolean;
+  repLabel: string;
   currentGoal: number;
   nextGoal: number | null; // weekly-step only
   weightGoal: number | null;
@@ -123,7 +125,9 @@ export async function getTrainingHome(playerId: string): Promise<TrainingHome> {
         name: ex.name,
         type: ex.type,
         progression: ex.progression,
+        weekQualifier: ex.weekQualifier,
         hasRepGoal: ex.hasRepGoal,
+        repLabel: ex.repLabel,
         currentGoal: r.repGoal,
         nextGoal:
           ex.progression === "weekly-step" ? r.repGoal + r.weeklyIncrement : null,

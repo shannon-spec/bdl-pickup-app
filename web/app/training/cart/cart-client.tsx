@@ -29,7 +29,7 @@ const FIELD_META: Record<
   SetupField,
   { label: string; suffix: string; min: number; max: number }
 > = {
-  baseRepGoal: { label: "Baseline daily goal", suffix: "reps", min: 1, max: 1000 },
+  baseRepGoal: { label: "Daily goal", suffix: "", min: 1, max: 1000 },
   weeklyIncrement: { label: "Weekly increase", suffix: "reps/wk", min: 0, max: 500 },
   weeklyDayTarget: { label: "Days per week", suffix: "of 7", min: 1, max: 7 },
 };
@@ -78,9 +78,11 @@ function SetupInputs({
                 onChange={(e) => onChange(f, e.target.value)}
                 className="h-10 w-20 rounded-[10px] bg-[color:var(--surface-2)] px-2 text-center text-[15px] font-bold num font-[family-name:var(--mono)] outline-none shadow-[inset_0_0_0_1px_var(--hairline-2)] focus:shadow-[inset_0_0_0_1.5px_var(--brand)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
               />
-              <span className="text-[11px] text-[color:var(--text-4)]">
-                {m.suffix}
-              </span>
+              {m.suffix && (
+                <span className="text-[11px] text-[color:var(--text-4)]">
+                  {m.suffix}
+                </span>
+              )}
             </span>
           </label>
         );
@@ -164,7 +166,7 @@ export function CartClient({ cart, addable }: CartView) {
   const goalLine = (c: CartExercise) => {
     const parts: string[] = [];
     if (c.hasRepGoal) {
-      parts.push(`${c.currentGoal} reps/day`);
+      parts.push(`${c.currentGoal} ${c.repLabel.toLowerCase()}/day`);
       if (c.progression === "weekly-step" && c.weeklyIncrement > 0)
         parts.push(`+${c.weeklyIncrement}/wk`);
       if (c.type === "weighted" && c.weightGoal != null)

@@ -110,7 +110,8 @@ export function LogClient({
           <div className="text-[11.5px] text-[color:var(--text-3)]">
             {exercise.hasRepGoal ? (
               <>
-                Daily goal: {exercise.currentGoal}
+                Daily goal: {exercise.currentGoal}{" "}
+                {exercise.repLabel.toLowerCase()}
                 {weighted && exercise.weightGoal != null && (
                   <> · PR: {exercise.currentGoal} @ {exercise.weightGoal} lb</>
                 )}
