@@ -69,11 +69,17 @@ function ExerciseCard({ ex }: { ex: HomeExercise }) {
           <div>
           <div className="text-[15px] font-bold">{ex.name}</div>
           <div className="text-[11.5px] text-[color:var(--text-3)]">
-            Goal: {ex.currentGoal} reps/day
-            {ex.type === "weighted" && ex.weightGoal != null
-              ? ` @ ${ex.weightGoal} lb`
-              : ""}{" "}
-            · {ex.weeklyDayTarget} of 7 days
+            {ex.hasRepGoal ? (
+              <>
+                Goal: {ex.currentGoal} reps/day
+                {ex.type === "weighted" && ex.weightGoal != null
+                  ? ` @ ${ex.weightGoal} lb`
+                  : ""}{" "}
+                · {ex.weeklyDayTarget} of 7 days
+              </>
+            ) : (
+              <>Log daily · {ex.weeklyDayTarget} of 7 days</>
+            )}
           </div>
           {ex.nextGoal != null && ex.nextGoal !== ex.currentGoal && (
             <div className="text-[10.5px] text-[color:var(--text-4)]">

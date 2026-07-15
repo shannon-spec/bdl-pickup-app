@@ -1507,6 +1507,8 @@ export const trainingSets = pgTable(
     reps: integer("reps").notNull(),
     /** Null for bodyweight exercises. */
     weight: integer("weight"),
+    /** Shots made this entry (for the "shots" exercise); null otherwise. */
+    made: integer("made"),
     /** Local calendar day the set counts toward (YYYY-MM-DD). */
     performedDay: date("performed_day").notNull(),
     performedAt: timestamp("performed_at", { withTimezone: true })

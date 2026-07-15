@@ -232,6 +232,51 @@ const today = dayKey(now);
   assert.equal(pr.xp, 20 + 30 + 50);
 }
 
+// Daily Shots: no rep goal — logging awards +20 only; day is "logged"
+{
+  const shots = exerciseBySlug("shots")!;
+  const SHOTS: Targets = {
+    repGoal: 1,
+    weightGoal: null,
+    weeklyDayTarget: 3,
+    weeklyIncrement: 0,
+  };
+  const a = applyLog({
+    state: base({ weekStart: today, daysLoggedThisWeek: [0, 0, 0, 0, 0, 0, 0] }),
+    exercise: shots,
+    targets: SHOTS,
+    day: today,
+    reps: 40,
+    weight: null,
+    repsTodayTotal: 40,
+    firstLogToday: true,
+    priorGoalMet: false,
+    priorPr: false,
+  });
+  assert.equal(a.xp, 20);
+  assert.equal(a.events.repGoal, false);
+  assert.equal(a.state.daysLoggedThisWeek![0], 1); // logged, never goal-met
+
+  // 3 logged days completes the week under the "logged" qualifier
+  const r = applyLog({
+    state: base({
+      weekStart: addDays(today, -2),
+      daysLoggedThisWeek: [1, 1, 0, 0, 0, 0, 0],
+    }),
+    exercise: shots,
+    targets: SHOTS,
+    day: today,
+    reps: 25,
+    weight: null,
+    repsTodayTotal: 25,
+    firstLogToday: true,
+    priorGoalMet: false,
+    priorPr: false,
+  });
+  assert.equal(r.events.weekly, true);
+  assert.equal(r.xp, 20 + 100);
+}
+
 /* ------------------------------- displayStreak ---------------------------- */
 {
   const s = base({

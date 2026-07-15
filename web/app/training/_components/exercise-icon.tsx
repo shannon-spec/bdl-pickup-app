@@ -61,7 +61,21 @@ function BenchIcon(p: { size?: number; className?: string }) {
   );
 }
 
+/** Basketball (circle + seams) for daily shots. */
+function ShotsIcon(p: { size?: number; className?: string }) {
+  return (
+    <Svg size={p.size} className={p.className}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 3 V21" />
+      <path d="M3 12 H21" />
+      <path d="M5.6 5.2 C 9 9, 9 15, 5.6 18.8" />
+      <path d="M18.4 5.2 C 15 9, 15 15, 18.4 18.8" />
+    </Svg>
+  );
+}
+
 export function ExerciseIcon({ slug, size, className }: Props) {
   if (slug === "pushups") return <PushupsIcon size={size} className={className} />;
+  if (slug === "shots") return <ShotsIcon size={size} className={className} />;
   return <BenchIcon size={size} className={className} />;
 }

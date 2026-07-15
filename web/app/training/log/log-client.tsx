@@ -24,7 +24,7 @@ export function LogClient({
   const [pending, start] = useTransition();
   const [slug, setSlug] = useState(initialSlug ?? cart[0]?.slug ?? "");
   const [reps, setReps] = useState("");
-  const [weight, setWeight] = useState("");
+  const [secondaryVal, setSecondaryVal] = useState("");
   const [date, setDate] = useState(today);
   const isPastWeek = date < mondayOfKey(today);
   const [error, setError] = useState<string | null>(null);
@@ -38,29 +38,33 @@ export function LogClient({
     [cart, slug],
   );
   const weighted = exercise?.type === "weighted";
+  const secondary = exercise?.secondary;
 
   const onSubmit = () => {
     setError(null);
     const repsN = Number(reps);
     if (!Number.isFinite(repsN) || repsN <= 0) {
-      setError("Enter a rep count above zero.");
+      setError("Enter a value above zero.");
       return;
     }
-    if (weighted && (!weight.trim() || Number(weight) < 0)) {
-      setError("Enter the weight lifted.");
+    const hasSecVal = secondaryVal.trim() !== "";
+    if (secondary?.required && (!hasSecVal || Number(secondaryVal) < 0)) {
+      setError(`Enter the ${secondary.label.toLowerCase()}.`);
       return;
     }
+    const secNum = hasSecVal ? Math.floor(Number(secondaryVal)) : null;
     start(async () => {
       const res = await logSet({
         slug: exercise.slug,
         reps: Math.floor(repsN),
-        weight: weighted ? Math.floor(Number(weight)) : null,
+        weight: secondary?.key === "weight" ? secNum : null,
+        made: secondary?.key === "made" ? secNum : null,
         day: date,
       });
       if (res.ok) {
         setResult((prev) => ({ r: res.data, tick: (prev?.tick ?? 0) + 1 }));
         setReps("");
-        setWeight("");
+        setSecondaryVal("");
         router.refresh();
       } else {
         setError(res.error);
@@ -104,9 +108,15 @@ export function LogClient({
             <div className="text-[15px] font-bold">{exercise.name}</div>
           </div>
           <div className="text-[11.5px] text-[color:var(--text-3)]">
-            Daily goal: {exercise.currentGoal}
-            {weighted && exercise.weightGoal != null && (
-              <> · PR: {exercise.currentGoal} @ {exercise.weightGoal} lb</>
+            {exercise.hasRepGoal ? (
+              <>
+                Daily goal: {exercise.currentGoal}
+                {weighted && exercise.weightGoal != null && (
+                  <> · PR: {exercise.currentGoal} @ {exercise.weightGoal} lb</>
+                )}
+              </>
+            ) : (
+              <>{exercise.weeklyDayTarget} of 7 days</>
             )}
           </div>
         </div>
@@ -126,7 +136,7 @@ export function LogClient({
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[color:var(--text-3)]">
-              Reps
+              {exercise.repLabel}
             </span>
             <input
               type="number"
@@ -137,17 +147,19 @@ export function LogClient({
               className="h-11 w-24 rounded-[10px] bg-[color:var(--surface-2)] px-3 text-center text-[16px] font-bold num font-[family-name:var(--mono)] outline-none shadow-[inset_0_0_0_1px_var(--hairline-2)] focus:shadow-[inset_0_0_0_1.5px_var(--brand)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
             />
           </label>
-          {weighted && (
+          {secondary && (
             <label className="flex flex-col gap-1">
               <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[color:var(--text-3)]">
-                Weight (lb)
+                {secondary.label}
+                {secondary.suffix ? ` (${secondary.suffix})` : ""}
+                {secondary.required ? "" : " · opt"}
               </span>
               <input
                 type="number"
                 min={0}
                 inputMode="numeric"
-                value={weight}
-                onChange={(e) => setWeight(e.target.value)}
+                value={secondaryVal}
+                onChange={(e) => setSecondaryVal(e.target.value)}
                 className="h-11 w-28 rounded-[10px] bg-[color:var(--surface-2)] px-3 text-center text-[16px] font-bold num font-[family-name:var(--mono)] outline-none shadow-[inset_0_0_0_1px_var(--hairline-2)] focus:shadow-[inset_0_0_0_1.5px_var(--brand)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
               />
             </label>

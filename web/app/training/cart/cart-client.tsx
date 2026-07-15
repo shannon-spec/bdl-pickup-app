@@ -162,11 +162,16 @@ export function CartClient({ cart, addable }: CartView) {
   };
 
   const goalLine = (c: CartExercise) => {
-    const parts = [`${c.currentGoal} reps/day`];
-    if (c.progression === "weekly-step" && c.weeklyIncrement > 0)
-      parts.push(`+${c.weeklyIncrement}/wk`);
-    if (c.type === "weighted" && c.weightGoal != null)
-      parts.push(`@ ${c.weightGoal} lb`);
+    const parts: string[] = [];
+    if (c.hasRepGoal) {
+      parts.push(`${c.currentGoal} reps/day`);
+      if (c.progression === "weekly-step" && c.weeklyIncrement > 0)
+        parts.push(`+${c.weeklyIncrement}/wk`);
+      if (c.type === "weighted" && c.weightGoal != null)
+        parts.push(`@ ${c.weightGoal} lb`);
+    } else {
+      parts.push("Log daily");
+    }
     parts.push(`${c.weeklyDayTarget} of 7 days`);
     return parts.join(" · ");
   };

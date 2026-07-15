@@ -219,6 +219,7 @@ function goalMet(
   reps: number,
   repsTodayTotal: number,
 ): boolean {
+  if (!exercise.hasRepGoal) return false;
   return exercise.repCounting === "cumulative"
     ? repsTodayTotal >= repGoal
     : reps >= repGoal;

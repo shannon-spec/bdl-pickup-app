@@ -77,6 +77,7 @@ export type HomeExercise = {
   name: string;
   type: Exercise["type"];
   progression: Exercise["progression"];
+  hasRepGoal: boolean;
   currentGoal: number;
   nextGoal: number | null; // weekly-step only
   weightGoal: number | null;
@@ -122,6 +123,7 @@ export async function getTrainingHome(playerId: string): Promise<TrainingHome> {
         name: ex.name,
         type: ex.type,
         progression: ex.progression,
+        hasRepGoal: ex.hasRepGoal,
         currentGoal: r.repGoal,
         nextGoal:
           ex.progression === "weekly-step" ? r.repGoal + r.weeklyIncrement : null,
@@ -151,6 +153,9 @@ export type CartExercise = {
   name: string;
   type: Exercise["type"];
   progression: Exercise["progression"];
+  hasRepGoal: boolean;
+  repLabel: string;
+  secondary?: Exercise["secondary"];
   currentGoal: number;
   baseRepGoal: number;
   weightGoal: number | null;
@@ -182,7 +187,7 @@ export async function getCart(playerId: string): Promise<CartView> {
 
   const inCart = new Set(rows.map((r) => r.exerciseSlug));
   const cart: CartExercise[] = rows
-    .map((r) => {
+    .map((r): CartExercise | null => {
       const ex = exerciseBySlug(r.exerciseSlug);
       if (!ex) return null;
       return {
@@ -190,6 +195,9 @@ export async function getCart(playerId: string): Promise<CartView> {
         name: ex.name,
         type: ex.type,
         progression: ex.progression,
+        hasRepGoal: ex.hasRepGoal,
+        repLabel: ex.repLabel,
+        secondary: ex.secondary,
         currentGoal: r.repGoal,
         baseRepGoal: r.baseRepGoal,
         weightGoal: r.weightGoal,

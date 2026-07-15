@@ -315,6 +315,7 @@ export async function logSet(input: {
   slug: string;
   reps: number;
   weight?: number | null;
+  made?: number | null;
   day?: string;
 }): Promise<ActionResult<LogResult>> {
   const session = await readSession();
@@ -334,6 +335,15 @@ export async function logSet(input: {
     if (!Number.isFinite(w) || w < 0)
       return { ok: false, error: "Enter a valid weight." };
     weight = w;
+  }
+
+  // Optional secondary "made" count (shots) — clamped to at most the total.
+  let made: number | null = null;
+  if (ex.secondary?.key === "made" && input.made != null) {
+    const m = Math.floor(Number(input.made));
+    if (!Number.isFinite(m) || m < 0)
+      return { ok: false, error: "Enter a valid makes count." };
+    made = Math.min(m, reps);
   }
 
   const now = new Date();
@@ -411,6 +421,7 @@ export async function logSet(input: {
     exerciseSlug: ex.slug,
     reps,
     weight,
+    made,
     performedDay: day,
   });
 
