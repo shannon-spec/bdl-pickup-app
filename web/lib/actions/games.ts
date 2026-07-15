@@ -382,6 +382,21 @@ export async function saveGameStats(
     if (!r?.playerId) continue;
     const values: Record<string, number | null> = {};
     for (const f of STAT_FIELDS) values[f] = toInt(r[f]);
+    // An all-null row carries no stats — don't persist a phantom row that
+    // would otherwise count as "saved" while the box score stays hidden.
+    // If the player already had a saved line, clearing every field removes it.
+    const hasAny = STAT_FIELDS.some((f) => values[f] !== null);
+    if (!hasAny) {
+      await db
+        .delete(gameStats)
+        .where(
+          and(
+            eq(gameStats.gameId, gameId),
+            eq(gameStats.playerId, r.playerId),
+          ),
+        );
+      continue;
+    }
     await db
       .insert(gameStats)
       .values({ gameId, playerId: r.playerId, ...values })

@@ -109,12 +109,21 @@ export function BoxScoreEditor({
       }
       const matched: Record<string, Record<string, number | null>> = data.matched ?? {};
       const ids = Object.keys(matched);
+      // A player was really imported only if they're on the roster AND at
+      // least one numeric value came back — otherwise nothing fills the grid.
+      const onRoster = (id: string) => players.some((p) => p.id === id);
+      const hasValues = (id: string) =>
+        COLUMNS.some((c) => {
+          const v = matched[id][c.key];
+          return v !== null && v !== undefined;
+        });
+      const filled = ids.filter((id) => onRoster(id) && hasValues(id));
+      const matchedEmpty = ids.filter((id) => onRoster(id) && !hasValues(id));
       setSaved(false);
       setRows((prev) => {
         const next = { ...prev };
-        for (const id of ids) {
-          if (!next[id]) continue;
-          const row = { ...next[id] };
+        for (const id of filled) {
+          const row = { ...(next[id] ?? emptyRow()) };
           for (const c of COLUMNS) {
             const v = matched[id][c.key];
             if (v !== null && v !== undefined) row[c.key] = String(v);
@@ -124,10 +133,17 @@ export function BoxScoreEditor({
         return next;
       });
       const unmatched: string[] = data.unmatched ?? [];
-      const parts = [`Imported ${ids.length} player${ids.length === 1 ? "" : "s"}.`];
+      const parts: string[] = [];
+      if (filled.length)
+        parts.push(`Imported stats for ${filled.length} player${filled.length === 1 ? "" : "s"}.`);
+      else parts.push("No stats could be read from the image.");
+      if (matchedEmpty.length)
+        parts.push(
+          `No numbers detected for ${matchedEmpty.length} matched player${matchedEmpty.length === 1 ? "" : "s"}.`,
+        );
       if (unmatched.length)
         parts.push(`Couldn't match: ${unmatched.join(", ")}.`);
-      parts.push("Review the numbers, then Save.");
+      if (filled.length) parts.push("Review the numbers, then Save.");
       setImportMsg(parts.join(" "));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not read the image.");
@@ -177,6 +193,16 @@ export function BoxScoreEditor({
       playerId: p.id,
       ...(rows[p.id] ?? emptyRow()),
     }));
+    // Guard against silently "saving" a blank grid: without at least one
+    // value there's nothing to store, and the box score would stay hidden.
+    const hasAny = players.some((p) =>
+      COLUMNS.some((c) => (rows[p.id]?.[c.key] ?? "").trim() !== ""),
+    );
+    if (!hasAny) {
+      setSaved(false);
+      setError("Nothing to save — enter or import stats first.");
+      return;
+    }
     start(async () => {
       const res = await saveGameStats(gameId, payload);
       if (res.ok) {
