@@ -6,6 +6,7 @@ import { Award, BarChart3, Loader2, Sparkles, TrendingUp } from "lucide-react";
 import { logSet, type LogResult } from "@/lib/actions/training";
 import type { CartExercise } from "@/lib/queries/training";
 import { mondayOfKey, TROPHIES } from "@/lib/training/engine";
+import { ExerciseIcon } from "../_components/exercise-icon";
 
 const trophyLabel = (id: string) =>
   TROPHIES.find((t) => t.id === id)?.label ?? id;
@@ -96,7 +97,12 @@ export function LogClient({
 
       <div className="flex flex-col gap-4 rounded-[16px] bg-[color:var(--surface)] p-4 shadow-[inset_0_0_0_1px_var(--hairline)]">
         <div className="flex items-baseline justify-between">
-          <div className="text-[15px] font-bold">{exercise.name}</div>
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[9px] bg-[color:var(--brand-soft)] text-[color:var(--brand-ink)]">
+              <ExerciseIcon slug={exercise.slug} size={16} />
+            </span>
+            <div className="text-[15px] font-bold">{exercise.name}</div>
+          </div>
           <div className="text-[11.5px] text-[color:var(--text-3)]">
             Daily goal: {exercise.currentGoal}
             {weighted && exercise.weightGoal != null && (

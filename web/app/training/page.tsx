@@ -10,6 +10,7 @@ import { readSession } from "@/lib/auth/session";
 import { getTrainingHome, type HomeExercise } from "@/lib/queries/training";
 import { TrainingNav } from "./_components/training-nav";
 import { XpBar } from "./_components/xp-bar";
+import { ExerciseIcon } from "./_components/exercise-icon";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Training · BDL" };
@@ -61,7 +62,11 @@ function ExerciseCard({ ex }: { ex: HomeExercise }) {
   return (
     <div className="flex flex-col gap-3 rounded-[16px] bg-[color:var(--surface)] p-4 shadow-[inset_0_0_0_1px_var(--hairline)]">
       <div className="flex items-start justify-between gap-3">
-        <div>
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-[color:var(--brand-soft)] text-[color:var(--brand-ink)]">
+            <ExerciseIcon slug={ex.slug} />
+          </span>
+          <div>
           <div className="text-[15px] font-bold">{ex.name}</div>
           <div className="text-[11.5px] text-[color:var(--text-3)]">
             Goal: {ex.currentGoal} reps/day
@@ -75,6 +80,7 @@ function ExerciseCard({ ex }: { ex: HomeExercise }) {
               Next week: {ex.nextGoal} reps/day after a completed week
             </div>
           )}
+          </div>
         </div>
         <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--brand-soft)] px-2.5 py-1 text-[12px] font-bold text-[color:var(--brand-ink)] num">
           <Flame size={13} strokeWidth={2.5} /> {ex.streak} wk

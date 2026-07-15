@@ -23,6 +23,7 @@ import type {
   CartView,
 } from "@/lib/queries/training";
 import type { SetupField } from "@/lib/training/catalog";
+import { ExerciseIcon } from "../_components/exercise-icon";
 
 const FIELD_META: Record<
   SetupField,
@@ -192,10 +193,15 @@ export function CartClient({ cart, addable }: CartView) {
                 className="flex flex-col gap-3 rounded-[12px] bg-[color:var(--surface)] p-3.5 shadow-[inset_0_0_0_1px_var(--hairline)]"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-[14px] font-bold">{c.name}</div>
-                    <div className="text-[11.5px] text-[color:var(--text-3)]">
-                      {goalLine(c)}
+                  <div className="flex items-center gap-3">
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-[color:var(--brand-soft)] text-[color:var(--brand-ink)]">
+                      <ExerciseIcon slug={c.slug} />
+                    </span>
+                    <div>
+                      <div className="text-[14px] font-bold">{c.name}</div>
+                      <div className="text-[11.5px] text-[color:var(--text-3)]">
+                        {goalLine(c)}
+                      </div>
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center justify-end gap-2">
@@ -294,7 +300,12 @@ export function CartClient({ cart, addable }: CartView) {
               className="flex flex-col gap-3 rounded-[12px] bg-[color:var(--surface)] p-3.5 shadow-[inset_0_0_0_1px_var(--hairline)]"
             >
               <div className="flex items-center justify-between gap-3">
-                <div className="text-[14px] font-bold">{a.name}</div>
+                <div className="flex items-center gap-3">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-[color:var(--brand-soft)] text-[color:var(--brand-ink)]">
+                    <ExerciseIcon slug={a.slug} />
+                  </span>
+                  <div className="text-[14px] font-bold">{a.name}</div>
+                </div>
                 <button
                   type="button"
                   onClick={() => runAdd(a)}
