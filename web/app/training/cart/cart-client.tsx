@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check,
+  ChevronUp,
   Loader2,
   Pencil,
   Plus,
@@ -123,6 +124,16 @@ export function CartClient({ cart, addable }: CartView) {
     null,
   );
   const [panelVals, setPanelVals] = useState<Vals>({});
+
+  // Which "Add an exercise" cards are expanded to their setup form.
+  const [openAdd, setOpenAdd] = useState<Set<string>>(() => new Set());
+  const toggleAdd = (slug: string) =>
+    setOpenAdd((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
 
   const openPanel = (c: CartExercise, mode: PanelMode) => {
     if (panel?.slug === c.slug && panel.mode === mode) {
@@ -348,67 +359,83 @@ export function CartClient({ cart, addable }: CartView) {
               </h3>
               {addable
                 .filter((a) => a.group === grp.key)
-                .map((a) => (
-            <div
-              key={a.slug}
-              className="flex flex-col gap-3 rounded-[12px] bg-[color:var(--surface)] p-3.5 shadow-[inset_0_0_0_1px_var(--hairline)]"
-            >
-              {a.usesPlan ? (
-                <>
-                  <div className="flex items-center gap-3">
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-[color:var(--brand-soft)] text-[color:var(--brand-ink)]">
-                      <ExerciseIcon slug={a.slug} />
-                    </span>
-                    <div className="text-[14px] font-bold">{a.name}</div>
-                  </div>
-                  <BenchPlanEditor
-                    slug={a.slug}
-                    initialSets={[{ weight: a.defaultBaseWeightGoal ?? 135 }]}
-                    initialIncrement={a.defaultWeeklyWeightIncrement}
-                    initialDayTarget={a.defaultWeeklyDayTarget}
-                    ctaLabel="Add to program"
-                    flush
-                  />
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-[color:var(--brand-soft)] text-[color:var(--brand-ink)]">
-                        <ExerciseIcon slug={a.slug} />
-                      </span>
-                      <div className="text-[14px] font-bold">{a.name}</div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => runAdd(a)}
-                      disabled={pending}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-[var(--r-lg)] bg-[color:var(--brand)] px-3.5 text-[12px] font-bold uppercase tracking-[0.06em] text-white shadow-[var(--cta-shadow)] hover:bg-[color:var(--brand-hover)] disabled:opacity-60"
+                .map((a) => {
+                  const isOpen = openAdd.has(a.slug);
+                  return (
+                    <div
+                      key={a.slug}
+                      className="flex flex-col gap-3 rounded-[12px] bg-[color:var(--surface)] p-3.5 shadow-[inset_0_0_0_1px_var(--hairline)]"
                     >
-                      {busy === a.slug ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : (
-                        <Plus size={14} strokeWidth={2.5} />
-                      )}
-                      {a.setupFields.length > 0 ? "Add to program" : "Add"}
-                    </button>
-                  </div>
-                  {a.setupFields.length > 0 && (
-                    <SetupInputs
-                      fields={a.setupFields}
-                      vals={addVals[a.slug] ?? {}}
-                      onChange={(f, v) =>
-                        setAddVals((prev) => ({
-                          ...prev,
-                          [a.slug]: { ...prev[a.slug], [f]: v },
-                        }))
-                      }
-                    />
-                  )}
-                </>
-              )}
-            </div>
-          ))}
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-[color:var(--brand-soft)] text-[color:var(--brand-ink)]">
+                            <ExerciseIcon slug={a.slug} />
+                          </span>
+                          <div className="text-[14px] font-bold">{a.name}</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => toggleAdd(a.slug)}
+                          className={`${btn} text-[color:var(--text-2)] hover:text-[color:var(--text)]`}
+                        >
+                          {isOpen ? (
+                            <>
+                              <ChevronUp size={14} strokeWidth={2.5} />
+                              Close
+                            </>
+                          ) : (
+                            <>
+                              <Plus size={14} strokeWidth={2.5} />
+                              Set up
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {isOpen &&
+                        (a.usesPlan ? (
+                          <BenchPlanEditor
+                            slug={a.slug}
+                            initialSets={[
+                              { weight: a.defaultBaseWeightGoal ?? 135 },
+                            ]}
+                            initialIncrement={a.defaultWeeklyWeightIncrement}
+                            initialDayTarget={a.defaultWeeklyDayTarget}
+                            ctaLabel="Add to program"
+                            flush
+                          />
+                        ) : (
+                          <div className="flex flex-col gap-3">
+                            {a.setupFields.length > 0 && (
+                              <SetupInputs
+                                fields={a.setupFields}
+                                vals={addVals[a.slug] ?? {}}
+                                onChange={(f, v) =>
+                                  setAddVals((prev) => ({
+                                    ...prev,
+                                    [a.slug]: { ...prev[a.slug], [f]: v },
+                                  }))
+                                }
+                              />
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => runAdd(a)}
+                              disabled={pending}
+                              className="inline-flex h-9 w-fit items-center gap-1.5 rounded-[var(--r-lg)] bg-[color:var(--brand)] px-4 text-[12px] font-bold uppercase tracking-[0.06em] text-white shadow-[var(--cta-shadow)] hover:bg-[color:var(--brand-hover)] disabled:opacity-60"
+                            >
+                              {busy === a.slug ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : (
+                                <Plus size={14} strokeWidth={2.5} />
+                              )}
+                              Add to program
+                            </button>
+                          </div>
+                        ))}
+                    </div>
+                  );
+                })}
             </div>
           ))}
         </div>
