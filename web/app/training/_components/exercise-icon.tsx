@@ -74,8 +74,22 @@ function ShotsIcon(p: { size?: number; className?: string }) {
   );
 }
 
+/** Squat: figure with a barbell across the shoulders and bent legs. */
+function SquatIcon(p: { size?: number; className?: string }) {
+  return (
+    <Svg size={p.size} className={p.className}>
+      <circle cx="12" cy="4.5" r="1.8" />
+      <path d="M6 8 H18" />
+      <path d="M12 6.3 V12" />
+      <path d="M12 12 L8.5 15.5 L8.5 20" />
+      <path d="M12 12 L15.5 15.5 L15.5 20" />
+    </Svg>
+  );
+}
+
 export function ExerciseIcon({ slug, size, className }: Props) {
   if (slug === "pushups") return <PushupsIcon size={size} className={className} />;
   if (slug === "shots") return <ShotsIcon size={size} className={className} />;
+  if (slug === "squats") return <SquatIcon size={size} className={className} />;
   return <BenchIcon size={size} className={className} />;
 }
