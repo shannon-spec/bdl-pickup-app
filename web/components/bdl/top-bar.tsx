@@ -44,13 +44,13 @@ const PRIMARY_NAV: NavItem[] = [
   { label: "Home", href: "/home", views: ["player", "commissioner", "admin"], signedInOnly: true },
   { label: "Discover", href: "/discover", views: ["player", "commissioner", "admin"] },
   { label: "Leaderboard", href: "/leaderboard", views: ["player", "commissioner", "admin"] },
+  { label: "Training", href: "/training", views: ["player", "commissioner", "admin"], signedInOnly: true, badge: "beta" },
   { label: "Manage", href: "/manage", views: ["player", "commissioner", "admin"], signedInOnly: true },
 ];
 
 // Everything else lives under the "More ▾" overflow menu.
 const MORE_NAV: NavItem[] = [
   { label: "Games", href: "/games", views: ["player", "commissioner", "admin"] },
-  { label: "Training", href: "/training", views: ["player", "commissioner", "admin"], signedInOnly: true, badge: "beta" },
   { label: "Players", href: "/players", views: ["player", "commissioner", "admin"] },
   { label: "Stats", href: "/stats", views: ["player", "commissioner", "admin"], badge: "beta" },
   { label: "Activity", href: "/activity", views: ["player", "commissioner", "admin"] },
@@ -162,7 +162,14 @@ export async function TopBar({
                 )}
                 data-active={isActive || undefined}
               >
-                {item.label}
+                <span className="inline-flex items-center gap-1.5">
+                  {item.label}
+                  {item.badge && (
+                    <span className="inline-flex items-center h-[14px] rounded-full bg-[rgba(120,185,255,0.5)] px-1.5 text-[8.5px] font-bold uppercase tracking-[0.06em] text-white">
+                      {item.badge}
+                    </span>
+                  )}
+                </span>
               </Link>
             );
           })}
