@@ -1423,6 +1423,114 @@ export const whoopCycles = pgTable(
   ],
 );
 
+/* ============== TRAINING (personal, gamified) ============== */
+
+/** One row per player: cumulative XP for the Training feature. Level and
+ *  tier are derived from `xp` in TS (lib/training/engine.ts), not stored.
+ *  `streakFreezes` is a launch hook (unused at v0.1). */
+export const trainingProfile = pgTable("training_profile", {
+  playerId: uuid("player_id")
+    .primaryKey()
+    .references(() => players.id, { onDelete: "cascade" }),
+  xp: integer("xp").notNull().default(0),
+  streakFreezes: integer("streak_freezes").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+/** The player's training "cart": one row per exercise they've added,
+ *  carrying its goals plus the gamified per-exercise state — streaks,
+ *  best set, lifetime reps, and the current Mon–Sun week's per-day log
+ *  flags. Date dedup columns keep one-time XP awards idempotent. */
+export const trainingUserExercise = pgTable(
+  "training_user_exercise",
+  {
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    /** Exercise slug from the code catalog (lib/training/catalog.ts),
+     *  e.g. "pushups" | "bench". Text, not a pgEnum, so new exercises
+     *  drop in without a migration. */
+    exerciseSlug: text("exercise_slug").notNull(),
+    /** Goals, seeded from the catalog default when added. weightGoal is
+     *  null for bodyweight exercises. */
+    repGoal: integer("rep_goal").notNull(),
+    weightGoal: integer("weight_goal"),
+    /** Monday (YYYY-MM-DD) of the week `daysLoggedThisWeek` describes. */
+    weekStart: date("week_start"),
+    /** 7 flags, index 0 = Monday .. 6 = Sunday; 1 = logged that day. */
+    daysLoggedThisWeek: integer("days_logged_this_week").array(),
+    currentStreakWeeks: integer("current_streak_weeks").notNull().default(0),
+    bestStreakWeeks: integer("best_streak_weeks").notNull().default(0),
+    lifetimeReps: integer("lifetime_reps").notNull().default(0),
+    bestSetReps: integer("best_set_reps"),
+    bestSetWeight: integer("best_set_weight"),
+    /** Dedup keys so once-per-day / once-per-week XP fires once: the days
+     *  we last paid the log/rep-goal/PR bonuses, and the week we paid the
+     *  weekly-consistency bonus. */
+    lastLoggedDay: date("last_logged_day"),
+    repGoalDay: date("rep_goal_day"),
+    prDay: date("pr_day"),
+    weeklyGoalHitWeek: date("weekly_goal_hit_week"),
+    addedAt: timestamp("added_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [primaryKey({ columns: [t.playerId, t.exerciseSlug] })],
+);
+
+/** Append-only log of individual sets. Powers weekly-volume charts and
+ *  the days-logged heatmap on the Stats screen. */
+export const trainingSets = pgTable(
+  "training_sets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    exerciseSlug: text("exercise_slug").notNull(),
+    reps: integer("reps").notNull(),
+    /** Null for bodyweight exercises. */
+    weight: integer("weight"),
+    /** Local calendar day the set counts toward (YYYY-MM-DD). */
+    performedDay: date("performed_day").notNull(),
+    performedAt: timestamp("performed_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("training_sets_player_ex_day_idx").on(
+      t.playerId,
+      t.exerciseSlug,
+      t.performedDay,
+    ),
+  ],
+);
+
+/** Unlocked trophies — permanent, one row per (player, trophy). */
+export const trainingTrophies = pgTable(
+  "training_trophies",
+  {
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    trophyId: text("trophy_id").notNull(),
+    unlockedAt: timestamp("unlocked_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.playerId, t.trophyId] })],
+);
+
 /* ============== RELATIONS ============== */
 
 export const playersRelations = relations(players, ({ many }) => ({
@@ -1528,6 +1636,14 @@ export type WhoopWorkout = typeof whoopWorkouts.$inferSelect;
 export type NewWhoopWorkout = typeof whoopWorkouts.$inferInsert;
 export type WhoopCycle = typeof whoopCycles.$inferSelect;
 export type NewWhoopCycle = typeof whoopCycles.$inferInsert;
+export type TrainingProfile = typeof trainingProfile.$inferSelect;
+export type NewTrainingProfile = typeof trainingProfile.$inferInsert;
+export type TrainingUserExercise = typeof trainingUserExercise.$inferSelect;
+export type NewTrainingUserExercise = typeof trainingUserExercise.$inferInsert;
+export type TrainingSet = typeof trainingSets.$inferSelect;
+export type NewTrainingSet = typeof trainingSets.$inferInsert;
+export type TrainingTrophy = typeof trainingTrophies.$inferSelect;
+export type NewTrainingTrophy = typeof trainingTrophies.$inferInsert;
 
 // Suppress an unused-symbol warning when this file is imported as types-only.
 export const __schemaSqlMarker = sql`/* schema */`;

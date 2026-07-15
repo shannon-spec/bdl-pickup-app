@@ -50,6 +50,7 @@ const PRIMARY_NAV: NavItem[] = [
 // Everything else lives under the "More ▾" overflow menu.
 const MORE_NAV: NavItem[] = [
   { label: "Games", href: "/games", views: ["player", "commissioner", "admin"] },
+  { label: "Training", href: "/training", views: ["player", "commissioner", "admin"], signedInOnly: true, badge: "beta" },
   { label: "Players", href: "/players", views: ["player", "commissioner", "admin"] },
   { label: "Stats", href: "/stats", views: ["player", "commissioner", "admin"], badge: "beta" },
   { label: "Activity", href: "/activity", views: ["player", "commissioner", "admin"] },
