@@ -178,7 +178,7 @@ export function CartClient({ cart, addable }: CartView) {
     if (c.usesPlan) {
       parts.push(
         c.plan?.length
-          ? c.plan.map((s) => `${s.weight}×${s.reps}`).join(" · ")
+          ? `${c.plan.map((s) => s.weight).join(" · ")} lb`
           : "No plan set",
       );
     } else if (c.hasRepGoal) {
@@ -343,12 +343,7 @@ export function CartClient({ cart, addable }: CartView) {
                   </div>
                   <BenchPlanEditor
                     slug={a.slug}
-                    initialSets={[
-                      {
-                        weight: a.defaultBaseWeightGoal ?? 135,
-                        reps: a.defaultBaseRepGoal,
-                      },
-                    ]}
+                    initialSets={[{ weight: a.defaultBaseWeightGoal ?? 135 }]}
                     initialIncrement={a.defaultWeeklyWeightIncrement}
                     initialDayTarget={a.defaultWeeklyDayTarget}
                     ctaLabel="Add to program"

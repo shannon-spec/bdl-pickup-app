@@ -151,7 +151,6 @@ export async function getTrainingHome(playerId: string): Promise<TrainingHome> {
           !!ex.usesPlan && r.plan != null && r.planConfirmedWeek !== mondayOf(now),
         suggestedSets: (r.plan ?? []).map((s) => ({
           weight: s.weight + r.weeklyWeightIncrement,
-          reps: s.reps,
         })),
         streak: displayStreak(rowToState(r), ex, rowToTargets(r), now),
         days: currentWeekDays(r, now),
@@ -245,7 +244,6 @@ export async function getCart(playerId: string): Promise<CartView> {
           !!ex.usesPlan && r.plan != null && r.planConfirmedWeek !== mondayOf(now),
         suggestedSets: (r.plan ?? []).map((s) => ({
           weight: s.weight + r.weeklyWeightIncrement,
-          reps: s.reps,
         })),
       };
     })

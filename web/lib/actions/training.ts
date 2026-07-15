@@ -355,7 +355,7 @@ export async function removeExercise(
  */
 export async function setBenchPlan(input: {
   slug: string;
-  sets: { weight: number; reps: number }[];
+  sets: { weight: number }[];
   weeklyWeightIncrement?: number;
   weeklyDayTarget?: number;
 }): Promise<ActionResult<null>> {
@@ -368,10 +368,7 @@ export async function setBenchPlan(input: {
   const raw = Array.isArray(input.sets) ? input.sets : [];
   if (raw.length === 0) return { ok: false, error: "Add at least one set." };
   if (raw.length > 10) return { ok: false, error: "Up to 10 sets." };
-  const sets = raw.map((s) => ({
-    weight: clampInt(s.weight, 0, 0, 2000),
-    reps: clampInt(s.reps, 1, 1, 100),
-  }));
+  const sets = raw.map((s) => ({ weight: clampInt(s.weight, 0, 0, 2000) }));
   const weeklyDayTarget = clampInt(
     input.weeklyDayTarget,
     ex.defaultWeeklyDayTarget,
@@ -498,7 +495,10 @@ export async function logSet(input: {
       return { ok: false, error: "Set up your plan first." };
     if (row.planConfirmedWeek !== mondayOf(now))
       return { ok: false, error: "Confirm this week's weights first." };
-    reps = plan.reduce((n, s) => n + s.reps, 0);
+    const r = Math.floor(Number(input.reps));
+    if (!Number.isFinite(r) || r <= 0)
+      return { ok: false, error: "Enter the reps you did." };
+    reps = r;
     weight = Math.max(0, ...plan.map((s) => s.weight)) || null;
   } else {
     reps = Math.floor(Number(input.reps));

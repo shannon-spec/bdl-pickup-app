@@ -112,7 +112,7 @@ export function LogClient({
             {exercise.usesPlan ? (
               <>
                 {exercise.plan?.length
-                  ? exercise.plan.map((s) => `${s.weight}×${s.reps}`).join(" · ")
+                  ? `${exercise.plan.map((s) => s.weight).join(" · ")} lb`
                   : "No plan set"}{" "}
                 · {exercise.weeklyDayTarget} of 7 days
               </>

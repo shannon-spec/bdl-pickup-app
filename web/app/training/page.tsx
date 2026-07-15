@@ -15,7 +15,7 @@ import { BenchWeek } from "./_components/bench-week";
 
 const planSummary = (plan: HomeExercise["plan"]) =>
   plan && plan.length
-    ? plan.map((s) => `${s.weight}×${s.reps}`).join(" · ")
+    ? `${plan.map((s) => s.weight).join(" · ")} lb`
     : "No plan set";
 
 export const dynamic = "force-dynamic";

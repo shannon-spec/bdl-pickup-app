@@ -34,8 +34,9 @@ export type SecondaryMetric = {
   suffix?: string;
 };
 
-/** One prescribed set in a plan-based exercise (e.g. bench). */
-export type PlanSet = { weight: number; reps: number };
+/** One prescribed set in a plan-based exercise (e.g. bench). Weight only —
+ *  reps are entered when the session is logged. */
+export type PlanSet = { weight: number };
 
 export type Exercise = {
   slug: string;
