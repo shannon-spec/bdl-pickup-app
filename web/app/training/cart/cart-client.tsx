@@ -22,7 +22,7 @@ import type {
   CartExercise,
   CartView,
 } from "@/lib/queries/training";
-import type { SetupField } from "@/lib/training/catalog";
+import { TRAINING_GROUPS, type SetupField } from "@/lib/training/catalog";
 import { ExerciseIcon } from "../_components/exercise-icon";
 import { BenchPlanEditor } from "../_components/bench-plan-editor";
 
@@ -210,7 +210,16 @@ export function CartClient({ cart, addable }: CartView) {
             No exercises yet — set one up below to start training.
           </p>
         ) : (
-          cart.map((c) => {
+          TRAINING_GROUPS.filter((g) =>
+            cart.some((c) => c.group === g.key),
+          ).map((grp) => (
+            <div key={grp.key} className="flex flex-col gap-1.5">
+              <h3 className="mt-1 text-[10.5px] font-bold uppercase tracking-[0.1em] text-[color:var(--text-4)]">
+                {grp.label}
+              </h3>
+              {cart
+                .filter((c) => c.group === grp.key)
+                .map((c) => {
             const open = panel?.slug === c.slug ? panel.mode : null;
             return (
               <div
@@ -319,7 +328,9 @@ export function CartClient({ cart, addable }: CartView) {
                 ) : null}
               </div>
             );
-          })
+          })}
+            </div>
+          ))
         )}
       </div>
 
@@ -328,7 +339,16 @@ export function CartClient({ cart, addable }: CartView) {
           <h2 className="text-[11.5px] font-bold uppercase tracking-[0.12em] text-[color:var(--text-2)]">
             Add an exercise
           </h2>
-          {addable.map((a) => (
+          {TRAINING_GROUPS.filter((g) =>
+            addable.some((a) => a.group === g.key),
+          ).map((grp) => (
+            <div key={grp.key} className="flex flex-col gap-1.5">
+              <h3 className="mt-1 text-[10.5px] font-bold uppercase tracking-[0.1em] text-[color:var(--text-4)]">
+                {grp.label}
+              </h3>
+              {addable
+                .filter((a) => a.group === grp.key)
+                .map((a) => (
             <div
               key={a.slug}
               className="flex flex-col gap-3 rounded-[12px] bg-[color:var(--surface)] p-3.5 shadow-[inset_0_0_0_1px_var(--hairline)]"
@@ -386,6 +406,8 @@ export function CartClient({ cart, addable }: CartView) {
                   )}
                 </>
               )}
+            </div>
+          ))}
             </div>
           ))}
         </div>

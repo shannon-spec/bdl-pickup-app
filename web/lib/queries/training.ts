@@ -77,6 +77,7 @@ function currentWeekDays(row: TrainingUserExercise, now: Date): number[] {
 export type HomeExercise = {
   slug: string;
   name: string;
+  group: Exercise["group"];
   type: Exercise["type"];
   progression: Exercise["progression"];
   weekQualifier: Exercise["weekQualifier"];
@@ -130,6 +131,7 @@ export async function getTrainingHome(playerId: string): Promise<TrainingHome> {
       return {
         slug: ex.slug,
         name: ex.name,
+        group: ex.group,
         type: ex.type,
         progression: ex.progression,
         weekQualifier: ex.weekQualifier,
@@ -173,6 +175,7 @@ export async function getTrainingHome(playerId: string): Promise<TrainingHome> {
 export type CartExercise = {
   slug: string;
   name: string;
+  group: Exercise["group"];
   type: Exercise["type"];
   progression: Exercise["progression"];
   hasRepGoal: boolean;
@@ -195,6 +198,7 @@ export type CartExercise = {
 export type AddableExercise = {
   slug: string;
   name: string;
+  group: Exercise["group"];
   type: Exercise["type"];
   progression: Exercise["progression"];
   defaultBaseRepGoal: number;
@@ -225,6 +229,7 @@ export async function getCart(playerId: string): Promise<CartView> {
       return {
         slug: ex.slug,
         name: ex.name,
+        group: ex.group,
         type: ex.type,
         progression: ex.progression,
         hasRepGoal: ex.hasRepGoal,
@@ -254,6 +259,7 @@ export async function getCart(playerId: string): Promise<CartView> {
   ).map((e) => ({
     slug: e.slug,
     name: e.name,
+    group: e.group,
     type: e.type,
     progression: e.progression,
     defaultBaseRepGoal: e.defaultBaseRepGoal,
@@ -365,6 +371,7 @@ export async function getTrainingStats(
       return {
         slug,
         name: ex.name,
+        group: ex.group,
         type: ex.type,
         series,
         max: Math.max(1, ...series.map((p) => p.reps)),

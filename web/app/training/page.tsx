@@ -12,6 +12,7 @@ import { TrainingNav } from "./_components/training-nav";
 import { XpBar } from "./_components/xp-bar";
 import { ExerciseIcon } from "./_components/exercise-icon";
 import { BenchWeek } from "./_components/bench-week";
+import { TRAINING_GROUPS } from "@/lib/training/catalog";
 
 const planSummary = (plan: HomeExercise["plan"]) =>
   plan && plan.length
@@ -49,9 +50,20 @@ export default async function TrainingPage() {
         {home.exercises.length === 0 ? (
           <EmptyState />
         ) : (
-          <div className="flex flex-col gap-3">
-            {home.exercises.map((ex) => (
-              <ExerciseCard key={ex.slug} ex={ex} />
+          <div className="flex flex-col gap-4">
+            {TRAINING_GROUPS.filter((g) =>
+              home.exercises.some((ex) => ex.group === g.key),
+            ).map((grp) => (
+              <div key={grp.key} className="flex flex-col gap-2">
+                <h3 className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-[color:var(--text-4)]">
+                  {grp.label}
+                </h3>
+                {home.exercises
+                  .filter((ex) => ex.group === grp.key)
+                  .map((ex) => (
+                    <ExerciseCard key={ex.slug} ex={ex} />
+                  ))}
+              </div>
             ))}
           </div>
         )}

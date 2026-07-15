@@ -38,9 +38,17 @@ export type SecondaryMetric = {
  *  reps are entered when the session is logged. */
 export type PlanSet = { weight: number };
 
+/** Program groups, shown as sections in the cart / train views. */
+export type TrainingGroupKey = "skills" | "strength";
+export const TRAINING_GROUPS: { key: TrainingGroupKey; label: string }[] = [
+  { key: "skills", label: "Skills" },
+  { key: "strength", label: "Strength & Conditioning" },
+];
+
 export type Exercise = {
   slug: string;
   name: string;
+  group: TrainingGroupKey;
   type: ExerciseType;
   repCounting: RepCounting;
   progression: Progression;
@@ -70,6 +78,7 @@ export const EXERCISES: Exercise[] = [
   {
     slug: "pushups",
     name: "Push-ups",
+    group: "strength",
     type: "bodyweight",
     repCounting: "cumulative",
     progression: "weekly-step",
@@ -87,6 +96,7 @@ export const EXERCISES: Exercise[] = [
   {
     slug: "bench",
     name: "Bench Press",
+    group: "strength",
     type: "weighted",
     repCounting: "single-set",
     progression: "none",
@@ -105,6 +115,7 @@ export const EXERCISES: Exercise[] = [
   {
     slug: "squats",
     name: "Squats",
+    group: "strength",
     type: "weighted",
     repCounting: "single-set",
     progression: "none",
@@ -123,6 +134,7 @@ export const EXERCISES: Exercise[] = [
   {
     slug: "shots",
     name: "Daily 3-Pt Shots",
+    group: "skills",
     type: "skill",
     repCounting: "cumulative",
     progression: "none",
